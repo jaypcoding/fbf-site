@@ -7,18 +7,24 @@ type AuthContextValue = {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  profileLoading: boolean;
+  profileError: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue>({
   session: null,
   profile: null,
   loading: true,
+  profileLoading: true,
+  profileError: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -43,16 +49,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!session?.user) {
       setProfile(null);
+      setProfileLoading(false);
+      setProfileError(false);
       return;
     }
     let active = true;
+    setProfile(null);
+    setProfileLoading(true);
+    setProfileError(false);
     supabase
       .from('profiles')
       .select('id, display_name, role')
       .eq('id', session.user.id)
       .maybeSingle()
-      .then(({ data }) => {
-        if (active) setProfile(data as Profile | null);
+      .then(({ data, error }) => {
+        if (active) {
+          setProfile(data as Profile | null);
+          setProfileError(Boolean(error));
+          setProfileLoading(false);
+        }
       });
     return () => {
       active = false;
@@ -60,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading }}>
+    <AuthContext.Provider value={{ session, profile, loading, profileLoading, profileError }}>
       {children}
     </AuthContext.Provider>
   );

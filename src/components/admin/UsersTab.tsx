@@ -3,6 +3,7 @@ import { ArrowRight, Trash2 } from 'lucide-react';
 import { supabase, type Profile } from '@/lib/supabase';
 import { useCompetitions } from '@/lib/hooks';
 import { LoadingCard, FormField, FormSelect, FormError } from '@/components/ui';
+import { refreshAdminData, useAdminDataVersion } from '@/lib/adminRefresh';
 
 type RoleValue = Profile['role'];
 const roleOptions: { value: RoleValue; label: string }[] = [
@@ -12,6 +13,7 @@ const roleOptions: { value: RoleValue; label: string }[] = [
 ];
 
 export function UsersTab({ currentUserId }: { currentUserId: string }) {
+  const refreshVersion = useAdminDataVersion();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
       setLoading(false);
     });
     return () => { active = false; };
-  }, []);
+  }, [refreshVersion]);
 
   async function changeRole(target: Profile, role: RoleValue) {
     setBusyId(target.id); setError(null);
@@ -34,6 +36,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
     setBusyId(null);
     if (err) { setError(err.message.includes('itself') || err.message.includes('própri') ? 'Você não pode alterar o seu próprio papel.' : 'Não foi possível alterar o papel deste usuário.'); return; }
     setProfiles((prev) => prev.map((p) => (p.id === target.id ? { ...p, role } : p)));
+    refreshAdminData();
   }
 
   return (
@@ -65,10 +68,12 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
 type Organizer = { user_id: string };
 
 export function OrganizersTab() {
-  const { competitions } = useCompetitions();
+  const { competitions, error: competitionsError } = useCompetitions();
+  const refreshVersion = useAdminDataVersion();
   const [selectedComp, setSelectedComp] = useState('');
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profilesError, setProfilesError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pickedUser, setPickedUser] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +84,14 @@ export function OrganizersTab() {
   }, [competitions, selectedComp]);
 
   useEffect(() => {
-    supabase.from('profiles').select('id, display_name, role').order('display_name', { ascending: true }).then(({ data }) => {
-      setProfiles((data || []) as Profile[]);
+    let active = true;
+    supabase.from('profiles').select('id, display_name, role').order('display_name', { ascending: true }).then(({ data, error: queryError }) => {
+      if (!active) return;
+      setProfilesError(Boolean(queryError));
+      setProfiles(queryError ? [] : (data || []) as Profile[]);
     });
-  }, []);
+    return () => { active = false; };
+  }, [refreshVersion]);
 
   useEffect(() => {
     if (!selectedComp) return;
@@ -95,7 +104,7 @@ export function OrganizersTab() {
       setLoading(false);
     });
     return () => { active = false; };
-  }, [selectedComp]);
+  }, [selectedComp, refreshVersion]);
 
   const nameOf = (id: string) => profiles.find((p) => p.id === id)?.display_name || 'Sem nome';
   const assignable = profiles.filter((p) => p.role === 'ORGANIZER' && !organizers.some((o) => o.user_id === p.id));
@@ -109,6 +118,7 @@ export function OrganizersTab() {
     if (err) { setError('Não foi possível atribuir este organizador.'); return; }
     setOrganizers((prev) => [...prev, { user_id: pickedUser }]);
     setPickedUser('');
+    refreshAdminData();
   }
 
   async function unassign(userId: string) {
@@ -116,6 +126,7 @@ export function OrganizersTab() {
     const { error: err } = await supabase.from('competition_organizers').delete().eq('competition_id', selectedComp).eq('user_id', userId);
     if (err) { setError('Não foi possível remover o organizador.'); return; }
     setOrganizers((prev) => prev.filter((o) => o.user_id !== userId));
+    refreshAdminData();
   }
 
   return (
@@ -135,14 +146,15 @@ export function OrganizersTab() {
               {assignable.map((p) => <option key={p.id} value={p.id}>{p.display_name || p.id.slice(0, 8)}</option>)}
             </FormSelect>
           </FormField>
-          {assignable.length === 0 && <p className="admin-hint">Promova um usuário a Organizador na aba Usuários para atribuí-lo aqui.</p>}
-          <FormError message={error} />
-          <button className="button button-primary" disabled={busy || !pickedUser}>{busy ? 'Aguarde...' : 'Atribuir'} <ArrowRight size={16} /></button>
+          {profilesError && <FormError message="Não foi possível carregar os perfis de usuário." />}
+          {assignable.length === 0 && !profilesError && <p className="admin-hint">Promova um usuário a Organizador na aba Usuários para atribuí-lo aqui.</p>}
+          <FormError message={error || (competitionsError ? 'Não foi possível carregar as competições.' : null)} />
+          <button className="button button-primary" disabled={busy || !pickedUser || profilesError || competitionsError}>{busy ? 'Aguarde...' : 'Atribuir'} <ArrowRight size={16} /></button>
         </form>
       </div>
       <div className="admin-list-card">
         <h3>Organizadores desta competição</h3>
-        {loading ? <LoadingCard /> : organizers.length === 0 ? <p className="admin-empty-text">Nenhum organizador atribuído.</p> : (
+        {loading ? <LoadingCard /> : error ? <FormError message={error} /> : organizers.length === 0 ? <p className="admin-empty-text">Nenhum organizador atribuído.</p> : (
           <div className="admin-list">
             {organizers.map((o) => (
               <div key={o.user_id} className="admin-list-item">

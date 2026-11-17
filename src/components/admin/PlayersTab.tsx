@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import { supabase, type Player } from '@/lib/supabase';
 import { usePlayers } from '@/lib/hooks';
+import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, PlayerPhoto, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 
 const positions: Player['position'][] = ['Goleiro', 'Volante', 'Pivô'];
 
 export function PlayersTab() {
-  const { players, loading } = usePlayers();
+  const { players, loading, error: playersError } = usePlayers();
   const [nickname, setNickname] = useState('');
   const [fullName, setFullName] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
@@ -25,14 +26,14 @@ export function PlayersTab() {
     setBusy(false);
     if (err) { setError('Não foi possível cadastrar o jogador.'); return; }
     setNickname(''); setFullName(''); setPhotoUrl(''); setNationality(''); setPosition('Volante');
-    window.location.reload();
+    refreshAdminData();
   }
 
   async function deletePlayer(id: string) {
     if (!window.confirm('Remover este jogador?')) return;
     const { error: err } = await supabase.from('players').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o jogador. Ele pode estar em algum elenco ou partida.'); return; }
-    window.location.reload();
+    refreshAdminData();
   }
 
   return (
@@ -64,7 +65,7 @@ export function PlayersTab() {
       </div>
       <div className="admin-list-card">
         <h3>Jogadores cadastrados</h3>
-        {loading ? <LoadingCard /> : players.length === 0 ? <p className="admin-empty-text">Nenhum jogador cadastrado ainda.</p> : (
+        {playersError ? <FormError message="Não foi possível carregar os jogadores cadastrados." /> : loading ? <LoadingCard /> : players.length === 0 ? <p className="admin-empty-text">Nenhum jogador cadastrado ainda.</p> : (
           <div className="admin-list">
             {players.map((p) => (
               <div key={p.id} className="admin-list-item">
@@ -83,14 +84,14 @@ export function PlayersTab() {
       </div>
       {editing && (
         <Modal title="Editar jogador" onClose={() => setEditing(null)}>
-          <PlayerEditForm player={editing} />
+          <PlayerEditForm player={editing} onSaved={() => setEditing(null)} />
         </Modal>
       )}
     </div>
   );
 }
 
-function PlayerEditForm({ player }: { player: Player }) {
+function PlayerEditForm({ player, onSaved }: { player: Player; onSaved: () => void }) {
   const [nickname, setNickname] = useState(player.nickname);
   const [fullName, setFullName] = useState(player.full_name ?? '');
   const [photoUrl, setPhotoUrl] = useState(player.photo_url ?? '');
@@ -112,7 +113,8 @@ function PlayerEditForm({ player }: { player: Player }) {
     }).eq('id', player.id);
     setBusy(false);
     if (err) { setError('Não foi possível salvar as alterações.'); return; }
-    window.location.reload();
+    refreshAdminData();
+    onSaved();
   }
 
   return (

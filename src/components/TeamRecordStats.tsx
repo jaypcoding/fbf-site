@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LoadingCard } from '@/components/ui';
+import { useAdminDataVersion } from '@/lib/adminRefresh';
 
 type TeamTotals = { played: number; wins: number; draws: number; losses: number; goalsFor: number; goalsAgainst: number };
 
 export function TeamRecordStats({ teamId }: { teamId: string }) {
   const [record, setRecord] = useState<TeamTotals | null>(null);
   const [error, setError] = useState(false);
+  const refreshVersion = useAdminDataVersion();
 
   useEffect(() => {
     let active = true;
+    setRecord(null);
+    setError(false);
     async function load() {
       const empty: TeamTotals = { played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 };
       const { data, error: queryError } = await supabase
@@ -31,7 +35,7 @@ export function TeamRecordStats({ teamId }: { teamId: string }) {
     }
     load();
     return () => { active = false; };
-  }, [teamId]);
+  }, [teamId, refreshVersion]);
 
   if (error) return <p className="admin-hint">Não foi possível carregar as estatísticas.</p>;
   if (!record) return <LoadingCard />;

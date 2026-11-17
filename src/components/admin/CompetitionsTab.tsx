@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ArrowRight, Pencil } from 'lucide-react';
 import { supabase, type Competition } from '@/lib/supabase';
-import { useCompetitions } from '@/lib/hooks';
+import { useManagedCompetitions } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
+import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 
 type Status = Competition['status'];
@@ -46,7 +47,7 @@ function competitionFields(competition: Competition): CompetitionFields {
 }
 
 export function CompetitionsTab() {
-  const { competitions, loading } = useCompetitions();
+  const { competitions, loading, error: competitionsError } = useManagedCompetitions();
   const { profile } = useAuth();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +65,7 @@ export function CompetitionsTab() {
         : 'Não foi possível atualizar o status da competição.');
       return;
     }
-    window.location.reload();
+    refreshAdminData();
   }
 
   return (
@@ -72,9 +73,9 @@ export function CompetitionsTab() {
       {isAdmin && <CompetitionCreateForm />}
       <div className="admin-list-card">
         <h3>Competições</h3>
-        <p className="admin-hint">O banco valida transições de status, vagas e encerramento de partidas. Organizadores só alteram competições atribuídas. Competições com partidas não podem ser excluídas: use “Cancelada / arquivada” ou “Finalizada” para preservar o histórico.</p>
+        <p className="admin-hint">As fases da temporada definem geração, classificação e avanço das equipes. Organizadores só alteram competições atribuídas; partidas concluídas são preservadas no histórico.</p>
         <FormError message={error} />
-        {loading ? <LoadingCard /> : competitions.length === 0 ? <p className="admin-empty-text">Nenhuma competição cadastrada.</p> : (
+        {competitionsError ? <FormError message="Não foi possível carregar as competições autorizadas para sua conta." /> : loading ? <LoadingCard /> : competitions.length === 0 ? <p className="admin-empty-text">{isAdmin ? 'Nenhuma competição cadastrada.' : 'Nenhuma competição foi atribuída à sua conta.'}</p> : (
           <div className="admin-list">
             {competitions.map((competition) => (
               <div key={competition.id} className="admin-list-item">
@@ -95,7 +96,7 @@ export function CompetitionsTab() {
       </div>
       {editing && (
         <Modal title="Editar competição" onClose={() => setEditing(null)}>
-          <CompetitionEditForm competition={editing} />
+          <CompetitionEditForm competition={editing} onSaved={() => setEditing(null)} />
         </Modal>
       )}
     </div>
@@ -122,7 +123,8 @@ function CompetitionCreateForm() {
     });
     setBusy(false);
     if (err) { setError('Não foi possível criar a competição.'); return; }
-    window.location.reload();
+    setFields(emptyFields);
+    refreshAdminData();
   }
 
   return (
@@ -137,7 +139,7 @@ function CompetitionCreateForm() {
   );
 }
 
-function CompetitionEditForm({ competition }: { competition: Competition }) {
+function CompetitionEditForm({ competition, onSaved }: { competition: Competition; onSaved: () => void }) {
   const [fields, setFields] = useState<CompetitionFields>(competitionFields(competition));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -156,7 +158,8 @@ function CompetitionEditForm({ competition }: { competition: Competition }) {
     }).eq('id', competition.id);
     setBusy(false);
     if (err) { setError('Não foi possível salvar as alterações.'); return; }
-    window.location.reload();
+    refreshAdminData();
+    onSaved();
   }
 
   return (
@@ -185,12 +188,15 @@ function CompetitionFieldsForm({ fields, setFields }: {
       </FormField>
       <FormField label="Formato">
         <FormSelect value={fields.format} onChange={(event) => setFields({ ...fields, format: event.target.value })}>
-          <option>Pontos corridos</option>
-          <option>Mata-mata</option>
-          <option>Grupos + Mata-mata</option>
-          <option>Personalizado</option>
+          <option value="Pontos corridos">Pontos corridos</option>
+          <option value="Mata-mata">Mata-mata</option>
+          <option value="Grupos + Mata-mata">Grupos + mata-mata</option>
+          <option value="Personalizado">Personalizado (montagem manual)</option>
+          {!['Pontos corridos', 'Mata-mata', 'Grupos + Mata-mata', 'Personalizado'].includes(fields.format)
+            && <option value={fields.format}>{fields.format} (formato legado)</option>}
         </FormSelect>
       </FormField>
+      <p className="admin-hint">Este formato será usado como padrão ao configurar as fases da temporada. Regras como turnos, grupos e classificações são definidas em cada fase.</p>
       <FormField label="Limite de times por temporada (opcional)">
         <FormInput type="number" min="1" value={fields.max_teams ?? ''} onChange={(event) => setFields({ ...fields, max_teams: event.target.value ? Number(event.target.value) : null })} />
       </FormField>

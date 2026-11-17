@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import { supabase, type Streamer } from '@/lib/supabase';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
+import { refreshAdminData, useAdminDataVersion } from '@/lib/adminRefresh';
 
 type Platform = Streamer['platform'];
 
@@ -14,6 +15,7 @@ type MatchOption = {
 };
 
 export function StreamersTab() {
+  const refreshVersion = useAdminDataVersion();
   const [streamers, setStreamers] = useState<Streamer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,25 +31,27 @@ export function StreamersTab() {
       setLoading(false);
     });
     return () => { active = false; };
-  }, []);
+  }, [refreshVersion]);
 
   async function create(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const displayName = String(form.get('display_name') ?? '').trim();
     const channel = String(form.get('channel') ?? '').trim();
     const platform = String(form.get('platform') ?? 'TWITCH') as Platform;
     if (!displayName || !channel) { setError('Preencha o nome e o canal.'); return; }
     const { error: err } = await supabase.from('streamers').insert({ display_name: displayName, channel, platform });
     if (err) { setError('Não foi possível cadastrar o streamer.'); return; }
-    window.location.reload();
+    formElement.reset();
+    refreshAdminData();
   }
 
   async function remove(id: string) {
     if (!window.confirm('Remover este streamer? Ele será desvinculado de todas as partidas.')) return;
     const { error: err } = await supabase.from('streamers').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o streamer.'); return; }
-    window.location.reload();
+    refreshAdminData();
   }
 
   return (
@@ -73,7 +77,7 @@ export function StreamersTab() {
       </div>
       <div className="admin-list-card">
         <h3>Streamers</h3>
-        {loading ? <LoadingCard /> : streamers.length === 0 ? <p className="admin-empty-text">Nenhum streamer cadastrado ainda.</p> : (
+        {error && loading === false && streamers.length === 0 ? <FormError message={error} /> : loading ? <LoadingCard /> : streamers.length === 0 ? <p className="admin-empty-text">Nenhum streamer cadastrado ainda.</p> : (
           <div className="admin-list">
             {streamers.map((s) => (
               <div key={s.id} className="admin-list-item">
@@ -93,7 +97,7 @@ export function StreamersTab() {
       </div>
       {editing && (
         <Modal title="Editar streamer" onClose={() => setEditing(null)}>
-          <StreamerEditForm streamer={editing} />
+          <StreamerEditForm streamer={editing} onSaved={() => setEditing(null)} />
         </Modal>
       )}
       {linking && (
@@ -105,7 +109,7 @@ export function StreamersTab() {
   );
 }
 
-function StreamerEditForm({ streamer }: { streamer: Streamer }) {
+function StreamerEditForm({ streamer, onSaved }: { streamer: Streamer; onSaved: () => void }) {
   const [displayName, setDisplayName] = useState(streamer.display_name);
   const [channel, setChannel] = useState(streamer.channel);
   const [platform, setPlatform] = useState<Platform>(streamer.platform);
@@ -119,7 +123,8 @@ function StreamerEditForm({ streamer }: { streamer: Streamer }) {
     const { error: err } = await supabase.from('streamers').update({ display_name: displayName.trim(), channel: channel.trim(), platform }).eq('id', streamer.id);
     setBusy(false);
     if (err) { setError('Não foi possível salvar as alterações.'); return; }
-    window.location.reload();
+    refreshAdminData();
+    onSaved();
   }
 
   return (
@@ -143,6 +148,7 @@ function StreamerEditForm({ streamer }: { streamer: Streamer }) {
 }
 
 function StreamerMatches({ streamer }: { streamer: Streamer }) {
+  const refreshVersion = useAdminDataVersion();
   const [matches, setMatches] = useState<MatchOption[]>([]);
   const [linkedIds, setLinkedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -161,7 +167,7 @@ function StreamerMatches({ streamer }: { streamer: Streamer }) {
       setLoading(false);
     });
     return () => { active = false; };
-  }, [streamer.id]);
+  }, [streamer.id, refreshVersion]);
 
   async function toggle(matchId: string, linked: boolean) {
     setError(null);

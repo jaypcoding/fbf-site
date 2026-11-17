@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Check, X } from 'lucide-react';
 import { supabase, type TeamRegistration } from '@/lib/supabase';
-import { useCompetitions, useSeasons, useTeams, useSeasonTeams } from '@/lib/hooks';
+import { useManagedCompetitions, useSeasons, useTeams, useSeasonTeams } from '@/lib/hooks';
+import { refreshAdminData, useAdminDataVersion } from '@/lib/adminRefresh';
 import { LoadingCard, TeamLogo, FormField, FormSelect, FormError } from '@/components/ui';
 
 export function RegistrationsTab() {
-  const { competitions } = useCompetitions();
+  const { competitions, loading: competitionsLoading, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
-  const { seasons } = useSeasons(selectedComp || undefined);
+  const { seasons, loading: seasonsLoading, error: seasonsError } = useSeasons(selectedComp || undefined);
   const [selectedSeason, setSelectedSeason] = useState('');
-  const { seasonTeams, loading: teamsLoading } = useSeasonTeams(selectedSeason || undefined);
-  const { teams } = useTeams();
+  const { seasonTeams, loading: seasonTeamsLoading, error: seasonTeamsError } = useSeasonTeams(selectedSeason || undefined);
+  const { teams, loading: teamsLoading, error: teamsError } = useTeams();
   const [registrations, setRegistrations] = useState<TeamRegistration[]>([]);
   const [registrationsLoading, setRegistrationsLoading] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState('');
+  const [registrationsError, setRegistrationsError] = useState(false);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const refreshVersion = useAdminDataVersion();
   const selectedCompetition = competitions.find((competition) => competition.id === selectedComp);
   const remainingTeams = teams.filter((team) =>
     !seasonTeams.some((entry) => entry.team_id === team.id)
@@ -23,6 +26,15 @@ export function RegistrationsTab() {
       registration.team_id === team.id && ['PENDING', 'APPROVED'].includes(registration.status),
     ),
   );
+  const pendingCount = registrations.filter((registration) => registration.status === 'PENDING').length;
+
+  useEffect(() => {
+    const availableIds = new Set(remainingTeams.map((team) => team.id));
+    setSelectedTeamIds((current) => {
+      const next = current.filter((teamId) => availableIds.has(teamId));
+      return next.length === current.length ? current : next;
+    });
+  }, [remainingTeams]);
 
   useEffect(() => {
     if (competitions.length > 0 && !competitions.some((competition) => competition.id === selectedComp)) {
@@ -47,6 +59,7 @@ export function RegistrationsTab() {
     }
     let active = true;
     setRegistrationsLoading(true);
+    setRegistrationsError(false);
     supabase
       .from('team_registrations')
       .select('id, season_id, team_id, status, submitted_by, reviewed_by, reviewed_at, created_at, team:team_id ( id, name, logo_url )')
@@ -54,26 +67,39 @@ export function RegistrationsTab() {
       .order('created_at', { ascending: false })
       .then(({ data, error: queryError }) => {
         if (!active) return;
-        if (queryError) setError('Não foi possível carregar as inscrições desta temporada.');
+        if (queryError) {
+          setRegistrations([]);
+          setRegistrationsError(true);
+          setError('Não foi possível carregar as inscrições desta temporada. Verifique o acesso à competição e tente novamente.');
+        }
         else setRegistrations((data || []) as unknown as TeamRegistration[]);
         setRegistrationsLoading(false);
       });
     return () => { active = false; };
-  }, [selectedSeason]);
+  }, [selectedSeason, refreshVersion]);
 
   async function register(event: React.FormEvent) {
     event.preventDefault();
-    if (!selectedSeason || !selectedTeam) { setError('Selecione uma temporada e um time.'); return; }
+    if (!selectedSeason || selectedTeamIds.length === 0) { setError('Selecione uma temporada e pelo menos um time.'); return; }
     setBusy(true);
     setError(null);
-    const { error: rpcError } = await supabase.rpc('register_team_for_season', {
-      p_season_id: selectedSeason,
-      p_team_id: selectedTeam,
-    });
+    const failedIds: string[] = [];
+    const failures: string[] = [];
+    for (const teamId of selectedTeamIds) {
+      const { error: rpcError } = await supabase.rpc('register_team_for_season', {
+        p_season_id: selectedSeason,
+        p_team_id: teamId,
+      });
+      if (rpcError) {
+        failedIds.push(teamId);
+        const teamName = teams.find((team) => team.id === teamId)?.name ?? 'Time selecionado';
+        failures.push(`${teamName}: ${rpcError.message || 'não foi possível criar a inscrição'}`);
+      }
+    }
     setBusy(false);
-    if (rpcError) { setError(rpcError.message || 'Não foi possível criar a inscrição.'); return; }
-    setSelectedTeam('');
-    window.location.reload();
+    setSelectedTeamIds(failedIds);
+    if (failedIds.length < selectedTeamIds.length) refreshAdminData();
+    if (failures.length > 0) setError(`Algumas inscrições não foram concluídas. ${failures.join(' ')}`);
   }
 
   async function review(registration: TeamRegistration, decision: 'APPROVED' | 'REJECTED') {
@@ -85,7 +111,7 @@ export function RegistrationsTab() {
     });
     setBusy(false);
     if (rpcError) { setError(rpcError.message || 'Não foi possível atualizar a inscrição.'); return; }
-    window.location.reload();
+    refreshAdminData();
   }
 
   async function withdraw(registration: TeamRegistration) {
@@ -97,7 +123,7 @@ export function RegistrationsTab() {
     });
     setBusy(false);
     if (rpcError) { setError(rpcError.message || 'Não foi possível retirar a inscrição.'); return; }
-    window.location.reload();
+    refreshAdminData();
   }
 
   const statusLabel: Record<TeamRegistration['status'], string> = {
@@ -113,31 +139,58 @@ export function RegistrationsTab() {
         <h3>Inscrever time</h3>
         <form onSubmit={register}>
           <FormField label="Competição">
-            <FormSelect value={selectedComp} onChange={(event) => { setSelectedComp(event.target.value); setSelectedSeason(''); setSelectedTeam(''); }}>
+            <FormSelect value={selectedComp} disabled={competitionsLoading} onChange={(event) => { setError(null); setSelectedComp(event.target.value); setSelectedSeason(''); setSelectedTeamIds([]); }}>
               <option value="">Selecione...</option>
               {competitions.map((competition) => <option key={competition.id} value={competition.id}>{competition.name}</option>)}
             </FormSelect>
           </FormField>
           <FormField label="Temporada">
-            <FormSelect value={selectedSeason} onChange={(event) => { setSelectedSeason(event.target.value); setSelectedTeam(''); }} disabled={!seasons.length}>
+            <FormSelect value={selectedSeason} onChange={(event) => { setError(null); setSelectedSeason(event.target.value); setSelectedTeamIds([]); }} disabled={seasonsLoading || !seasons.length}>
               <option value="">Selecione...</option>
               {seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}
             </FormSelect>
           </FormField>
-          <FormField label="Time">
-            <FormSelect value={selectedTeam} onChange={(event) => setSelectedTeam(event.target.value)}>
-              <option value="">Selecione...</option>
-              {remainingTeams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
-            </FormSelect>
-          </FormField>
+          <div className="form-field">
+            <span className="form-field-label">Times cadastrados</span>
+            {teamsLoading || seasonTeamsLoading || registrationsLoading ? <LoadingCard /> : teamsError || seasonTeamsError || registrationsError ? (
+              <FormError message="Não foi possível carregar todos os dados de inscrição. Verifique suas permissões para esta competição e tente novamente." />
+            ) : !selectedSeason ? (
+              <p className="admin-empty-text">Selecione uma temporada para ver os times disponíveis.</p>
+            ) : remainingTeams.length === 0 ? (
+              <p className="admin-empty-text">{teams.length === 0 ? 'Cadastre equipes na plataforma antes de inscrevê-las.' : 'Não há equipes disponíveis para inscrição nesta temporada.'}</p>
+            ) : (
+              <div className="admin-list">
+                {remainingTeams.map((team) => (
+                  <label key={team.id} className="admin-list-item">
+                    <span className="admin-list-team">
+                      <TeamLogo src={team.logo_url} name={team.name} size={30} />
+                      <strong>{team.name}</strong>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={selectedTeamIds.includes(team.id)}
+                      disabled={busy || selectedCompetition?.status !== 'REGISTRATION'}
+                      onChange={(event) => setSelectedTeamIds((current) =>
+                        event.target.checked
+                          ? [...current, team.id]
+                          : current.filter((id) => id !== team.id),
+                      )}
+                      aria-label={`Selecionar ${team.name} para inscrição`}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           <FormError message={error} />
-          <button className="button button-primary" disabled={busy || !selectedSeason || !selectedTeam || selectedCompetition?.status !== 'REGISTRATION'}>
-            {busy ? 'Aguarde...' : 'Enviar inscrição'} <ArrowRight size={16} />
+          <button className="button button-primary" disabled={busy || !selectedSeason || !selectedTeamIds.length || selectedCompetition?.status !== 'REGISTRATION'}>
+            {busy ? 'Aguarde...' : `Enviar inscrição${selectedTeamIds.length ? ` (${selectedTeamIds.length})` : ''}`} <ArrowRight size={16} />
           </button>
         </form>
+        <FormError message={competitionsError ? 'Não foi possível carregar as competições.' : seasonsError ? 'Não foi possível carregar as temporadas.' : null} />
         {!seasons.length && selectedComp && <p className="admin-hint">Crie uma temporada para esta competição primeiro, na aba Temporadas.</p>}
         {selectedCompetition && selectedCompetition.status !== 'REGISTRATION' && <p className="admin-hint">As inscrições só podem ser enviadas quando a competição estiver com inscrições abertas.</p>}
-        {selectedCompetition?.max_teams && <p className="admin-hint">Limite da competição: {selectedCompetition.max_teams} times; aprovados nesta temporada: {seasonTeams.length}.</p>}
+        {selectedCompetition?.max_teams && <p className="admin-hint">Limite da competição: {selectedCompetition.max_teams} times; aprovados: {seasonTeams.length}; pendentes: {pendingCount}.</p>}
       </div>
       <div className="admin-list-card">
         <h3>Inscrições e times aprovados</h3>

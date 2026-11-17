@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Trash2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { useCompetitions, useSeasons, useStages, useRounds } from '@/lib/hooks';
+import { supabase, type Stage } from '@/lib/supabase';
+import { useManagedCompetitions, useSeasons, useStages, useRounds } from '@/lib/hooks';
 import { LoadingCard, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 import { GenerateRoundsForm } from '@/components/admin/GenerateRoundsForm';
+import { refreshAdminData } from '@/lib/adminRefresh';
 
 const tieBreakerOptions = [
   ['Pontos', 'POINTS'],
   ['Vitórias', 'WINS'],
+  ['Empates', 'DRAWS'],
+  ['Derrotas', 'LOSSES'],
   ['Saldo de gols', 'GOAL_DIFF'],
   ['Gols marcados', 'GOALS_FOR'],
   ['Gols sofridos', 'GOALS_AGAINST'],
@@ -16,17 +19,24 @@ const tieBreakerOptions = [
 const defaultTieBreakers = 'Pontos, Vitórias, Saldo de gols, Gols marcados, Nome do time';
 
 export function StagesTab() {
-  const { competitions } = useCompetitions();
+  const { competitions, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
   const { seasons } = useSeasons(selectedComp || undefined);
   const [selectedSeason, setSelectedSeason] = useState('');
-  const { stages, loading } = useStages(selectedSeason || undefined);
+  const { stages, loading, error: stagesError } = useStages(selectedSeason || undefined);
   const [stageName, setStageName] = useState('');
   const [stageFormat, setStageFormat] = useState('Pontos corridos');
+  const [roundRobinLegs, setRoundRobinLegs] = useState<1 | 2>(1);
+  const [groupLegs, setGroupLegs] = useState<1 | 2>(1);
+  const [knockoutLegs, setKnockoutLegs] = useState<1 | 2>(1);
+  const [groupCount, setGroupCount] = useState(2);
+  const [qualifiersPerGroup, setQualifiersPerGroup] = useState(2);
+  const [groupCrossing, setGroupCrossing] = useState<'RANKED' | 'DRAW'>('RANKED');
+  const [thirdPlace, setThirdPlace] = useState(false);
   const [stageOrder, setStageOrder] = useState('1');
   const [tieBreakerInput, setTieBreakerInput] = useState(defaultTieBreakers);
   const [selectedStage, setSelectedStage] = useState('');
-  const { rounds } = useRounds();
+  const { rounds, error: roundsError } = useRounds(undefined, true);
   const [roundName, setRoundName] = useState('');
   const [roundOrder, setRoundOrder] = useState('1');
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +55,11 @@ export function StagesTab() {
   async function createStage(event: React.FormEvent) {
     event.preventDefault();
     if (!selectedSeason || !stageName.trim()) { setError('Selecione uma temporada e dê um nome à fase.'); return; }
+    if (stageFormat === 'Grupos + Mata-mata'
+      && (!Number.isInteger(groupCount) || groupCount < 2 || !Number.isInteger(qualifiersPerGroup) || qualifiersPerGroup < 1)) {
+      setError('Configure ao menos dois grupos e uma quantidade válida de classificados por grupo.');
+      return;
+    }
     const labelsToIds = new Map(tieBreakerOptions.map(([label, id]) => [label.toLocaleLowerCase('pt-BR'), id]));
     const tieBreakers = tieBreakerInput.split(',').map((item) => labelsToIds.get(item.trim().toLocaleLowerCase('pt-BR')));
     if (tieBreakers.length === 0 || tieBreakers.some((item) => !item) || new Set(tieBreakers).size !== tieBreakers.length) {
@@ -58,36 +73,60 @@ export function StagesTab() {
       format: stageFormat,
       stage_order: parseInt(stageOrder, 10) || 1,
       tie_breakers: tieBreakers,
+      settings: stageFormat === 'Pontos corridos'
+        ? { legs: roundRobinLegs }
+        : {
+            knockout_legs: knockoutLegs,
+            group_legs: groupLegs,
+            group_count: groupCount,
+            qualifiers_per_group: qualifiersPerGroup,
+            group_crossing: groupCrossing,
+            third_place: thirdPlace,
+          },
     });
     setBusy(false);
     if (err) { setError(err.message || 'Não foi possível criar a fase.'); return; }
     setStageName(''); setStageOrder('1');
-    window.location.reload();
+    refreshAdminData();
   }
 
   async function deleteStage(id: string) {
-    if (!window.confirm('Remover esta fase e todas as suas rodadas e partidas?')) return;
+    if (roundsError) { setError('Não foi possível verificar as rodadas desta fase.'); return; }
+    const roundIds = rounds.filter((round) => round.stage_id === id).map((round) => round.id);
+    if (roundIds.length > 0) {
+      const { count, error: countError } = await supabase.from('matches').select('id', { count: 'exact', head: true }).in('round_id', roundIds);
+      if (countError) { setError('Não foi possível verificar se a fase possui partidas.'); return; }
+      if (count) { setError('Esta fase possui partidas e não pode ser removida. Preserve o histórico e encerre a competição, se necessário.'); return; }
+    }
+    if (!window.confirm('Remover esta fase e suas rodadas vazias?')) return;
     const { error: err } = await supabase.from('stages').delete().eq('id', id);
-    if (err) { setError('Não foi possível remover a fase.'); return; }
-    window.location.reload();
+    if (err) { setError('Não foi possível remover a fase. O banco pode estar protegendo dados vinculados.'); return; }
+    refreshAdminData();
   }
 
   async function createRound(event: React.FormEvent) {
     event.preventDefault();
     if (!selectedStage || !roundName.trim()) { setError('Selecione uma fase e dê um nome à rodada.'); return; }
+    if (rounds.some((round) => round.stage_id === selectedStage && round.round_order === (parseInt(roundOrder, 10) || 1))) {
+      setError('Já existe uma rodada com esta ordem nesta fase.');
+      return;
+    }
     setBusy(true); setError(null);
     const { error: err } = await supabase.from('rounds').insert({ stage_id: selectedStage, name: roundName.trim(), round_order: parseInt(roundOrder, 10) || 1 });
     setBusy(false);
     if (err) { setError('Não foi possível criar a rodada.'); return; }
     setRoundName(''); setRoundOrder('1');
-    window.location.reload();
+    refreshAdminData();
   }
 
   async function deleteRound(id: string) {
-    if (!window.confirm('Remover esta rodada e todas as suas partidas?')) return;
+    const { count, error: countError } = await supabase.from('matches').select('id', { count: 'exact', head: true }).eq('round_id', id);
+    if (countError) { setError('Não foi possível verificar se a rodada possui partidas.'); return; }
+    if (count) { setError('Esta rodada possui partidas e não pode ser removida. Preserve o histórico da competição.'); return; }
+    if (!window.confirm('Remover esta rodada vazia?')) return;
     const { error: err } = await supabase.from('rounds').delete().eq('id', id);
-    if (err) { setError('Não foi possível remover a rodada.'); return; }
-    window.location.reload();
+    if (err) { setError('Não foi possível remover a rodada. O banco pode estar protegendo dados vinculados.'); return; }
+    refreshAdminData();
   }
 
   return (
@@ -96,7 +135,15 @@ export function StagesTab() {
         <h3>Nova fase</h3>
         <form onSubmit={createStage}>
           <FormField label="Competição">
-            <FormSelect value={selectedComp} onChange={(e) => { setSelectedComp(e.target.value); setSelectedSeason(''); setSelectedStage(''); }}>
+            <FormSelect value={selectedComp} onChange={(e) => {
+              const nextCompetition = competitions.find((competition) => competition.id === e.target.value);
+              setSelectedComp(e.target.value);
+              setSelectedSeason('');
+              setSelectedStage('');
+              if (nextCompetition && ['Pontos corridos', 'Mata-mata', 'Grupos + Mata-mata'].includes(nextCompetition.format)) {
+                setStageFormat(nextCompetition.format);
+              }
+            }}>
               <option value="">Selecione...</option>
               {competitions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </FormSelect>
@@ -113,18 +160,65 @@ export function StagesTab() {
           <FormField label="Formato">
             <FormSelect value={stageFormat} onChange={(e) => setStageFormat(e.target.value)}>
               <option>Pontos corridos</option>
-              <option>Mata-mata</option>
-              <option>Grupos + Mata-mata</option>
-              <option>Personalizado</option>
+              <option value="Mata-mata">Mata-mata</option>
+              <option value="Grupos + Mata-mata">Grupos + mata-mata</option>
+              <option value="Personalizado">Personalizado (montagem manual)</option>
             </FormSelect>
           </FormField>
+          {stageFormat === 'Pontos corridos' ? (
+            <FormField label="Turnos">
+              <FormSelect value={roundRobinLegs} onChange={(e) => setRoundRobinLegs(Number(e.target.value) as 1 | 2)}>
+                <option value={1}>Turno único</option>
+                <option value={2}>Turno e returno</option>
+              </FormSelect>
+            </FormField>
+          ) : stageFormat === 'Mata-mata' || stageFormat === 'Grupos + Mata-mata' ? (
+            <>
+              {stageFormat === 'Grupos + Mata-mata' && (
+                <>
+                  <FormField label="Quantidade de grupos">
+                    <FormInput type="number" min="2" value={groupCount} onChange={(e) => setGroupCount(Number(e.target.value))} />
+                  </FormField>
+                  <FormField label="Classificados por grupo">
+                    <FormInput type="number" min="1" value={qualifiersPerGroup} onChange={(e) => setQualifiersPerGroup(Number(e.target.value))} />
+                  </FormField>
+                  <FormField label="Cruzamentos entre grupos">
+                    <FormSelect value={groupCrossing} onChange={(e) => setGroupCrossing(e.target.value as 'RANKED' | 'DRAW')}>
+                      <option value="RANKED">Por colocação, sem repetir grupo</option>
+                      <option value="DRAW">Sorteio, sem repetir grupo</option>
+                    </FormSelect>
+                  </FormField>
+                  <FormField label="Turnos na fase de grupos">
+                    <FormSelect value={groupLegs} onChange={(e) => setGroupLegs(Number(e.target.value) as 1 | 2)}>
+                      <option value={1}>Turno único</option>
+                      <option value={2}>Turno e returno</option>
+                    </FormSelect>
+                  </FormField>
+                </>
+              )}
+              <FormField label={stageFormat === 'Grupos + Mata-mata' ? 'Turnos no mata-mata' : 'Jogos por confronto'}>
+                <FormSelect value={knockoutLegs} onChange={(e) => setKnockoutLegs(Number(e.target.value) as 1 | 2)}>
+                  <option value={1}>Jogo único</option>
+                  <option value={2}>Ida e volta</option>
+                </FormSelect>
+              </FormField>
+              <FormField label="Disputa de terceiro lugar">
+                <FormSelect value={thirdPlace ? 'yes' : 'no'} onChange={(e) => setThirdPlace(e.target.value === 'yes')}>
+                  <option value="no">Não</option>
+                  <option value="yes">Sim</option>
+                </FormSelect>
+              </FormField>
+            </>
+          ) : (
+            <p className="admin-hint">Formato legado: cadastre as rodadas e partidas manualmente.</p>
+          )}
           <FormField label="Ordem">
             <FormInput type="number" min="1" value={stageOrder} onChange={(e) => setStageOrder(e.target.value)} />
           </FormField>
           <FormField label="Critérios de desempate (ordem)">
             <FormInput value={tieBreakerInput} onChange={(e) => setTieBreakerInput(e.target.value)} placeholder={defaultTieBreakers} />
           </FormField>
-          <FormError message={error} />
+          <FormError message={error || (competitionsError ? 'Não foi possível carregar as competições autorizadas.' : null)} />
           <button className="button button-primary" disabled={busy || !selectedSeason}>{busy ? 'Aguarde...' : 'Criar fase'} <ArrowRight size={16} /></button>
         </form>
         {stages.length > 0 && (
@@ -148,11 +242,13 @@ export function StagesTab() {
             </form>
           </>
         )}
-        {selectedStage && selectedSeason && <GenerateRoundsForm stageId={selectedStage} seasonId={selectedSeason} />}
+        {selectedStage && selectedSeason && stages.find((stage) => stage.id === selectedStage)
+          ? <GenerateRoundsForm stage={stages.find((stage) => stage.id === selectedStage) as Stage} seasonId={selectedSeason} />
+          : null}
       </div>
       <div className="admin-list-card">
         <h3>Fases e rodadas</h3>
-        {loading ? <LoadingCard /> : stages.length === 0 ? <p className="admin-empty-text">Nenhuma fase criada ainda.</p> : (
+        {stagesError || roundsError ? <FormError message="Não foi possível carregar as fases e rodadas. Verifique a competição e suas permissões." /> : loading ? <LoadingCard /> : stages.length === 0 ? <p className="admin-empty-text">Nenhuma fase criada ainda.</p> : (
           <div className="admin-list">
             {stages.map((s) => {
               const stageRounds = rounds.filter((r) => r.stage_id === s.id);

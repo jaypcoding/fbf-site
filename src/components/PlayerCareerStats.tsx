@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { LoadingCard } from '@/components/ui';
+import { useAdminDataVersion } from '@/lib/adminRefresh';
 
 export function PlayerCareerStats({ playerId }: { playerId: string }) {
   const [totals, setTotals] = useState<{ goals: number; assists: number } | null>(null);
   const [error, setError] = useState(false);
+  const refreshVersion = useAdminDataVersion();
 
   useEffect(() => {
     let active = true;
+    setTotals(null);
+    setError(false);
     supabase.from('player_career_statistics').select('goals, assists').eq('player_id', playerId).maybeSingle().then(({ data, error: err }) => {
     if (!active) return;
     if (err) { setError(true); return; }
@@ -17,7 +21,7 @@ export function PlayerCareerStats({ playerId }: { playerId: string }) {
     });
     });
     return () => { active = false; };
-  }, [playerId]);
+  }, [playerId, refreshVersion]);
 
   if (error) return <p className="admin-hint">Não foi possível carregar as estatísticas.</p>;
   if (!totals) return <LoadingCard />;

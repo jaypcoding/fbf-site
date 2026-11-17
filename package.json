@@ -11,7 +11,7 @@
     "db:start": "supabase start",
     "db:reset": "node scripts/supabase-local.mjs reset",
     "db:test": "node scripts/supabase-local.mjs test-db",
-    "test:integration": "npm run db:start && npm run db:reset && npm run db:test && node scripts/test-round-robin-concurrency.mjs && node scripts/test-legacy-migration.mjs",
+    "test:integration": "npm run db:start && npm run db:reset && npm run db:test && node scripts/test-round-robin-concurrency.mjs && node scripts/test-knockout-progression-concurrency.mjs && node scripts/test-legacy-migration.mjs",
     "supabase:check": "node --experimental-strip-types scripts/check-supabase-connection.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"

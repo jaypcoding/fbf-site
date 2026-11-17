@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Trash2 } from 'lucide-react';
 import { supabase, type Match, type MatchEvent } from '@/lib/supabase';
-import { useCompetitions, useSeasons, useStages, useRounds, useMatches, useMatchEvents, useRosters } from '@/lib/hooks';
+import { useManagedCompetitions, useSeasons, useStages, useRounds, useMatches, useMatchEvents, useRosters, useGoalkeeperParticipations } from '@/lib/hooks';
 import { parseClock, formatClock } from '@/lib/time';
+import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 
 type EventType = MatchEvent['event_type'];
@@ -22,15 +23,15 @@ const periodLabels = {
 } as const;
 
 export function EventsTab() {
-  const { competitions } = useCompetitions();
+  const { competitions, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
-  const { seasons } = useSeasons(selectedComp || undefined);
+  const { seasons, error: seasonsError } = useSeasons(selectedComp || undefined);
   const [selectedSeason, setSelectedSeason] = useState('');
-  const { stages } = useStages(selectedSeason || undefined);
+  const { stages, error: stagesError } = useStages(selectedSeason || undefined);
   const [selectedStage, setSelectedStage] = useState('');
-  const { rounds } = useRounds(selectedStage || undefined);
+  const { rounds, error: roundsError } = useRounds(selectedStage || undefined);
   const [selectedRound, setSelectedRound] = useState('');
-  const { matches } = useMatches(selectedRound || undefined);
+  const { matches, error: matchesError } = useMatches(selectedRound || undefined);
   const [selectedMatch, setSelectedMatch] = useState('');
   const match = matches.find((m) => m.id === selectedMatch) ?? null;
 
@@ -51,6 +52,7 @@ export function EventsTab() {
     <div className="admin-grid">
       <div className="admin-form-card">
         <h3>Registrar evento</h3>
+        {(competitionsError || seasonsError || stagesError || roundsError || matchesError) && <FormError message="Não foi possível carregar todos os dados da partida. Verifique suas permissões e tente novamente." />}
         <FormField label="Competição">
           <FormSelect value={selectedComp} onChange={(e) => { setSelectedComp(e.target.value); setSelectedSeason(''); setSelectedStage(''); setSelectedRound(''); setSelectedMatch(''); }}>
             <option value="">Selecione...</option>
@@ -81,7 +83,7 @@ export function EventsTab() {
             {matches.map((m) => <option key={m.id} value={m.id}>{m.home_team?.team?.name || '—'} x {m.away_team?.team?.name || '—'}</option>)}
           </FormSelect>
         </FormField>
-        {match && <EventForm match={match} />}
+        {match && <EventForm key={match.id} match={match} />}
       </div>
       <div className="admin-list-card">
         <h3>Eventos da partida</h3>
@@ -102,8 +104,9 @@ function EventForm({ match }: { match: Match }) {
   const [ownGoal, setOwnGoal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const { rosters } = useRosters(teamId || undefined);
-  const { events } = useMatchEvents(match.id);
+  const { rosters, error: rostersError } = useRosters(teamId || undefined);
+  const { events, error: eventsError } = useMatchEvents(match.id);
+  const { spells, error: spellsError } = useGoalkeeperParticipations([match.id]);
   const teamOptions = [match.home_team, match.away_team].filter(Boolean);
   const assistGoals = events.filter((item) =>
     item.event_type === 'GOAL'
@@ -111,13 +114,21 @@ function EventForm({ match }: { match: Match }) {
     && item.period !== 'PENALTY_SHOOTOUT'
     && item.team_id === teamId,
   );
+  const eventPlayers = eventType === 'GOALKEEPER_IN'
+    ? rosters.filter((roster) => roster.player?.position === 'Goleiro')
+    : eventType === 'GOALKEEPER_OUT'
+      ? spells.filter((spell) => spell.team_id === teamId && spell.ended_at_seconds === null)
+        .map((spell) => ({ player_id: spell.player_id, player: spell.player }))
+      : rosters;
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
     const seconds = parseClock(minute);
     if (seconds === null) { setError('Informe o minuto como 12 ou 12:30.'); return; }
     if (!teamId || !playerId) { setError('Selecione o time e o jogador.'); return; }
+    if (!eventPlayers.some((player) => player.player_id === playerId)) { setError('Selecione um jogador válido para este tipo de evento e time.'); return; }
     if (eventType === 'SUBSTITUTION' && !relatedId) { setError('Informe quem saiu na substituição.'); return; }
+    if (eventType === 'SUBSTITUTION' && relatedId === playerId) { setError('Quem entra e quem sai devem ser jogadores diferentes.'); return; }
     if (eventType === 'ASSIST' && !goalEventId) { setError('Vincule a assistência a um gol válido.'); return; }
     const linkedGoal = events.find((item) => item.id === goalEventId);
     if (eventType === 'ASSIST' && (!linkedGoal || linkedGoal.team_id !== teamId)) {
@@ -137,8 +148,13 @@ function EventForm({ match }: { match: Match }) {
       related_player_id: eventType === 'SUBSTITUTION' ? relatedId : null,
     });
     setBusy(false);
-    if (err) { setError('Não foi possível registrar o evento.'); return; }
-    window.location.reload();
+    if (err) { setError(err.message || 'Não foi possível registrar o evento.'); return; }
+    setMinute('');
+    setPlayerId('');
+    setRelatedId('');
+    setGoalEventId('');
+    setOwnGoal(false);
+    refreshAdminData();
   }
 
   return (
@@ -196,12 +212,13 @@ function EventForm({ match }: { match: Match }) {
           {teamOptions.map((st) => st && <option key={st.id} value={st.id}>{st.team?.name || '—'}</option>)}
         </FormSelect>
       </FormField>
-      <FormField label={eventType === 'SUBSTITUTION' ? 'Quem entrou' : 'Jogador'}>
+      <FormField label={eventType === 'SUBSTITUTION' ? 'Quem entrou' : eventType === 'GOALKEEPER_IN' || eventType === 'GOALKEEPER_OUT' ? 'Goleiro' : 'Jogador'}>
         <FormSelect value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
           <option value="">Selecione...</option>
-          {rosters.map((r) => <option key={r.id} value={r.player_id}>{r.player?.nickname}</option>)}
+          {eventPlayers.map((roster) => <option key={roster.player_id} value={roster.player_id}>{roster.player?.nickname}</option>)}
         </FormSelect>
       </FormField>
+      {(rostersError || eventsError || (eventType === 'GOALKEEPER_OUT' && spellsError)) && <FormError message="Não foi possível carregar os dados para registrar este evento." />}
       {eventType === 'SUBSTITUTION' && (
         <FormField label="Quem saiu">
           <FormSelect value={relatedId} onChange={(e) => setRelatedId(e.target.value)}>
@@ -216,23 +233,25 @@ function EventForm({ match }: { match: Match }) {
         </FormField>
       )}
       <FormError message={error} />
-      <button className="button button-primary" disabled={busy}>{busy ? 'Aguarde...' : 'Registrar evento'} <ArrowRight size={16} /></button>
+      <button className="button button-primary" disabled={busy || rostersError || eventsError || (eventType === 'GOALKEEPER_OUT' && spellsError)}>{busy ? 'Aguarde...' : 'Registrar evento'} <ArrowRight size={16} /></button>
     </form>
   );
 }
 
 function MatchEventList({ matchId }: { matchId: string }) {
-  const { events, loading } = useMatchEvents(matchId);
+  const { events, loading, error: loadError } = useMatchEvents(matchId);
   const [error, setError] = useState<string | null>(null);
 
   async function remove(id: string) {
     if (!window.confirm('Remover este evento?')) return;
     const { error: err } = await supabase.from('match_events').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o evento.'); return; }
-    window.location.reload();
+    refreshAdminData();
   }
 
   if (loading) return <LoadingCard />;
+  if (loadError) return <FormError message="Não foi possível carregar os eventos desta partida." />;
+  if (loadError) return <FormError message="Não foi possível carregar os eventos desta partida." />;
   if (events.length === 0) return <p className="admin-empty-text">Nenhum evento registrado nesta partida.</p>;
   return (
     <div className="admin-list">

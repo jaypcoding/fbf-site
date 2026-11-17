@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Pencil } from 'lucide-react';
 import { supabase, type Match, type SeasonTeam } from '@/lib/supabase';
-import { useCompetitions, useSeasons, useStages, useRounds, useMatches, useSeasonTeams } from '@/lib/hooks';
+import { useManagedCompetitions, useSeasons, useStages, useRounds, useMatches, useSeasonTeams } from '@/lib/hooks';
 import { matchStatusLabels } from '@/lib/labels';
 import { availableMatchStatuses } from '@/lib/matchRules';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 import { formatClock, parseClock } from '@/lib/time';
+import { refreshAdminData } from '@/lib/adminRefresh';
 
 type MatchStatus = Match['status'];
 
@@ -27,7 +28,7 @@ function teamName(st?: SeasonTeam) {
 }
 
 export function MatchesTab() {
-  const { competitions } = useCompetitions();
+  const { competitions, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
   const { seasons } = useSeasons(selectedComp || undefined);
   const [selectedSeason, setSelectedSeason] = useState('');
@@ -35,8 +36,8 @@ export function MatchesTab() {
   const [selectedStage, setSelectedStage] = useState('');
   const { rounds } = useRounds(selectedStage || undefined);
   const [selectedRound, setSelectedRound] = useState('');
-  const { matches, loading } = useMatches(selectedRound || undefined);
-  const { seasonTeams } = useSeasonTeams(selectedSeason || undefined);
+  const { matches, loading, error: matchesError } = useMatches(selectedRound || undefined);
+  const { seasonTeams, error: seasonTeamsError } = useSeasonTeams(selectedSeason || undefined);
   const [homeTeam, setHomeTeam] = useState('');
   const [awayTeam, setAwayTeam] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
@@ -71,7 +72,7 @@ export function MatchesTab() {
     setBusy(false);
     if (err) { setError('Não foi possível criar a partida.'); return; }
     setHomeTeam(''); setAwayTeam(''); setScheduledAt('');
-    window.location.reload();
+    refreshAdminData();
   }
 
   return (
@@ -118,13 +119,13 @@ export function MatchesTab() {
           <FormField label="Data e hora">
             <FormInput type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
           </FormField>
-          <FormError message={error} />
+          <FormError message={error || (competitionsError ? 'Não foi possível carregar as competições autorizadas.' : null)} />
           <button className="button button-primary" disabled={busy || !selectedRound}>{busy ? 'Aguarde...' : 'Criar partida'} <ArrowRight size={16} /></button>
         </form>
       </div>
       <div className="admin-list-card">
         <h3>Partidas da rodada</h3>
-        {loading ? <LoadingCard /> : !selectedRound ? <p className="admin-empty-text">Selecione uma rodada para ver as partidas.</p> : matches.length === 0 ? <p className="admin-empty-text">Nenhuma partida nesta rodada.</p> : (
+        {matchesError || seasonTeamsError ? <FormError message="Não foi possível carregar as partidas ou as equipes inscritas. Verifique suas permissões e tente novamente." /> : loading ? <LoadingCard /> : !selectedRound ? <p className="admin-empty-text">Selecione uma rodada para ver as partidas.</p> : matches.length === 0 ? <p className="admin-empty-text">Nenhuma partida nesta rodada.</p> : (
           <div className="admin-list">
             {matches.map((m) => (
               <MatchRow key={m.id} match={m} onEdit={() => setEditing(m)} />
@@ -134,7 +135,7 @@ export function MatchesTab() {
       </div>
       {editing && (
         <Modal title="Editar partida" onClose={() => setEditing(null)}>
-          <MatchEditForm match={editing} seasonTeams={seasonTeams} />
+          <MatchEditForm match={editing} seasonTeams={seasonTeams} onSaved={() => setEditing(null)} />
         </Modal>
       )}
     </div>
@@ -152,6 +153,7 @@ function MatchRow({ match, onEdit }: { match: Match; onEdit: () => void }) {
     setBusy(false);
     if (err) { setError('Não foi possível mudar o status.'); return; }
     setStatusValue(value);
+    refreshAdminData();
   }
 
   return (
@@ -181,7 +183,7 @@ function MatchRow({ match, onEdit }: { match: Match; onEdit: () => void }) {
   );
 }
 
-function MatchEditForm({ match, seasonTeams }: { match: Match; seasonTeams: SeasonTeam[] }) {
+function MatchEditForm({ match, seasonTeams, onSaved }: { match: Match; seasonTeams: SeasonTeam[]; onSaved: () => void }) {
   const [homeTeam, setHomeTeam] = useState(match.home_team_id ?? '');
   const [awayTeam, setAwayTeam] = useState(match.away_team_id ?? '');
   const [scheduledAt, setScheduledAt] = useState(toLocalInput(match.scheduled_at));
@@ -206,7 +208,8 @@ function MatchEditForm({ match, seasonTeams }: { match: Match; seasonTeams: Seas
     }).eq('id', match.id);
     setBusy(false);
     if (err) { setError('Não foi possível salvar as alterações.'); return; }
-    window.location.reload();
+    refreshAdminData();
+    onSaved();
   }
 
   return (

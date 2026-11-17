@@ -3,6 +3,7 @@ import { Hand } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatClock } from '@/lib/time';
 import { LoadingCard, EmptyState, PlayerPhoto, TeamLogo } from '@/components/ui';
+import { useAdminDataVersion } from '@/lib/adminRefresh';
 
 type KeeperRow = {
   player_id: string;
@@ -31,6 +32,7 @@ export function GoalkeeperRanking({ competitionId }: { competitionId?: string })
   const [rows, setRows] = useState<KeeperRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const refreshVersion = useAdminDataVersion();
 
   useEffect(() => {
     let active = true;
@@ -47,7 +49,7 @@ export function GoalkeeperRanking({ competitionId }: { competitionId?: string })
       setLoading(false);
     });
     return () => { active = false; };
-  }, [competitionId]);
+  }, [competitionId, refreshVersion]);
 
   const keepers = useMemo(() => {
     const byPlayer = new Map<string, Keeper>();

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Trash2 } from 'lucide-react';
 import { supabase, type Match } from '@/lib/supabase';
-import { useCompetitions, useSeasons, useStages, useRounds, useMatches, useRosters, useGoalkeeperParticipations } from '@/lib/hooks';
+import { useManagedCompetitions, useSeasons, useStages, useRounds, useMatches, useRosters, useGoalkeeperParticipations } from '@/lib/hooks';
 import { formatClock } from '@/lib/time';
 import { isCleanSheet } from '@/lib/cleanSheet';
+import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, FormField, FormSelect, FormError, PlayerPhoto } from '@/components/ui';
 
 export function GoalkeepersTab() {
-  const { competitions } = useCompetitions();
+  const { competitions, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
   const { seasons } = useSeasons(selectedComp || undefined);
   const [selectedSeason, setSelectedSeason] = useState('');
@@ -15,7 +16,7 @@ export function GoalkeepersTab() {
   const [selectedStage, setSelectedStage] = useState('');
   const { rounds } = useRounds(selectedStage || undefined);
   const [selectedRound, setSelectedRound] = useState('');
-  const { matches } = useMatches(selectedRound || undefined);
+  const { matches, error: matchesError } = useMatches(selectedRound || undefined);
   const [selectedMatch, setSelectedMatch] = useState('');
   const match = matches.find((m) => m.id === selectedMatch) ?? null;
 
@@ -66,11 +67,11 @@ export function GoalkeepersTab() {
             {matches.map((m) => <option key={m.id} value={m.id}>{m.home_team?.team?.name || '—'} x {m.away_team?.team?.name || '—'}</option>)}
           </FormSelect>
         </FormField>
-        {match && <SpellForm match={match} />}
+        {match && <SpellForm key={match.id} match={match} />}
       </div>
       <div className="admin-list-card">
         <h3>Participações de goleiros</h3>
-        {match ? <SpellList matchId={match.id} /> : <p className="admin-empty-text">Selecione uma partida para ver os goleiros.</p>}
+        {competitionsError || matchesError ? <FormError message="Não foi possível carregar as competições ou partidas autorizadas." /> : match ? <SpellList matchId={match.id} /> : <p className="admin-empty-text">Selecione uma partida para ver os goleiros.</p>}
       </div>
     </div>
   );
@@ -82,7 +83,7 @@ function SpellForm({ match }: { match: Match }) {
   const [playerId, setPlayerId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const { rosters } = useRosters(teamId || undefined);
+  const { rosters, error: rostersError } = useRosters(teamId || undefined);
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
@@ -95,8 +96,9 @@ function SpellForm({ match }: { match: Match }) {
       started_at_seconds: 0,
     });
     setBusy(false);
-    if (err) { setError('Não foi possível registrar a participação.'); return; }
-    window.location.reload();
+    if (err) { setError(err.message || 'Não foi possível registrar a participação.'); return; }
+    setPlayerId('');
+    refreshAdminData();
   }
 
   return (
@@ -111,9 +113,11 @@ function SpellForm({ match }: { match: Match }) {
       <FormField label="Goleiro">
         <FormSelect value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
           <option value="">Selecione...</option>
-          {rosters.map((r) => <option key={r.id} value={r.player_id}>{r.player?.nickname} ({r.player?.position})</option>)}
+          {rosters.filter((roster) => roster.player?.position === 'Goleiro').map((r) => <option key={r.id} value={r.player_id}>{r.player?.nickname} ({r.player?.position})</option>)}
         </FormSelect>
       </FormField>
+      {rostersError && <FormError message="Não foi possível carregar o elenco deste time." />}
+      {!rostersError && rosters.length > 0 && !rosters.some((roster) => roster.player?.position === 'Goleiro') && <p className="admin-hint">O elenco não possui jogadores cadastrados na posição Goleiro.</p>}
       <FormError message={error} />
       <button className="button button-primary" disabled={busy || !playerId}>{busy ? 'Aguarde...' : 'Registrar goleiro'} <ArrowRight size={16} /></button>
     </form>
@@ -128,7 +132,7 @@ function SpellList({ matchId }: { matchId: string }) {
     if (!window.confirm('Remover esta participação?')) return;
     const { error: err } = await supabase.from('goalkeeper_participations').delete().eq('id', id);
     if (err) { setError('Não foi possível remover a participação.'); return; }
-    window.location.reload();
+    refreshAdminData();
   }
 
   if (loading) return <LoadingCard />;

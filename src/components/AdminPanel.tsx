@@ -21,15 +21,15 @@ const tabs: { id: Tab; label: string; icon: typeof Trophy; adminOnly?: boolean }
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
   { id: 'competitions', label: 'Competições', icon: Trophy },
   { id: 'seasons', label: 'Temporadas', icon: CalendarDays },
-  { id: 'teams', label: 'Times', icon: Users },
-  { id: 'players', label: 'Jogadores', icon: CircleUserRound },
+  { id: 'teams', label: 'Times', icon: Users, adminOnly: true },
+  { id: 'players', label: 'Jogadores', icon: CircleUserRound, adminOnly: true },
   { id: 'registrations', label: 'Inscrições', icon: ClipboardList },
   { id: 'rosters', label: 'Elencos', icon: Shirt },
   { id: 'stages', label: 'Fases & Rodadas', icon: Flag },
   { id: 'matches', label: 'Partidas', icon: Swords },
   { id: 'events', label: 'Eventos', icon: Goal },
   { id: 'goalkeepers', label: 'Goleiros', icon: Hand },
-  { id: 'streamers', label: 'Streamers', icon: Mic },
+  { id: 'streamers', label: 'Streamers', icon: Mic, adminOnly: true },
   { id: 'organizers', label: 'Organizadores', icon: BadgeCheck, adminOnly: true },
   { id: 'users', label: 'Usuários', icon: UserCog, adminOnly: true },
 ];
@@ -45,7 +45,7 @@ export function AdminPanel({ profile }: { profile: Profile | null }) {
         <div>
           <span className="section-kicker">Área administrativa</span>
           <h1>{profile?.display_name || 'Sua conta'}</h1>
-          <p>Gerencie competições, partidas, gols, goleiros, streamers e estatísticas.</p>
+          <p>{isAdmin ? 'Gerencie toda a plataforma, incluindo competições, cadastros, partidas e permissões.' : 'Gerencie as competições que foram atribuídas à sua conta.'}</p>
         </div>
         <span className="role-badge">{profile?.role || 'USER'}</span>
       </div>
@@ -60,15 +60,15 @@ export function AdminPanel({ profile }: { profile: Profile | null }) {
         {tab === 'overview' && <OverviewTab />}
         {tab === 'competitions' && <CompetitionsTab />}
         {tab === 'seasons' && <SeasonsTab />}
-        {tab === 'teams' && <TeamsTab />}
-        {tab === 'players' && <PlayersTab />}
+        {tab === 'teams' && isAdmin && <TeamsTab />}
+        {tab === 'players' && isAdmin && <PlayersTab />}
         {tab === 'registrations' && <RegistrationsTab />}
         {tab === 'rosters' && <RostersTab />}
         {tab === 'stages' && <StagesTab />}
         {tab === 'matches' && <MatchesTab />}
         {tab === 'events' && <EventsTab />}
         {tab === 'goalkeepers' && <GoalkeepersTab />}
-        {tab === 'streamers' && <StreamersTab />}
+        {tab === 'streamers' && isAdmin && <StreamersTab />}
         {tab === 'organizers' && isAdmin && <OrganizersTab />}
         {tab === 'users' && isAdmin && <UsersTab currentUserId={profile?.id ?? ''} />}
       </div>

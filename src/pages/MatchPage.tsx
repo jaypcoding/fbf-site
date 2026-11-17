@@ -30,15 +30,15 @@ type MatchDetail = {
 
 export function MatchPage() {
   const { id } = useParams();
-  const { match: rawMatch, loading: matchLoading } = useMatch(id);
-  const { events, loading: eventsLoading } = useMatchEvents(id);
+  const { match: rawMatch, loading: matchLoading, error: matchError } = useMatch(id);
+  const { events, loading: eventsLoading, error: eventsError } = useMatchEvents(id);
   const match = rawMatch as unknown as MatchDetail | null;
 
   const scorers = useMemo(() => {
-    const totals = new Map<string, { name: string; photo: string | null; goals: number }>();
+    const totals = new Map<string, { id: string; name: string; photo: string | null; goals: number }>();
     for (const ev of events) {
       if (ev.event_type !== 'GOAL' || ev.is_own_goal || ev.period === 'PENALTY_SHOOTOUT' || !ev.player) continue;
-      const current = totals.get(ev.player.id) ?? { name: ev.player.nickname, photo: ev.player.photo_url, goals: 0 };
+      const current = totals.get(ev.player.id) ?? { id: ev.player.id, name: ev.player.nickname, photo: ev.player.photo_url, goals: 0 };
       current.goals += 1;
       totals.set(ev.player.id, current);
     }
@@ -46,12 +46,14 @@ export function MatchPage() {
   }, [events]);
 
   if (matchLoading || eventsLoading) return <section className="container detail-section"><LoadingCard /></section>;
+  if (matchError || eventsError) return <section className="container detail-section"><EmptyState icon={<Goal />} title="Não foi possível carregar a partida" description="O serviço de partidas está indisponível no momento. Tente novamente mais tarde." actionLabel="Ver competições" actionTo="/competicoes" /></section>;
   if (!match) return <section className="container detail-section"><EmptyState icon={<Goal />} title="Partida não encontrada" description="Verifique o link ou volte para a lista de competições." actionLabel="Ver competições" actionTo="/competicoes" /></section>;
 
   const competition = match.round?.stage?.season?.competition;
   const homeName = match.home_team?.team?.name || '—';
   const awayName = match.away_team?.team?.name || '—';
   const finished = match.status === 'FINISHED' && match.home_score !== null && match.away_score !== null;
+  const live = match.status === 'LIVE' && match.home_score !== null && match.away_score !== null;
 
   return (
     <section className="container detail-section">
@@ -60,7 +62,7 @@ export function MatchPage() {
       <div className="score-banner">
         <div className="score-team"><TeamLogo src={match.home_team?.team?.logo_url ?? null} name={homeName} size={56} /><span>{homeName}</span></div>
         <strong>
-          {finished ? `${match.home_score} × ${match.away_score}` : 'vs'}
+          {finished || live ? `${match.home_score} × ${match.away_score}` : 'vs'}
           {finished && match.home_penalty_score !== null && match.away_penalty_score !== null
             ? ` (Pên. ${match.home_penalty_score} × ${match.away_penalty_score})`
             : ''}
@@ -94,7 +96,7 @@ export function MatchPage() {
           {scorers.length === 0 ? <p className="admin-empty-text">Nenhum gol registrado.</p> : (
             <div className="scorer-list">
               {scorers.map((s) => (
-                <div key={s.name} className="scorer-item">
+                <div key={s.id} className="scorer-item">
                   <PlayerPhoto src={s.photo} name={s.name} size={36} />
                   <strong>{s.name}</strong>
                   <span>{s.goals} {s.goals === 1 ? 'gol' : 'gols'}</span>

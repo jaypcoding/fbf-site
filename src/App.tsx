@@ -12,7 +12,9 @@ import { PlayerCareerStats } from '@/components/PlayerCareerStats';
 import { TeamRecordStats } from '@/components/TeamRecordStats';
 import { MatchPage } from '@/pages/MatchPage';
 import { StageStandings } from '@/components/StageStandings';
+import { KnockoutBracket } from '@/components/KnockoutBracket';
 import { formatClock } from '@/lib/time';
+import { useAdminDataVersion } from '@/lib/adminRefresh';
 
 type Status = Competition['status'];
 
@@ -45,10 +47,17 @@ function App() {
 
 function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authActionError, setAuthActionError] = useState('');
   const { session, profile } = useAuth();
   const location = useLocation();
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
+
+  async function signOut() {
+    setAuthActionError('');
+    const { error } = await supabase.auth.signOut();
+    if (error) setAuthActionError('Não foi possível encerrar a sessão. Tente novamente.');
+  }
 
   return (
     <div className="app-shell">
@@ -70,29 +79,34 @@ function AppShell() {
             {session && profile && (profile.role === 'ADMIN' || profile.role === 'ORGANIZER') && (
               <NavLink to="/painel" className="nav-link panel-link"><LayoutDashboard size={16} /> Painel</NavLink>
             )}
-            {session ? <button className="account-link" onClick={() => supabase.auth.signOut()}><CircleUserRound size={16} /> Sair</button> : <Link to="/login" className="login-link"><LogIn size={16} /> Login</Link>}
+            {session ? <button className="account-link" onClick={signOut}><CircleUserRound size={16} /> Sair</button> : <Link to="/login" className="login-link"><LogIn size={16} /> Login</Link>}
+            {authActionError && <span role="alert" className="admin-hint">{authActionError}</span>}
           </nav>
         </div>
       </header>
-      <main><Routes><Route path="/" element={<Home />} /><Route path="/competicoes" element={<Competitions />} /><Route path="/competicoes/:id" element={<CompetitionDetail />} /><Route path="/times" element={<TeamsPage />} /><Route path="/times/:id" element={<TeamDetail />} /><Route path="/jogadores" element={<PlayersPage />} /><Route path="/jogadores/:id" element={<PlayerDetail />} /><Route path="/estatisticas" element={<Stats />} /><Route path="/login" element={<Login />} /><Route path="/painel" element={<Dashboard />} /><Route path="/partidas/:id" element={<MatchPage />} /></Routes></main>
+      <main><Routes><Route path="/" element={<Home />} /><Route path="/competicoes" element={<Competitions />} /><Route path="/competicoes/:id" element={<CompetitionDetail />} /><Route path="/times" element={<TeamsPage />} /><Route path="/times/:id" element={<TeamDetail />} /><Route path="/jogadores" element={<PlayersPage />} /><Route path="/jogadores/:id" element={<PlayerDetail />} /><Route path="/estatisticas" element={<Stats />} /><Route path="/login" element={<Login />} /><Route path="/painel" element={<Dashboard />} /><Route path="/partidas/:id" element={<MatchPage />} /><Route path="*" element={<NotFound />} /></Routes></main>
       <footer className="site-footer"><div className="container footer-inner"><div className="footer-brand"><img src="/1389286770004463646.webp" alt="" /><strong>FBF</strong></div><span>Competições, equipes e histórias do futsal brasileiro.</span><span>© {new Date().getFullYear()} FBF</span></div></footer><LiveMiniPlayer />
     </div>
   );
 }
 
 function Home() {
-  const { competitions, loading } = useCompetitions();
+  const { competitions, loading, error } = useCompetitions();
   const active = competitions.filter((competition) => competition.status === 'ACTIVE');
   const upcoming = competitions.filter((competition) => ['UPCOMING', 'REGISTRATION'].includes(competition.status));
   return <>
-    <section className="hero-section"><div className="container hero-grid"><div className="hero-copy"><div className="eyebrow"><span className="eyebrow-dot" /> Federação Brasileira de Futsal</div><h1>O jogo brasileiro,<br /><em>organizado.</em></h1><p>Competições, equipes, resultados e estatísticas do HaxBall brasileiro em um só lugar.</p><div className="hero-actions"><Link to="/competicoes" className="button button-primary">Explorar competições <ArrowRight size={17} /></Link><Link to="/jogadores" className="button button-quiet">Ver jogadores</Link></div></div><div className="hero-visual"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-card"><div className="hero-card-top"><span>Temporada</span><span className="live-chip"><span /> AO VIVO</span></div><div className="hero-card-logo"><img src="/1389286770004463646.webp" alt="Logo FBF" /></div><strong>FBF</strong><span>Federação Brasileira de Futsal</span><div className="hero-card-line"><i /><i /><i /></div></div><div className="hero-stamp"><Shield size={17} /><span>Desde<br /><b>2018</b></span></div></div></div></section>
-    <section className="container content-section"><div className="section-heading"><div><span className="section-kicker">Agora na FBF</span><h2>O calendário começa aqui</h2></div><Link to="/competicoes" className="text-link">Ver todas <ArrowRight size={16} /></Link></div>{loading ? <LoadingCard /> : active.length === 0 ? <EmptyState icon={<CalendarDays />} title="Não há competições em andamento" description="Quando uma competição começar, você poderá acompanhar jogos, tabela e estatísticas por aqui." actionLabel="Conhecer competições" actionTo="/competicoes" /> : <CompetitionGrid competitions={active} />}</section>
+    <section className="hero-section"><div className="container hero-grid"><div className="hero-copy"><div className="eyebrow"><span className="eyebrow-dot" /> Federação Brasileira de Futsal</div><h1>O jogo brasileiro,<br /><em>organizado.</em></h1><p>Competições, equipes, resultados e estatísticas do HaxBall brasileiro em um só lugar.</p><div className="hero-actions"><Link to="/competicoes" className="button button-primary">Explorar competições <ArrowRight size={17} /></Link><Link to="/jogadores" className="button button-quiet">Ver jogadores</Link></div></div><div className="hero-visual"><div className="hero-orbit orbit-one" /><div className="hero-orbit orbit-two" /><div className="hero-card"><div className="hero-card-top"><span>Temporada</span><span className="live-chip">FBF</span></div><div className="hero-card-logo"><img src="/1389286770004463646.webp" alt="Logo FBF" /></div><strong>FBF</strong><span>Federação Brasileira de Futsal</span><div className="hero-card-line"><i /><i /><i /></div></div><div className="hero-stamp"><Shield size={17} /><span>Desde<br /><b>2018</b></span></div></div></div></section>
+    <section className="container content-section"><div className="section-heading"><div><span className="section-kicker">Agora na FBF</span><h2>O calendário começa aqui</h2></div><Link to="/competicoes" className="text-link">Ver todas <ArrowRight size={16} /></Link></div>{loading ? <LoadingCard /> : error ? <EmptyState icon={<CalendarDays />} title="Não foi possível carregar as competições" description="Tente novamente mais tarde." actionLabel="Ver competições" actionTo="/competicoes" /> : active.length === 0 ? <EmptyState icon={<CalendarDays />} title="Não há competições em andamento" description="Quando uma competição começar, você poderá acompanhar jogos, tabela e estatísticas por aqui." actionLabel="Conhecer competições" actionTo="/competicoes" /> : <CompetitionGrid competitions={active} />}</section>
     <section className="container feature-row"><div className="feature-card accent-card"><div className="feature-icon"><Sparkles size={19} /></div><div><span className="section-kicker">Próximo capítulo</span><h3>{upcoming.length ? 'Inscrições e novidades em breve' : 'Um espaço pronto para a próxima temporada'}</h3><p>A estrutura da FBF está preparada para receber novas edições, times e disputas.</p></div><ArrowRight size={20} /></div><div className="feature-card"><div className="feature-icon dark"><Goal size={19} /></div><div><span className="section-kicker">Dados do jogo</span><h3>Estatísticas que contam a história</h3><p>Artilharia, assistências e CS calculados a partir dos eventos reais.</p></div><ChevronRight size={20} /></div></section>
   </>;
 }
 
+function NotFound() {
+  return <section className="container detail-section"><EmptyState icon={<Trophy />} title="Página não encontrada" description="O endereço pode estar incorreto ou o conteúdo não está mais disponível." actionLabel="Voltar ao início" actionTo="/" /></section>;
+}
+
 function Competitions() {
-  const { competitions, loading } = useCompetitions();
+  const { competitions, loading, error } = useCompetitions();
   const [filter, setFilter] = useState('Todas');
   const [category, setCategory] = useState('Todas');
   const categories = ['Todas', ...Array.from(new Set(competitions.map((competition) => competition.category)))];
@@ -100,35 +114,61 @@ function Competitions() {
     const statusMatches = filter === 'Todas' || (filter === 'Em andamento' && competition.status === 'ACTIVE') || (filter === 'Próximas' && ['UPCOMING', 'REGISTRATION'].includes(competition.status)) || (filter === 'Finalizadas' && competition.status === 'FINISHED');
     return statusMatches && (category === 'Todas' || competition.category === category);
   });
-  return <><PageIntro eyebrow="Calendário FBF" title="Competições" description="Acompanhe todas as competições e suas futuras edições em um calendário único." /><section className="container listing-section"><div className="filter-bar"><div className="filter-tabs">{['Todas', 'Em andamento', 'Próximas', 'Finalizadas'].map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? 'selected' : ''}>{item}</button>)}</div><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filtrar por categoria">{categories.map((item) => <option key={item}>{item}</option>)}</select></div>{loading ? <LoadingCard /> : filtered.length ? <CompetitionGrid competitions={filtered} /> : <EmptyState icon={<Trophy />} title="Nenhuma competição encontrada" description="Não há edições com esses filtros no momento. As competições base estão prontas para receber novas temporadas." />}</section></>;
+  return <><PageIntro eyebrow="Calendário FBF" title="Competições" description="Acompanhe todas as competições e suas futuras edições em um calendário único." /><section className="container listing-section"><div className="filter-bar"><div className="filter-tabs">{['Todas', 'Em andamento', 'Próximas', 'Finalizadas'].map((item) => <button key={item} onClick={() => setFilter(item)} className={filter === item ? 'selected' : ''}>{item}</button>)}</div><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filtrar por categoria">{categories.map((item) => <option key={item}>{item}</option>)}</select></div>{loading ? <LoadingCard /> : error ? <EmptyState icon={<Trophy />} title="Não foi possível carregar as competições" description="Tente novamente mais tarde." /> : filtered.length ? <CompetitionGrid competitions={filtered} /> : <EmptyState icon={<Trophy />} title="Nenhuma competição encontrada" description="Não há edições com esses filtros no momento. As competições base estão prontas para receber novas temporadas." />}</section></>;
 }
 
 function CompetitionDetail() {
   const { id } = useParams();
-  const { competitions, loading } = useCompetitions();
+  const { competitions, loading, error: competitionsError } = useCompetitions();
   const competition = competitions.find((item) => item.id === id);
   const [tab, setTab] = useState('Visão geral');
-  const { seasons } = useSeasons(id);
-  const activeSeason = seasons[0];
-  const { seasonTeams, loading: stLoading } = useSeasonTeams(activeSeason?.id);
-  const { stages } = useStages(activeSeason?.id);
+  const { seasons, loading: seasonsLoading, error: seasonsError } = useSeasons(id);
+  const [selectedSeasonId, setSelectedSeasonId] = useState('');
+  const activeSeason = seasons.find((season) => season.id === selectedSeasonId) ?? seasons[0];
+  const { seasonTeams, loading: stLoading, error: seasonTeamsError } = useSeasonTeams(activeSeason?.id);
+  const { stages, loading: stagesLoading, error: stagesError } = useStages(activeSeason?.id);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [allEvents, setAllEvents] = useState<MatchEvent[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState(false);
+  const refreshVersion = useAdminDataVersion();
 
   useEffect(() => {
+    if (!seasons.some((season) => season.id === selectedSeasonId)) {
+      setSelectedSeasonId(seasons[0]?.id ?? '');
+    }
+  }, [seasons, selectedSeasonId]);
+
+  useEffect(() => {
+    if (seasonsLoading || stagesLoading) {
+      setDataLoading(true);
+      return;
+    }
+    if (seasonsError || stagesError) {
+      setDataError(true);
+      setDataLoading(false);
+      return;
+    }
     if (!activeSeason || stages.length === 0) {
       setAllMatches([]);
       setAllEvents([]);
+      setDataError(false);
+      setDataLoading(false);
       return;
     }
 
     let active = true;
     setDataLoading(true);
+    setDataError(false);
     const stageIds = stages.map((s) => s.id);
 
-    supabase.from('rounds').select('id').in('stage_id', stageIds).then(({ data: roundRows }) => {
+    supabase.from('rounds').select('id').in('stage_id', stageIds).then(({ data: roundRows, error: roundsError }) => {
       if (!active) return;
+      if (roundsError) {
+        setDataError(true);
+        setDataLoading(false);
+        return;
+      }
 
       const roundIds = (roundRows as { id: string }[] | null)?.map((r) => r.id) || [];
       if (roundIds.length === 0) {
@@ -138,8 +178,13 @@ function CompetitionDetail() {
         return;
       }
 
-      supabase.from('matches').select('id, round_id, home_team_id, away_team_id, scheduled_at, home_score, away_score, status, home_team:home_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), away_team:away_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) )').in('round_id', roundIds).order('scheduled_at', { ascending: true }).then(({ data: matchData }) => {
+      supabase.from('matches').select('id, round_id, home_team_id, away_team_id, scheduled_at, home_score, away_score, home_penalty_score, away_penalty_score, status, series_id, series_leg, home_source_match_id, home_source_outcome, away_source_match_id, away_source_outcome, home_team:home_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), away_team:away_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), round:round_id ( id, stage_id, name, round_order, phase_type, stage_group_id, leg_number, bracket_round, stage_group:stage_group_id ( id, name, group_order ) )').in('round_id', roundIds).order('scheduled_at', { ascending: true }).then(({ data: matchData, error: matchesError }) => {
         if (!active) return;
+        if (matchesError) {
+          setDataError(true);
+          setDataLoading(false);
+          return;
+        }
         const matchesList = (matchData || []) as unknown as Match[];
         setAllMatches(matchesList);
 
@@ -150,9 +195,10 @@ function CompetitionDetail() {
           return;
         }
 
-        supabase.from('match_events').select('id, match_id, event_type, period, is_own_goal, goal_event_id, minute_seconds, team_id, player_id, related_player_id, player:player_id ( id, nickname, photo_url, position ), related_player:related_player_id ( id, nickname )').in('match_id', matchIds).order('minute_seconds', { ascending: true }).then(({ data: evData }) => {
+        supabase.from('match_events').select('id, match_id, event_type, period, is_own_goal, goal_event_id, minute_seconds, team_id, player_id, related_player_id, player:player_id ( id, nickname, photo_url, position ), related_player:related_player_id ( id, nickname )').in('match_id', matchIds).order('minute_seconds', { ascending: true }).then(({ data: evData, error: eventsError }) => {
           if (active) {
-            setAllEvents((evData || []) as unknown as MatchEvent[]);
+            if (eventsError) setDataError(true);
+            else setAllEvents((evData || []) as unknown as MatchEvent[]);
             setDataLoading(false);
           }
         });
@@ -160,9 +206,10 @@ function CompetitionDetail() {
     });
 
     return () => { active = false; };
-  }, [activeSeason, stages]);
+  }, [activeSeason, stages, seasonsLoading, seasonsError, stagesLoading, stagesError, refreshVersion]);
 
-  if (loading) return <section className="container detail-section"><LoadingCard /></section>;
+  if (loading || seasonsLoading) return <section className="container detail-section"><LoadingCard /></section>;
+  if (competitionsError) return <section className="container detail-section"><EmptyState icon={<Trophy />} title="Não foi possível carregar a competição" description="Tente novamente mais tarde." actionLabel="Voltar para competições" actionTo="/competicoes" /></section>;
   if (!competition) return <section className="container detail-section"><EmptyState icon={<Trophy />} title="Competição não encontrada" description="A competição que você procura ainda não está disponível." actionLabel="Voltar para competições" actionTo="/competicoes" /></section>;
 
   const teamCount = seasonTeams.length;
@@ -191,53 +238,77 @@ function CompetitionDetail() {
   }
   const assisters = Array.from(assistMap.values()).sort((a, b) => b.count - a.count);
 
-  return <section className="container detail-section"><Link to="/competicoes" className="back-link">← Todas as competições</Link><div className="detail-hero"><div><span className="status-pill"><span /> {statusLabels[competition.status]}</span><h1>{competition.name}</h1><p>{competition.description || 'Uma competição oficial da Federação Brasileira de Futsal.'}</p></div><div className="detail-emblem"><img src="/1389286770004463646.webp" alt="" /></div></div><div className="detail-meta"><div><span>Categoria</span><strong>{competition.category}</strong></div><div><span>Formato</span><strong>{competition.format}</strong></div><div><span>Temporada</span><strong>{activeSeason ? activeSeason.name : 'A definir'}</strong></div><div><span>Equipes</span><strong>{teamCount > 0 ? teamCount : '—'}</strong></div></div><div className="detail-tabs">{['Visão geral', 'Classificação', 'Jogos', 'Times', 'Artilharia', 'Assistências', 'Goleiros / CS'].map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}>{item}</button>)}</div>
-    {tab === 'Visão geral' ? (activeSeason ? <div className="detail-overview"><div className="overview-card"><span className="section-kicker">Temporada ativa</span><h2>{activeSeason.name}</h2><p>{activeSeason.starts_at ? `Início: ${new Date(activeSeason.starts_at).toLocaleDateString('pt-BR')}` : 'Data a definir'}{activeSeason.ends_at ? ` — Fim: ${new Date(activeSeason.ends_at).toLocaleDateString('pt-BR')}` : ''}</p></div>{teamCount > 0 && <div className="overview-teams"><h3>Equipes inscritas</h3><div className="team-chips">{seasonTeams.map((st) => <Link key={st.id} to={`/times/${st.team_id}`} className="team-chip"><TeamLogo src={st.team?.logo_url || null} name={st.team?.name || ''} size={28} /><span>{st.team?.name}</span></Link>)}</div></div>}</div> : <EmptyState icon={<CalendarDays />} title="Edição ainda não iniciada" description="Esta competição já está cadastrada na FBF. Assim que uma temporada for criada, jogos, times e estatísticas aparecerão nesta página." />)
-    : tab === 'Times' ? (stLoading ? <LoadingCard /> : teamCount > 0 ? <div className="team-grid">{seasonTeams.map((st) => <Link key={st.id} to={`/times/${st.team_id}`} className="team-card"><div className="team-card-logo"><TeamLogo src={st.team?.logo_url || null} name={st.team?.name || ''} size={56} /></div><h3>{st.team?.name}</h3></Link>)}</div> : <EmptyState icon={<Users />} title="Nenhum time inscrito" description="Os times serão exibidos aqui assim que forem inscritos nesta temporada." />)
-    : tab === 'Classificação' ? (dataLoading ? <LoadingCard /> : <StageStandings stages={stages} />)
-    : tab === 'Jogos' ? (dataLoading ? <LoadingCard /> : allMatches.length === 0 ? <EmptyState icon={<Goal />} title="Sem partidas agendadas" description="As partidas aparecerão aqui assim que forem criadas no painel administrativo." /> : <div className="matches-list">{allMatches.map((m) => <Link key={m.id} to={`/partidas/${m.id}`} className="match-card"><div className="match-date">{m.scheduled_at ? new Date(m.scheduled_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'A definir'}</div><div className="match-teams"><div className="match-team-side"><TeamLogo src={m.home_team?.team?.logo_url || null} name={m.home_team?.team?.name || ''} size={28} /><span>{m.home_team?.team?.name || '—'}</span></div><div className="match-score-display">{m.status === 'FINISHED' ? `${m.home_score ?? 0} × ${m.away_score ?? 0}` : <span className="match-vs">vs</span>}</div><div className="match-team-side"><TeamLogo src={m.away_team?.team?.logo_url || null} name={m.away_team?.team?.name || ''} size={28} /><span>{m.away_team?.team?.name || '—'}</span></div></div></Link>)}</div>)
-    : tab === 'Artilharia' ? (dataLoading ? <LoadingCard /> : scorers.length === 0 ? <EmptyState icon={<Goal />} title="Sem gols registrados" description="A artilharia será calculada automaticamente a partir dos eventos das partidas." /> : <div className="stats-table">{scorers.map((s, i) => <Link to={`/jogadores/${s.player.id}`} key={s.player.id} className="stats-row"><span className="stats-pos">{i + 1}</span><PlayerPhoto src={s.player.photo_url} name={s.player.nickname} size={32} /><div className="stats-info"><strong>{s.player.nickname}</strong><span>{s.team_name || '—'}</span></div><span className="stats-count">{s.count}</span></Link>)}</div>)
-    : tab === 'Assistências' ? (dataLoading ? <LoadingCard /> : assisters.length === 0 ? <EmptyState icon={<BarChart3 />} title="Sem assistências registradas" description="As assistências serão calculadas automaticamente a partir dos eventos das partidas." /> : <div className="stats-table">{assisters.map((a, i) => <Link to={`/jogadores/${a.player.id}`} key={a.player.id} className="stats-row"><span className="stats-pos">{i + 1}</span><PlayerPhoto src={a.player.photo_url} name={a.player.nickname} size={32} /><div className="stats-info"><strong>{a.player.nickname}</strong><span>{a.team_name || '—'}</span></div><span className="stats-count">{a.count}</span></Link>)}</div>)
+  return <section className="container detail-section"><Link to="/competicoes" className="back-link">← Todas as competições</Link><div className="detail-hero"><div><span className="status-pill"><span /> {statusLabels[competition.status]}</span><h1>{competition.name}</h1><p>{competition.description || 'Uma competição oficial da Federação Brasileira de Futsal.'}</p></div><div className="detail-emblem"><img src="/1389286770004463646.webp" alt="" /></div></div><div className="detail-meta"><div><span>Categoria</span><strong>{competition.category}</strong></div><div><span>Formato</span><strong>{competition.format}</strong></div><div>{seasons.length > 1 ? <label className="form-field"><span>Edição</span><select aria-label="Selecionar edição" value={activeSeason?.id ?? ''} onChange={(event) => setSelectedSeasonId(event.target.value)}>{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}</select></label> : <><span>Edição</span><strong>{activeSeason ? activeSeason.name : 'A definir'}</strong></>}</div><div><span>Equipes</span><strong>{teamCount > 0 ? teamCount : '—'}</strong></div></div><div className="detail-tabs">{['Visão geral', 'Classificação', 'Jogos', 'Times', 'Artilharia', 'Assistências', 'Goleiros / CS'].map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}>{item}</button>)}</div>
+    {seasonsError || stagesError ? <EmptyState icon={<CalendarDays />} title="Não foi possível carregar as edições" description="Tente novamente mais tarde." /> : tab === 'Visão geral' ? (activeSeason ? <div className="detail-overview"><div className="overview-card"><span className="section-kicker">Edição selecionada</span><h2>{activeSeason.name}</h2><p>{activeSeason.starts_at ? `Início: ${new Date(activeSeason.starts_at).toLocaleDateString('pt-BR')}` : 'Data a definir'}{activeSeason.ends_at ? ` — Fim: ${new Date(activeSeason.ends_at).toLocaleDateString('pt-BR')}` : ''}</p></div>{stLoading ? <LoadingCard /> : seasonTeamsError ? <EmptyState icon={<Users />} title="Não foi possível carregar os times" description="Tente novamente mais tarde." /> : teamCount > 0 && <div className="overview-teams"><h3>Equipes inscritas</h3><div className="team-chips">{seasonTeams.map((st) => <Link key={st.id} to={`/times/${st.team_id}`} className="team-chip"><TeamLogo src={st.team?.logo_url || null} name={st.team?.name || ''} size={28} /><span>{st.team?.name}</span></Link>)}</div></div>}</div> : <EmptyState icon={<CalendarDays />} title="Edição ainda não iniciada" description="Esta competição já está cadastrada na FBF. Assim que uma temporada for criada, jogos, times e estatísticas aparecerão nesta página." />)
+    : tab === 'Times' ? (stLoading ? <LoadingCard /> : seasonTeamsError ? <EmptyState icon={<Users />} title="Não foi possível carregar os times" description="Tente novamente mais tarde." /> : teamCount > 0 ? <div className="team-grid">{seasonTeams.map((st) => <Link key={st.id} to={`/times/${st.team_id}`} className="team-card"><div className="team-card-logo"><TeamLogo src={st.team?.logo_url || null} name={st.team?.name || ''} size={56} /></div><h3>{st.team?.name}</h3></Link>)}</div> : <EmptyState icon={<Users />} title="Nenhum time inscrito" description="Os times serão exibidos aqui assim que forem inscritos nesta temporada." />)
+    : tab === 'Classificação' ? (dataLoading ? <LoadingCard /> : dataError ? <EmptyState icon={<BarChart3 />} title="Não foi possível carregar a classificação" description="Tente novamente mais tarde." /> : <StageStandings stages={stages} />)
+    : tab === 'Jogos' ? (dataLoading ? <LoadingCard /> : dataError ? <EmptyState icon={<Goal />} title="Não foi possível carregar as partidas" description="Tente novamente mais tarde." /> : allMatches.length === 0 ? <EmptyState icon={<Goal />} title="Sem partidas agendadas" description="As partidas aparecerão aqui assim que forem criadas no painel administrativo." /> : <><KnockoutBracket matches={allMatches} stages={stages} /><div className="matches-list">{allMatches.filter((match) => match.round?.phase_type !== 'KNOCKOUT').map((m) => <Link key={m.id} to={`/partidas/${m.id}`} className="match-card"><div className="match-date">{m.round?.stage_group?.name ? `${m.round.stage_group.name} · ` : ''}{m.round?.name || ''}{m.scheduled_at ? ` · ${new Date(m.scheduled_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}</div><div className="match-teams"><div className="match-team-side"><TeamLogo src={m.home_team?.team?.logo_url || null} name={m.home_team?.team?.name || ''} size={28} /><span>{m.home_team?.team?.name || 'A definir'}</span></div><div className="match-score-display">{(m.status === 'FINISHED' || m.status === 'LIVE') && m.home_score !== null && m.away_score !== null ? `${m.home_score} × ${m.away_score}` : <span className="match-vs">vs</span>}</div><div className="match-team-side"><TeamLogo src={m.away_team?.team?.logo_url || null} name={m.away_team?.team?.name || ''} size={28} /><span>{m.away_team?.team?.name || 'A definir'}</span></div></div></Link>)}</div></>)
+    : tab === 'Artilharia' ? (dataLoading ? <LoadingCard /> : dataError ? <EmptyState icon={<Goal />} title="Não foi possível carregar a artilharia" description="Tente novamente mais tarde." /> : scorers.length === 0 ? <EmptyState icon={<Goal />} title="Sem gols registrados" description="A artilharia será calculada automaticamente a partir dos eventos das partidas." /> : <div className="stats-table">{scorers.map((s, i) => <Link to={`/jogadores/${s.player.id}`} key={s.player.id} className="stats-row"><span className="stats-pos">{i + 1}</span><PlayerPhoto src={s.player.photo_url} name={s.player.nickname} size={32} /><div className="stats-info"><strong>{s.player.nickname}</strong><span>{s.team_name || '—'}</span></div><span className="stats-count">{s.count}</span></Link>)}</div>)
+    : tab === 'Assistências' ? (dataLoading ? <LoadingCard /> : dataError ? <EmptyState icon={<BarChart3 />} title="Não foi possível carregar as assistências" description="Tente novamente mais tarde." /> : assisters.length === 0 ? <EmptyState icon={<BarChart3 />} title="Sem assistências registradas" description="As assistências serão calculadas automaticamente a partir dos eventos das partidas." /> : <div className="stats-table">{assisters.map((a, i) => <Link to={`/jogadores/${a.player.id}`} key={a.player.id} className="stats-row"><span className="stats-pos">{i + 1}</span><PlayerPhoto src={a.player.photo_url} name={a.player.nickname} size={32} /><div className="stats-info"><strong>{a.player.nickname}</strong><span>{a.team_name || '—'}</span></div><span className="stats-count">{a.count}</span></Link>)}</div>)
     : <GoalkeeperRanking competitionId={competition.id} />}</section>;
 }
 
 function TeamsPage() {
-  const { teams, loading } = useTeams();
-  return <><PageIntro eyebrow="Universo FBF" title="Times" description="Conheça as equipes que fazem parte da história da FBF." /><section className="container directory-section"><div className="directory-toolbar"><div><span className="section-kicker">Base pública</span><h2>Todos os times</h2></div></div>{loading ? <LoadingCard /> : teams.length === 0 ? <EmptyState icon={<Users />} title="Ainda não há times cadastrados" description="Assim que os organizadores cadastrarem os primeiros times, eles aparecerão aqui com logo e elenco." /> : <div className="team-grid">{teams.map((team) => <Link key={team.id} to={`/times/${team.id}`} className="team-card"><div className="team-card-logo"><TeamLogo src={team.logo_url} name={team.name} size={56} /></div><h3>{team.name}</h3></Link>)}</div>}</section></>;
+  const { teams, loading, error } = useTeams();
+  return <><PageIntro eyebrow="Universo FBF" title="Times" description="Conheça as equipes que fazem parte da história da FBF." /><section className="container directory-section"><div className="directory-toolbar"><div><span className="section-kicker">Base pública</span><h2>Todos os times</h2></div></div>{loading ? <LoadingCard /> : error ? <EmptyState icon={<Users />} title="Não foi possível carregar os times" description="Tente novamente mais tarde." /> : teams.length === 0 ? <EmptyState icon={<Users />} title="Ainda não há times cadastrados" description="Assim que os organizadores cadastrarem os primeiros times, eles aparecerão aqui com logo e elenco." /> : <div className="team-grid">{teams.map((team) => <Link key={team.id} to={`/times/${team.id}`} className="team-card"><div className="team-card-logo"><TeamLogo src={team.logo_url} name={team.name} size={56} /></div><h3>{team.name}</h3></Link>)}</div>}</section></>;
 }
 
 function TeamDetail() {
   const { id } = useParams();
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [seasonTeamId, setSeasonTeamId] = useState<string | null>(null);
-  const { rosters, loading: rostersLoading } = useRosters(seasonTeamId || undefined);
+  const [seasonName, setSeasonName] = useState('');
+  const [seasonLoading, setSeasonLoading] = useState(true);
+  const [seasonError, setSeasonError] = useState(false);
+  const { rosters, loading: rostersLoading, error: rostersError } = useRosters(seasonTeamId || undefined);
+  const refreshVersion = useAdminDataVersion();
 
   useEffect(() => {
-    if (!id) return;
-    let active = true;
-    supabase.from('teams').select('id, name, logo_url').eq('id', id).maybeSingle().then(({ data }) => {
-      if (!active) return;
-      setTeam(data as Team | null);
+    if (!id) {
       setLoading(false);
-    });
-    supabase.from('season_teams').select('id, season_id, season:season_id ( id, name, starts_at, ends_at )').eq('team_id', id).order('created_at', { ascending: false }).then(({ data }) => {
+      setSeasonLoading(false);
+      setTeam(null);
+      setSeasonTeamId(null);
+      setSeasonName('');
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setSeasonLoading(true);
+    setTeam(null);
+    setSeasonTeamId(null);
+    setSeasonName('');
+    setError(false);
+    setSeasonError(false);
+    Promise.all([
+      supabase.from('teams').select('id, name, logo_url').eq('id', id).maybeSingle(),
+      supabase.from('season_teams').select('id, season_id, created_at, season:season_id ( id, name, starts_at, ends_at )').eq('team_id', id).order('created_at', { ascending: false }),
+    ]).then(([teamResult, seasonTeamResult]) => {
       if (!active) return;
-      const latest = (data as { id: string }[] | null)?.[0];
-      if (latest) setSeasonTeamId(latest.id);
+      setError(Boolean(teamResult.error));
+      setTeam(teamResult.error ? null : teamResult.data as Team | null);
+      setLoading(false);
+      setSeasonError(Boolean(seasonTeamResult.error));
+      const latest = (seasonTeamResult.data || [])[0] as unknown as { id: string; season: { name: string }[] } | undefined;
+      setSeasonTeamId(seasonTeamResult.error ? null : latest?.id ?? null);
+      setSeasonName(latest?.season[0]?.name ?? '');
+      setSeasonLoading(false);
     });
     return () => { active = false; };
-  }, [id]);
+  }, [id, refreshVersion]);
 
   if (loading) return <section className="container detail-section"><LoadingCard /></section>;
+  if (error) return <section className="container detail-section"><EmptyState icon={<Users />} title="Não foi possível carregar o time" description="Tente novamente mais tarde." actionLabel="Ver todos os times" actionTo="/times" /></section>;
   if (!team) return <section className="container detail-section"><EmptyState icon={<Users />} title="Time não encontrado" description="O time que você procura ainda não está cadastrado." actionLabel="Ver todos os times" actionTo="/times" /></section>;
 
-  return <section className="container detail-section"><Link to="/times" className="back-link">← Todos os times</Link><div className="detail-hero"><div><h1>{team.name}</h1><p>Elenco e informações oficiais do time na FBF.</p></div><div className="detail-emblem"><TeamLogo src={team.logo_url} name={team.name} size={74} /></div></div><TeamRecordStats teamId={team.id} /><div className="detail-tabs"><button className="active">Elenco</button></div>{rostersLoading ? <LoadingCard /> : rosters.length === 0 ? <EmptyState icon={<CircleUserRound />} title="Elenco não definido" description="Os jogadores deste time aparecerão aqui assim que o elenco for montado para a temporada ativa." /> : <div className="roster-grid">{rosters.map((r) => <div key={r.id} className="roster-card"><div className="roster-number">{r.shirt_number ?? '—'}</div><div className="roster-photo"><PlayerPhoto src={r.player?.photo_url || null} name={r.player?.nickname || ''} size={44} /></div><div className="roster-info"><strong>{r.player?.nickname}</strong><span>{r.player?.position}</span></div></div>)}</div>}</section>;
+  return <section className="container detail-section"><Link to="/times" className="back-link">← Todos os times</Link><div className="detail-hero"><div><h1>{team.name}</h1><p>Elenco e informações oficiais do time na FBF.</p></div><div className="detail-emblem"><TeamLogo src={team.logo_url} name={team.name} size={74} /></div></div><TeamRecordStats teamId={team.id} /><div className="detail-tabs"><button className="active">Elenco{seasonName ? ` · ${seasonName}` : ''}</button></div>{seasonLoading || rostersLoading ? <LoadingCard /> : seasonError || rostersError ? <EmptyState icon={<Users />} title="Não foi possível carregar o elenco" description="Tente novamente mais tarde." /> : rosters.length === 0 ? <EmptyState icon={<CircleUserRound />} title="Elenco não definido" description="Os jogadores deste time aparecerão aqui assim que um elenco for registrado em uma temporada." /> : <div className="roster-grid">{rosters.map((r) => <div key={r.id} className="roster-card"><div className="roster-number">{r.shirt_number ?? '—'}</div><div className="roster-photo"><PlayerPhoto src={r.player?.photo_url || null} name={r.player?.nickname || ''} size={44} /></div><div className="roster-info"><strong>{r.player?.nickname}</strong><span>{r.player?.position}</span></div></div>)}</div>}</section>;
 }
 
 function PlayersPage() {
-  const { players, loading } = usePlayers();
-  return <><PageIntro eyebrow="Universo FBF" title="Jogadores" description="Talentos, capitães e goleiros do futsal brasileiro." /><section className="container directory-section"><div className="directory-toolbar"><div><span className="section-kicker">Base pública</span><h2>Todos os jogadores</h2></div></div>{loading ? <LoadingCard /> : players.length === 0 ? <EmptyState icon={<CircleUserRound />} title="Os jogadores aparecerão quando as primeiras edições forem criadas" description="Assim que os organizadores cadastrarem os jogadores, eles aparecerão aqui com posição, nacionalidade e time atual." /> : <div className="player-grid">{players.map((player) => <Link key={player.id} to={`/jogadores/${player.id}`} className="player-card"><div className="player-card-photo"><PlayerPhoto src={player.photo_url} name={player.nickname} size={52} /></div><div className="player-card-info"><strong>{player.nickname}</strong><span>{player.position}{player.nationality ? ` · ${player.nationality}` : ''}</span></div></Link>)}</div>}</section></>;
+  const { players, loading, error } = usePlayers();
+  return <><PageIntro eyebrow="Universo FBF" title="Jogadores" description="Talentos, capitães e goleiros do futsal brasileiro." /><section className="container directory-section"><div className="directory-toolbar"><div><span className="section-kicker">Base pública</span><h2>Todos os jogadores</h2></div></div>{loading ? <LoadingCard /> : error ? <EmptyState icon={<CircleUserRound />} title="Não foi possível carregar os jogadores" description="Tente novamente mais tarde." /> : players.length === 0 ? <EmptyState icon={<CircleUserRound />} title="Os jogadores aparecerão quando as primeiras edições forem criadas" description="Assim que a administração cadastrar os jogadores, eles aparecerão aqui com posição, nacionalidade e time atual." /> : <div className="player-grid">{players.map((player) => <Link key={player.id} to={`/jogadores/${player.id}`} className="player-card"><div className="player-card-photo"><PlayerPhoto src={player.photo_url} name={player.nickname} size={52} /></div><div className="player-card-info"><strong>{player.nickname}</strong><span>{player.position}{player.nationality ? ` · ${player.nationality}` : ''}</span></div></Link>)}</div>}</section></>;
 }
 
 function PlayerDetail() {
@@ -245,36 +316,67 @@ function PlayerDetail() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [teamHistory, setTeamHistory] = useState<{ team_id: string; team_name: string; team_logo: string | null; season_name: string }[]>([]);
+  const [error, setError] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const refreshVersion = useAdminDataVersion();
 
   useEffect(() => {
-    if (!id) return;
-    let active = true;
-    supabase.from('players').select('id, nickname, full_name, photo_url, nationality, position').eq('id', id).maybeSingle().then(({ data }) => {
-      if (!active) return;
-      setPlayer(data as Player | null);
+    if (!id) {
       setLoading(false);
-    });
-    supabase.from('rosters').select('season_team_id, season_team:season_team_id ( id, season_id, season:season_id ( id, name ), team:team_id ( id, name, logo_url ) )').eq('player_id', id).then(({ data }) => {
+      setPlayer(null);
+      setTeamHistory([]);
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    setPlayer(null);
+    setTeamHistory([]);
+    setError(false);
+    setHistoryError(false);
+    Promise.all([
+      supabase.from('players').select('id, nickname, full_name, photo_url, nationality, position').eq('id', id).maybeSingle(),
+      supabase.from('rosters').select('season_team:season_team_id ( id, season_id, season:season_id ( id, name ), team:team_id ( id, name, logo_url ) )').eq('player_id', id),
+    ]).then(([playerResult, rosterResult]) => {
       if (!active) return;
-      const rows = (data as { season_team: { season: { name: string }; team: { id: string; name: string; logo_url: string | null } } }[] | null) || [];
-      setTeamHistory(rows.map((r) => ({ team_id: r.season_team.team.id, team_name: r.season_team.team.name, team_logo: r.season_team.team.logo_url, season_name: r.season_team.season.name })));
+      setError(Boolean(playerResult.error));
+      setPlayer(playerResult.error ? null : playerResult.data as Player | null);
+      setLoading(false);
+      setHistoryError(Boolean(rosterResult.error));
+      const rows = (rosterResult.data || []) as unknown as {
+        season_team: {
+          season: { name: string }[];
+          team: { id: string; name: string; logo_url: string | null }[];
+        }[];
+      }[];
+      setTeamHistory(rosterResult.error ? [] : rows.flatMap((row) => {
+        const seasonTeam = row.season_team[0];
+        const season = seasonTeam?.season[0];
+        const team = seasonTeam?.team[0];
+        return season && team
+          ? [{ team_id: team.id, team_name: team.name, team_logo: team.logo_url, season_name: season.name }]
+          : [];
+      }));
     });
     return () => { active = false; };
-  }, [id]);
+  }, [id, refreshVersion]);
 
   if (loading) return <section className="container detail-section"><LoadingCard /></section>;
+  if (error) return <section className="container detail-section"><EmptyState icon={<CircleUserRound />} title="Não foi possível carregar o jogador" description="Tente novamente mais tarde." actionLabel="Ver todos os jogadores" actionTo="/jogadores" /></section>;
   if (!player) return <section className="container detail-section"><EmptyState icon={<CircleUserRound />} title="Jogador não encontrado" description="O jogador que você procura ainda não está cadastrado." actionLabel="Ver todos os jogadores" actionTo="/jogadores" /></section>;
 
-  return <section className="container detail-section"><Link to="/jogadores" className="back-link">← Todos os jogadores</Link><div className="detail-hero"><div><h1>{player.nickname}</h1><p>{player.full_name || ''}{player.nationality ? ` · ${player.nationality}` : ''}</p></div><div className="detail-emblem"><PlayerPhoto src={player.photo_url} name={player.nickname} size={74} /></div></div><div className="detail-meta"><div><span>Posição</span><strong>{player.position}</strong></div><div><span>Nacionalidade</span><strong>{player.nationality || '—'}</strong></div></div><PlayerCareerStats playerId={player.id} /><div className="detail-tabs"><button className="active">Carreira</button></div>{teamHistory.length === 0 ? <EmptyState icon={<Users />} title="Sem histórico de times" description="Este jogador ainda não foi vinculado a nenhum time em uma temporada." /> : <div className="team-grid">{teamHistory.map((h) => <Link key={`${h.team_id}-${h.season_name}`} to={`/times/${h.team_id}`} className="team-card"><div className="team-card-logo"><TeamLogo src={h.team_logo} name={h.team_name} size={56} /></div><h3>{h.team_name}</h3><span className="team-card-season">{h.season_name}</span></Link>)}</div>}</section>;
+  return <section className="container detail-section"><Link to="/jogadores" className="back-link">← Todos os jogadores</Link><div className="detail-hero"><div><h1>{player.nickname}</h1><p>{player.full_name || ''}{player.nationality ? ` · ${player.nationality}` : ''}</p></div><div className="detail-emblem"><PlayerPhoto src={player.photo_url} name={player.nickname} size={74} /></div></div><div className="detail-meta"><div><span>Posição</span><strong>{player.position}</strong></div><div><span>Nacionalidade</span><strong>{player.nationality || '—'}</strong></div></div><PlayerCareerStats playerId={player.id} /><div className="detail-tabs"><button className="active">Carreira</button></div>{historyError ? <EmptyState icon={<Users />} title="Não foi possível carregar o histórico" description="Tente novamente mais tarde." /> : teamHistory.length === 0 ? <EmptyState icon={<Users />} title="Sem histórico de times" description="Este jogador ainda não foi vinculado a nenhum time em uma temporada." /> : <div className="team-grid">{teamHistory.map((h) => <Link key={`${h.team_id}-${h.season_name}`} to={`/times/${h.team_id}`} className="team-card"><div className="team-card-logo"><TeamLogo src={h.team_logo} name={h.team_name} size={56} /></div><h3>{h.team_name}</h3><span className="team-card-season">{h.season_name}</span></Link>)}</div>}</section>;
 }
 
 function Stats() {
   const [totals, setTotals] = useState<{ goals: number; assists: number; cleanSheetTime: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const refreshVersion = useAdminDataVersion();
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError(false);
     Promise.all([
       supabase.from('player_career_statistics').select('goals, assists'),
       supabase.from('goalkeeper_clean_sheet_statistics').select('total_seconds'),
@@ -295,7 +397,7 @@ function Stats() {
       setLoading(false);
     });
     return () => { active = false; };
-  }, []);
+  }, [refreshVersion]);
 
   return (
     <>
@@ -328,20 +430,22 @@ function Login() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   if (session) return <section className="container auth-section"><div className="auth-card"><Check className="success-icon" /><h1>Você já está conectado</h1><p>Acesse o painel para acompanhar as áreas disponíveis para sua conta.</p><button className="button button-primary" onClick={() => navigate('/painel')}>Ir para o painel <ArrowRight size={17} /></button></div></section>;
-  async function submit(event: React.FormEvent) { event.preventDefault(); setBusy(true); setMessage(''); const result = mode === 'login' ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password, options: { data: { display_name: name } } }); setBusy(false); if (result.error) { setMessage('Não foi possível concluir. Confira seus dados e tente novamente.'); return; } setMessage(mode === 'login' ? 'Login realizado.' : 'Conta criada. Você já pode acessar a plataforma.'); if (mode === 'login') navigate('/'); }
+  async function submit(event: React.FormEvent) { event.preventDefault(); setBusy(true); setMessage(''); const result = mode === 'login' ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password, options: { data: { display_name: name } } }); setBusy(false); if (result.error) { setMessage('Não foi possível concluir. Confira seus dados e tente novamente.'); return; } if (mode === 'login') { setMessage('Login realizado.'); navigate('/'); } else { setMessage(result.data.session ? 'Conta criada. Você já pode acessar a plataforma.' : 'Conta criada. Confira seu e-mail para confirmar o cadastro antes de entrar.'); } }
   return <section className="container auth-section"><div className="auth-card"><div className="auth-logo"><img src="/1389286770004463646.webp" alt="Logo FBF" /></div><span className="section-kicker">Área restrita</span><h1>{mode === 'login' ? 'Bem-vindo de volta' : 'Criar uma conta'}</h1><p>{mode === 'login' ? 'Entre para acompanhar sua área na plataforma FBF.' : 'Crie seu acesso para acompanhar novidades e competições.'}</p><form onSubmit={submit}>{mode === 'signup' && <label>Nome<input value={name} onChange={(event) => setName(event.target.value)} required placeholder="Como devemos chamar você?" /></label>}<label>E-mail<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="voce@email.com" /></label><label>Senha<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} placeholder="Mínimo de 6 caracteres" /></label>{message && <div className="form-message">{message}</div>}<button className="button button-primary full-width" disabled={busy}>{busy ? 'Aguarde...' : mode === 'login' ? 'Entrar na plataforma' : 'Criar minha conta'} <ArrowRight size={17} /></button></form><button className="switch-auth" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}>{mode === 'login' ? 'Ainda não tenho uma conta' : 'Já tenho uma conta'}</button></div></section>;
 }
 
 function Dashboard() {
-  const { session, profile } = useAuth();
+  const { session, profile, profileLoading, profileError } = useAuth();
   if (!session) return <section className="container auth-section"><div className="auth-card"><Shield className="success-icon" /><h1>Entre para acessar o painel</h1><p>O painel é reservado para usuários autorizados pela FBF.</p><Link to="/login" className="button button-primary">Fazer login <ArrowRight size={17} /></Link></div></section>;
+  if (profileLoading) return <section className="container auth-section"><LoadingCard /></section>;
+  if (profileError || !profile) return <section className="container auth-section"><EmptyState icon={<Shield />} title="Não foi possível confirmar seu perfil" description="As permissões não foram carregadas. Tente novamente mais tarde ou contate a administração da FBF." /></section>;
   const isManager = profile?.role === 'ADMIN' || profile?.role === 'ORGANIZER';
   if (!isManager) return <section className="container dashboard-section"><div className="dashboard-heading"><div><span className="section-kicker">Área administrativa</span><h1>{profile?.display_name || 'Sua conta'}</h1><p>Acompanhe seu acesso e as novidades da FBF.</p></div><span className="role-badge">{profile?.role || 'USER'}</span></div><div className="admin-empty"><div className="admin-empty-icon"><Shield /></div><div><h2>Acesso de visualização</h2><p>Seu perfil pode acompanhar todas as informações públicas da plataforma. A gestão é reservada a administradores e organizadores.</p></div></div></section>;
   return <AdminPanel profile={profile} />;
 }
 
 function CompetitionGrid({ competitions }: { competitions: Competition[] }) {
-  return <div className="competition-grid">{competitions.map((competition) => <Link to={`/competicoes/${competition.id}`} className="competition-card" key={competition.id}><div className="card-top"><span className="category-label">{competition.category}</span><span className={`status-dot status-${competition.status.toLowerCase()}`}><span />{statusLabels[competition.status]}</span></div><div className="card-symbol"><img src="/1389286770004463646.webp" alt="" /></div><h3>{competition.name}</h3><div className="card-bottom"><span>Temporada a definir</span><ChevronRight size={17} /></div></Link>)}</div>;
+  return <div className="competition-grid">{competitions.map((competition) => <Link to={`/competicoes/${competition.id}`} className="competition-card" key={competition.id}><div className="card-top"><span className="category-label">{competition.category}</span><span className={`status-dot status-${competition.status.toLowerCase()}`}><span />{statusLabels[competition.status]}</span></div><div className="card-symbol"><img src="/1389286770004463646.webp" alt="" /></div><h3>{competition.name}</h3><div className="card-bottom"><span>Ver detalhes e edições</span><ChevronRight size={17} /></div></Link>)}</div>;
 }
 
 export default App;

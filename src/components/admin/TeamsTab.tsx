@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import { supabase, type Team } from '@/lib/supabase';
 import { useTeams } from '@/lib/hooks';
+import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, TeamLogo, FormField, FormInput, FormError } from '@/components/ui';
 
 export function TeamsTab() {
-  const { teams, loading } = useTeams();
+  const { teams, loading, error: teamsError } = useTeams();
   const [name, setName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -20,14 +21,14 @@ export function TeamsTab() {
     setBusy(false);
     if (err) { setError(err.code === '23505' ? 'Já existe um time com esse nome.' : 'Não foi possível criar o time.'); return; }
     setName(''); setLogoUrl('');
-    window.location.reload();
+    refreshAdminData();
   }
 
   async function deleteTeam(id: string) {
     if (!window.confirm('Remover este time?')) return;
     const { error: err } = await supabase.from('teams').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o time. Ele pode estar inscrito em alguma temporada.'); return; }
-    window.location.reload();
+    refreshAdminData();
   }
 
   return (
@@ -48,7 +49,7 @@ export function TeamsTab() {
       </div>
       <div className="admin-list-card">
         <h3>Times cadastrados</h3>
-        {loading ? <LoadingCard /> : teams.length === 0 ? <p className="admin-empty-text">Nenhum time cadastrado ainda.</p> : (
+        {teamsError ? <FormError message="Não foi possível carregar os times cadastrados." /> : loading ? <LoadingCard /> : teams.length === 0 ? <p className="admin-empty-text">Nenhum time cadastrado ainda.</p> : (
           <div className="admin-list">
             {teams.map((t) => (
               <div key={t.id} className="admin-list-item">
@@ -67,14 +68,14 @@ export function TeamsTab() {
       </div>
       {editing && (
         <Modal title="Editar time" onClose={() => setEditing(null)}>
-          <TeamEditForm team={editing} />
+          <TeamEditForm team={editing} onSaved={() => setEditing(null)} />
         </Modal>
       )}
     </div>
   );
 }
 
-function TeamEditForm({ team }: { team: Team }) {
+function TeamEditForm({ team, onSaved }: { team: Team; onSaved: () => void }) {
   const [name, setName] = useState(team.name);
   const [logoUrl, setLogoUrl] = useState(team.logo_url ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +88,8 @@ function TeamEditForm({ team }: { team: Team }) {
     const { error: err } = await supabase.from('teams').update({ name: name.trim(), logo_url: logoUrl.trim() || null }).eq('id', team.id);
     setBusy(false);
     if (err) { setError(err.code === '23505' ? 'Já existe um time com esse nome.' : 'Não foi possível salvar as alterações.'); return; }
-    window.location.reload();
+    refreshAdminData();
+    onSaved();
   }
 
   return (

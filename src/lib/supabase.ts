@@ -84,6 +84,15 @@ export type Stage = {
   stage_order: number;
   format: string;
   tie_breakers: string[];
+  settings: {
+    legs?: 1 | 2;
+    group_legs?: 1 | 2;
+    knockout_legs?: 1 | 2;
+    group_count?: number;
+    qualifiers_per_group?: number;
+    group_crossing?: 'RANKED' | 'DRAW';
+    third_place?: boolean;
+  };
 };
 
 export type Round = {
@@ -91,6 +100,11 @@ export type Round = {
   stage_id: string;
   name: string;
   round_order: number;
+  phase_type: 'ROUND_ROBIN' | 'GROUP' | 'KNOCKOUT' | 'MANUAL';
+  stage_group_id: string | null;
+  leg_number: 1 | 2;
+  bracket_round: number | null;
+  stage_group?: { id: string; name: string; group_order: number } | null;
 };
 
 export type Match = {
@@ -105,6 +119,12 @@ export type Match = {
   home_penalty_score: number | null;
   away_penalty_score: number | null;
   status: 'SCHEDULED' | 'LIVE' | 'FINISHED' | 'POSTPONED' | 'CANCELLED';
+  series_id: string | null;
+  series_leg: 1 | 2;
+  home_source_match_id: string | null;
+  home_source_outcome: 'WINNER' | 'LOSER' | null;
+  away_source_match_id: string | null;
+  away_source_outcome: 'WINNER' | 'LOSER' | null;
   home_team?: SeasonTeam;
   away_team?: SeasonTeam;
   round?: Round;

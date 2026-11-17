@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import { supabase, type Season } from '@/lib/supabase';
-import { useCompetitions, useSeasons } from '@/lib/hooks';
+import { useManagedCompetitions, useSeasons } from '@/lib/hooks';
+import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 
 export function SeasonsTab() {
-  const { competitions, loading: compLoading } = useCompetitions();
+  const { competitions, loading: compLoading, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState<string>('');
-  const { seasons, loading } = useSeasons(selectedComp || undefined);
+  const { seasons, loading, error: seasonsError } = useSeasons(selectedComp || undefined);
   const [name, setName] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
@@ -28,14 +29,23 @@ export function SeasonsTab() {
     setBusy(false);
     if (err) { setError(err.message || 'Não foi possível criar a temporada.'); return; }
     setName(''); setStartsAt(''); setEndsAt('');
-    window.location.reload();
+    refreshAdminData();
   }
 
   async function deleteSeason(id: string) {
-    if (!window.confirm('Remover esta temporada?')) return;
+    const [teamResult, stageResult] = await Promise.all([
+      supabase.from('season_teams').select('id', { count: 'exact', head: true }).eq('season_id', id),
+      supabase.from('stages').select('id', { count: 'exact', head: true }).eq('season_id', id),
+    ]);
+    if (teamResult.error || stageResult.error) { setError('Não foi possível verificar os dados vinculados à temporada.'); return; }
+    if (teamResult.count || stageResult.count) {
+      setError('Esta temporada possui equipes inscritas ou fases cadastradas e não pode ser removida. Preserve o histórico da competição.');
+      return;
+    }
+    if (!window.confirm('Remover esta temporada vazia?')) return;
     const { error: err } = await supabase.from('seasons').delete().eq('id', id);
-    if (err) { setError('Não foi possível remover a temporada.'); return; }
-    window.location.reload();
+    if (err) { setError('Não foi possível remover a temporada. O banco pode estar protegendo dados vinculados.'); return; }
+    refreshAdminData();
   }
 
   const filteredSeasons = selectedComp ? seasons.filter((s) => s.competition_id === selectedComp) : seasons;
@@ -66,7 +76,7 @@ export function SeasonsTab() {
       </div>
       <div className="admin-list-card">
         <h3>Temporadas cadastradas</h3>
-        {loading ? <LoadingCard /> : filteredSeasons.length === 0 ? <p className="admin-empty-text">Nenhuma temporada criada ainda.</p> : (
+        {competitionsError || seasonsError ? <FormError message="Não foi possível carregar as competições e temporadas autorizadas." /> : loading ? <LoadingCard /> : filteredSeasons.length === 0 ? <p className="admin-empty-text">Nenhuma temporada criada ainda.</p> : (
           <div className="admin-list">
             {filteredSeasons.map((s) => {
               const comp = competitions.find((c) => c.id === s.competition_id);
@@ -88,14 +98,14 @@ export function SeasonsTab() {
       </div>
       {editing && (
         <Modal title="Editar temporada" onClose={() => setEditing(null)}>
-          <SeasonEditForm season={editing} />
+          <SeasonEditForm season={editing} onSaved={() => setEditing(null)} />
         </Modal>
       )}
     </div>
   );
 }
 
-function SeasonEditForm({ season }: { season: Season }) {
+function SeasonEditForm({ season, onSaved }: { season: Season; onSaved: () => void }) {
   const [name, setName] = useState(season.name);
   const [startsAt, setStartsAt] = useState(season.starts_at ?? '');
   const [endsAt, setEndsAt] = useState(season.ends_at ?? '');
@@ -110,7 +120,8 @@ function SeasonEditForm({ season }: { season: Season }) {
     const { error: err } = await supabase.from('seasons').update({ name: name.trim(), starts_at: startsAt || null, ends_at: endsAt || null }).eq('id', season.id);
     setBusy(false);
     if (err) { setError(err.message || 'Não foi possível salvar as alterações.'); return; }
-    window.location.reload();
+    refreshAdminData();
+    onSaved();
   }
 
   return (
