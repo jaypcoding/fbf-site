@@ -33,7 +33,8 @@ O vínculo foi realizado sem migrations ou alterações de dados. Não execute `
 
 - As sete migrations listadas na seção abaixo estão aplicadas no projeto de produção (a migration 7 foi aplicada em 17/11/2026).
 - O conteúdo das migrations no Git corresponde ao estado aplicado em produção a partir do commit `e3f3688`. A verificação foi feita somente com consultas de leitura: o SQL registrado em `supabase_migrations.schema_migrations` e o hash do corpo das funções definidas pelas migrations foram comparados com os arquivos.
-- A sequência completa ainda **não** foi executada a partir de um banco vazio, e os testes pgTAP (`supabase/tests/`) e os scripts de integração e concorrência ainda não foram executados. Eles serão executados em um ambiente de staging separado e no CI antes de qualquer nova migration.
+- Desde 19/11/2026 o CI (`.github/workflows/ci.yml`) aplica todas as migrations a partir de um banco vazio no Supabase local do runner e executa os testes pgTAP (`supabase/tests/`), os scripts de concorrência e o teste de migração legada a cada push. A primeira execução revelou erros nos próprios testes, corrigidos nos commits seguintes, e dois defeitos de banco registrados nos testes: D19 (finalizar várias partidas do mata-mata num único UPDATE) e D20 (inserir vários eventos de goleiro num único INSERT). O fluxo do painel, de uma operação por comando, não é afetado.
+- Ainda não existe projeto de staging separado; ele é pré-requisito para aplicar novas migrations em produção.
 - Nenhuma nova migration deve ser aplicada remotamente sem validação em staging e autorização explícita do proprietário.
 
 ### Bootstrap único do primeiro ADMIN
