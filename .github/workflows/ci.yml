@@ -52,7 +52,15 @@ jobs:
       - run: npm ci
       - run: mkdir -p ci-logs
       - name: Start local Supabase stack
-        run: npx supabase start
+        # One retry absorbs transient image-pull or container start failures.
+        run: |
+          set -o pipefail
+          if ! npx supabase start 2>&1 | tee ci-logs/start.log; then
+            echo "First start attempt failed; retrying once." | tee -a ci-logs/start.log
+            npx supabase stop --no-backup 2>&1 | tee -a ci-logs/start.log || true
+            sleep 20
+            npx supabase start 2>&1 | tee -a ci-logs/start.log
+          fi
       - name: Show local database version
         run: npx supabase db query "SHOW server_version;"
       - name: Reset local database (all migrations from scratch)
@@ -74,7 +82,7 @@ jobs:
         run: set -o pipefail; node scripts/test-legacy-migration.mjs 2>&1 | tee ci-logs/legacy.log
       - name: Publish failure details as annotations
         if: failure()
-        run: node scripts/ci-annotate.mjs ci-logs/db-reset.log ci-logs/pgtap.log ci-logs/round-robin.log ci-logs/knockout.log ci-logs/legacy.log
+        run: node scripts/ci-annotate.mjs ci-logs/start.log ci-logs/db-reset.log ci-logs/pgtap.log ci-logs/round-robin.log ci-logs/knockout.log ci-logs/legacy.log
       - name: Stop local Supabase stack
         if: always()
         run: npx supabase stop --no-backup
