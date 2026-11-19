@@ -17,7 +17,7 @@ VALUES
   ('c1000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001', 'Published season'),
   ('c1000000-0000-0000-0000-000000000002', 'c0000000-0000-0000-0000-000000000002', 'Draft season');
 
-SELECT plan(7);
+SELECT plan(11);
 
 SET LOCAL ROLE anon;
 
@@ -52,6 +52,24 @@ SELECT is(
 SELECT lives_ok(
   $$SELECT player_id FROM public.player_competition_statistics$$,
   'anonymous visitors can read the official player statistics view'
+);
+SELECT lives_ok(
+  $$SELECT player_id FROM public.player_career_statistics$$,
+  'anonymous visitors can read career statistics'
+);
+SELECT lives_ok(
+  $$SELECT team_id FROM public.team_competition_statistics$$,
+  'anonymous visitors can read team statistics'
+);
+SELECT lives_ok(
+  $$SELECT player_id FROM public.goalkeeper_clean_sheet_statistics$$,
+  'anonymous visitors can read goalkeeper statistics'
+);
+SELECT lives_ok(
+  $$SELECT r.id FROM public.rosters r
+    JOIN public.season_teams st ON st.id = r.season_team_id
+    JOIN public.seasons s ON s.id = st.season_id$$,
+  'anonymous visitors can read rosters together with their seasons'
 );
 SELECT is(
   public.is_fbf_manager(),
