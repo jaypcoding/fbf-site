@@ -3,7 +3,8 @@ import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, 
 import { ArrowRight, BarChart3, CalendarDays, Check, ChevronRight, CircleUserRound, ClipboardList, Goal, LayoutDashboard, LogIn, Menu, Shield, Sparkles, Trophy, Users, X } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { shouldBlockOnProfile } from '@/lib/authProfile';
-import { supabase, type Competition, type Team, type Player, type Match, type MatchEvent } from '@/lib/supabase';
+import { buildSeasonLeaders, type LeaderPlayer, type SeasonStatRow } from '@/lib/seasonLeaders';
+import { supabase, type Competition, type Team, type Player, type Match } from '@/lib/supabase';
 import { useCompetitions, useSeasons, useTeams, usePlayers, useSeasonTeams, useRosters, useStages } from '@/lib/hooks';
 import { LoadingCard, EmptyState, PageIntro, TeamLogo, PlayerPhoto } from '@/components/ui';
 import { AdminPanel } from '@/components/AdminPanel';
@@ -18,6 +19,9 @@ import { formatClock } from '@/lib/time';
 import { useAdminDataVersion } from '@/lib/adminRefresh';
 
 type Status = Competition['status'];
+
+type LeaderData = { rows: SeasonStatRow[]; players: Map<string, LeaderPlayer>; teams: Map<string, string> };
+const EMPTY_LEADER_DATA: LeaderData = { rows: [], players: new Map(), teams: new Map() };
 
 const statusLabels: Record<Status, string> = {
   DRAFT: 'Em preparação',
@@ -129,7 +133,7 @@ function CompetitionDetail() {
   const { seasonTeams, loading: stLoading, error: seasonTeamsError } = useSeasonTeams(activeSeason?.id);
   const { stages, loading: stagesLoading, error: stagesError } = useStages(activeSeason?.id);
   const [allMatches, setAllMatches] = useState<Match[]>([]);
-  const [allEvents, setAllEvents] = useState<MatchEvent[]>([]);
+  const [leaderData, setLeaderData] = useState<LeaderData>(EMPTY_LEADER_DATA);
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState(false);
   const refreshVersion = useAdminDataVersion();
@@ -152,7 +156,7 @@ function CompetitionDetail() {
     }
     if (!activeSeason || stages.length === 0) {
       setAllMatches([]);
-      setAllEvents([]);
+      setLeaderData(EMPTY_LEADER_DATA);
       setDataError(false);
       setDataLoading(false);
       return;
@@ -162,48 +166,51 @@ function CompetitionDetail() {
     setDataLoading(true);
     setDataError(false);
     const stageIds = stages.map((s) => s.id);
+    const seasonId = activeSeason.id;
 
-    supabase.from('rounds').select('id').in('stage_id', stageIds).then(({ data: roundRows, error: roundsError }) => {
-      if (!active) return;
-      if (roundsError) {
-        setDataError(true);
-        setDataLoading(false);
-        return;
-      }
-
+    async function loadMatches(): Promise<Match[]> {
+      const { data: roundRows, error: roundsError } = await supabase.from('rounds').select('id').in('stage_id', stageIds);
+      if (roundsError) throw roundsError;
       const roundIds = (roundRows as { id: string }[] | null)?.map((r) => r.id) || [];
-      if (roundIds.length === 0) {
-        setAllMatches([]);
-        setAllEvents([]);
-        setDataLoading(false);
-        return;
+      if (roundIds.length === 0) return [];
+      const { data: matchData, error: matchesError } = await supabase.from('matches').select('id, round_id, home_team_id, away_team_id, scheduled_at, home_score, away_score, status, series_id, series_leg, home_source_match_id, home_source_outcome, away_source_match_id, away_source_outcome, home_team:home_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), away_team:away_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), round:round_id ( id, stage_id, name, round_order, phase_type, stage_group_id, leg_number, bracket_round, stage_group:stage_group_id ( id, name, group_order ) )').in('round_id', roundIds).order('scheduled_at', { ascending: true });
+      if (matchesError) throw matchesError;
+      return (matchData || []) as unknown as Match[];
+    }
+
+    // Season leaders come from the official statistics view (one row per player),
+    // instead of downloading every event of the season and aggregating here.
+    async function loadLeaders(): Promise<LeaderData> {
+      const { data: statRows, error: statsError } = await supabase.from('player_competition_statistics').select('player_id, goals, assists').eq('season_id', seasonId);
+      if (statsError) throw statsError;
+      const rows = (statRows || []) as SeasonStatRow[];
+      const playerIds = rows.map((row) => row.player_id);
+      if (playerIds.length === 0) return EMPTY_LEADER_DATA;
+      const [playersResult, rostersResult] = await Promise.all([
+        supabase.from('players').select('id, nickname, photo_url, position').in('id', playerIds),
+        supabase.from('rosters').select('player_id, season_team:season_team_id ( season_id, team:team_id ( name ) )').in('player_id', playerIds),
+      ]);
+      if (playersResult.error) throw playersResult.error;
+      if (rostersResult.error) throw rostersResult.error;
+      const players = new Map(((playersResult.data || []) as LeaderPlayer[]).map((player) => [player.id, player]));
+      const teams = new Map<string, string>();
+      for (const roster of (rostersResult.data || []) as unknown as { player_id: string; season_team: { season_id: string; team: { name: string } | null } | null }[]) {
+        if (roster.season_team?.season_id === seasonId && roster.season_team.team?.name && !teams.has(roster.player_id)) {
+          teams.set(roster.player_id, roster.season_team.team.name);
+        }
       }
+      return { rows, players, teams };
+    }
 
-      supabase.from('matches').select('id, round_id, home_team_id, away_team_id, scheduled_at, home_score, away_score, home_penalty_score, away_penalty_score, status, series_id, series_leg, home_source_match_id, home_source_outcome, away_source_match_id, away_source_outcome, home_team:home_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), away_team:away_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), round:round_id ( id, stage_id, name, round_order, phase_type, stage_group_id, leg_number, bracket_round, stage_group:stage_group_id ( id, name, group_order ) )').in('round_id', roundIds).order('scheduled_at', { ascending: true }).then(({ data: matchData, error: matchesError }) => {
-        if (!active) return;
-        if (matchesError) {
-          setDataError(true);
-          setDataLoading(false);
-          return;
-        }
-        const matchesList = (matchData || []) as unknown as Match[];
-        setAllMatches(matchesList);
-
-        const matchIds = matchesList.map((m) => m.id);
-        if (matchIds.length === 0) {
-          setAllEvents([]);
-          setDataLoading(false);
-          return;
-        }
-
-        supabase.from('match_events').select('id, match_id, event_type, period, is_own_goal, goal_event_id, minute_seconds, team_id, player_id, related_player_id, player:player_id ( id, nickname, photo_url, position ), related_player:related_player_id ( id, nickname )').in('match_id', matchIds).order('minute_seconds', { ascending: true }).then(({ data: evData, error: eventsError }) => {
-          if (active) {
-            if (eventsError) setDataError(true);
-            else setAllEvents((evData || []) as unknown as MatchEvent[]);
-            setDataLoading(false);
-          }
-        });
-      });
+    Promise.all([loadMatches(), loadLeaders()]).then(([matchesList, leaders]) => {
+      if (!active) return;
+      setAllMatches(matchesList);
+      setLeaderData(leaders);
+      setDataLoading(false);
+    }).catch(() => {
+      if (!active) return;
+      setDataError(true);
+      setDataLoading(false);
     });
 
     return () => { active = false; };
@@ -214,30 +221,8 @@ function CompetitionDetail() {
   if (!competition) return <section className="container detail-section"><EmptyState icon={<Trophy />} title="Competição não encontrada" description="A competição que você procura ainda não está disponível." actionLabel="Voltar para competições" actionTo="/competicoes" /></section>;
 
   const teamCount = seasonTeams.length;
-  const officialMatchIds = new Set(allMatches
-    .filter((match) => match.status === 'FINISHED' && match.home_score !== null && match.away_score !== null)
-    .map((match) => match.id));
-  const goals = allEvents.filter((event) => event.event_type === 'GOAL' && !event.is_own_goal && event.period !== 'PENALTY_SHOOTOUT' && event.player_id && officialMatchIds.has(event.match_id));
-  const goalMap = new Map<string, { player: { id: string; nickname: string; photo_url: string | null; position: string }; team_name: string | null; count: number }>();
-  for (const g of goals) {
-    const key = g.player_id!;
-    const existing = goalMap.get(key);
-    const teamName = g.team_id ? seasonTeams.find((st) => st.id === g.team_id)?.team?.name || null : null;
-    if (existing) existing.count++;
-    else goalMap.set(key, { player: { id: g.player!.id, nickname: g.player!.nickname, photo_url: g.player!.photo_url, position: g.player!.position }, team_name: teamName, count: 1 });
-  }
-  const scorers = Array.from(goalMap.values()).sort((a, b) => b.count - a.count);
-
-  const assists = allEvents.filter((event) => event.event_type === 'ASSIST' && event.goal_event_id && event.player_id && officialMatchIds.has(event.match_id));
-  const assistMap = new Map<string, { player: { id: string; nickname: string; photo_url: string | null; position: string }; team_name: string | null; count: number }>();
-  for (const a of assists) {
-    const key = a.player_id!;
-    const existing = assistMap.get(key);
-    const teamName = a.team_id ? seasonTeams.find((st) => st.id === a.team_id)?.team?.name || null : null;
-    if (existing) existing.count++;
-    else assistMap.set(key, { player: { id: a.player!.id, nickname: a.player!.nickname, photo_url: a.player!.photo_url, position: a.player!.position }, team_name: teamName, count: 1 });
-  }
-  const assisters = Array.from(assistMap.values()).sort((a, b) => b.count - a.count);
+  const scorers = buildSeasonLeaders(leaderData.rows, 'goals', leaderData.players, leaderData.teams);
+  const assisters = buildSeasonLeaders(leaderData.rows, 'assists', leaderData.players, leaderData.teams);
 
   return <section className="container detail-section"><Link to="/competicoes" className="back-link">← Todas as competições</Link><div className="detail-hero"><div><span className="status-pill"><span /> {statusLabels[competition.status]}</span><h1>{competition.name}</h1><p>{competition.description || 'Uma competição oficial da Federação Brasileira de Futsal.'}</p></div><div className="detail-emblem"><img src="/1389286770004463646.webp" alt="" /></div></div><div className="detail-meta"><div><span>Categoria</span><strong>{competition.category}</strong></div><div><span>Formato</span><strong>{competition.format}</strong></div><div>{seasons.length > 1 ? <label className="form-field"><span>Edição</span><select aria-label="Selecionar edição" value={activeSeason?.id ?? ''} onChange={(event) => setSelectedSeasonId(event.target.value)}>{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}</select></label> : <><span>Edição</span><strong>{activeSeason ? activeSeason.name : 'A definir'}</strong></>}</div><div><span>Equipes</span><strong>{teamCount > 0 ? teamCount : '—'}</strong></div></div><div className="detail-tabs">{['Visão geral', 'Classificação', 'Jogos', 'Times', 'Artilharia', 'Assistências', 'Goleiros / CS'].map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}>{item}</button>)}</div>
     {seasonsError || stagesError ? <EmptyState icon={<CalendarDays />} title="Não foi possível carregar as edições" description="Tente novamente mais tarde." /> : tab === 'Visão geral' ? (activeSeason ? <div className="detail-overview"><div className="overview-card"><span className="section-kicker">Edição selecionada</span><h2>{activeSeason.name}</h2><p>{activeSeason.starts_at ? `Início: ${new Date(activeSeason.starts_at).toLocaleDateString('pt-BR')}` : 'Data a definir'}{activeSeason.ends_at ? ` — Fim: ${new Date(activeSeason.ends_at).toLocaleDateString('pt-BR')}` : ''}</p></div>{stLoading ? <LoadingCard /> : seasonTeamsError ? <EmptyState icon={<Users />} title="Não foi possível carregar os times" description="Tente novamente mais tarde." /> : teamCount > 0 && <div className="overview-teams"><h3>Equipes inscritas</h3><div className="team-chips">{seasonTeams.map((st) => <Link key={st.id} to={`/times/${st.team_id}`} className="team-chip"><TeamLogo src={st.team?.logo_url || null} name={st.team?.name || ''} size={28} /><span>{st.team?.name}</span></Link>)}</div></div>}</div> : <EmptyState icon={<CalendarDays />} title="Edição ainda não iniciada" description="Esta competição já está cadastrada na FBF. Assim que uma temporada for criada, jogos, times e estatísticas aparecerão nesta página." />)

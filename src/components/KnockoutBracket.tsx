@@ -108,9 +108,7 @@ export function KnockoutBracket({ matches, stages }: { matches: Match[]; stages:
                             <span>{orderedMatches.length > 1 ? (match.series_leg === 1 ? 'Ida' : 'Volta') : match.round?.name}</span>
                             <strong>{(match.status === 'FINISHED' || match.status === 'LIVE')
                               && match.home_score !== null && match.away_score !== null
-                              ? `${match.home_score} × ${match.away_score}${match.home_penalty_score !== null && match.away_penalty_score !== null
-                                ? ` (${match.home_penalty_score}–${match.away_penalty_score} pên.)`
-                                : ''}${match.status === 'LIVE' ? ' · AO VIVO' : ''}`
+                              ? `${match.home_score} × ${match.away_score}${match.status === 'LIVE' ? ' · AO VIVO' : ''}`
                               : match.status === 'CANCELLED' ? 'Cancelada' : match.status === 'POSTPONED' ? 'Adiada' : 'Pendente'}</strong>
                             <ArrowRight size={14} />
                           </Link>

@@ -50,6 +50,8 @@ export function MatchPage() {
   if (!match) return <section className="container detail-section"><EmptyState icon={<Goal />} title="Partida não encontrada" description="Verifique o link ou volte para a lista de competições." actionLabel="Ver competições" actionTo="/competicoes" /></section>;
 
   const competition = match.round?.stage?.season?.competition;
+  // No mata-mata empatado, o primeiro gol no período extra (gol de ouro) decide a partida.
+  const decidedByGoldenGoal = events.some((ev) => ev.event_type === 'GOAL' && ev.period === 'EXTRA_TIME');
   const homeName = match.home_team?.team?.name || '—';
   const awayName = match.away_team?.team?.name || '—';
   const finished = match.status === 'FINISHED' && match.home_score !== null && match.away_score !== null;
@@ -63,13 +65,13 @@ export function MatchPage() {
         <div className="score-team"><TeamLogo src={match.home_team?.team?.logo_url ?? null} name={homeName} size={56} /><span>{homeName}</span></div>
         <strong>
           {finished || live ? `${match.home_score} × ${match.away_score}` : 'vs'}
-          {finished && match.home_penalty_score !== null && match.away_penalty_score !== null
-            ? ` (Pên. ${match.home_penalty_score} × ${match.away_penalty_score})`
-            : ''}
         </strong>
         <div className="score-team"><TeamLogo src={match.away_team?.team?.logo_url ?? null} name={awayName} size={56} /><span>{awayName}</span></div>
       </div>
-      <p className="admin-hint">{matchStatusLabels[match.status]}</p>
+      <p className="admin-hint">
+        {matchStatusLabels[match.status]}
+        {decidedByGoldenGoal ? ' · Decidida no gol de ouro' : ''}
+      </p>
 
       <div className="match-page-grid">
         <div>
@@ -85,7 +87,7 @@ export function MatchPage() {
                     <strong>{ev.is_own_goal ? `${ev.player?.nickname || '—'} (gol contra)` : ev.player?.nickname || '—'}{ev.related_player ? ` ↔ ${ev.related_player.nickname}` : ''}</strong>
                     <span>{ev.team?.team?.name || '—'}</span>
                   </div>
-                  <span className="timeline-type">{eventLabels[ev.event_type]}{ev.period === 'EXTRA_TIME' ? ' · Prorrogação' : ev.period === 'PENALTY_SHOOTOUT' ? ' · Pênaltis' : ''}</span>
+                  <span className="timeline-type">{eventLabels[ev.event_type]}{ev.period === 'EXTRA_TIME' ? ' · Gol de ouro' : ''}</span>
                 </div>
               ))}
             </div>

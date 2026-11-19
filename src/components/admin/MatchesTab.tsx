@@ -168,9 +168,6 @@ function MatchRow({ match, onEdit }: { match: Match; onEdit: () => void }) {
         <span>{match.home_score ?? '—'}</span>
         <span>×</span>
         <span>{match.away_score ?? '—'}</span>
-        {match.home_penalty_score !== null && match.away_penalty_score !== null && (
-          <small>(Pên. {match.home_penalty_score}×{match.away_penalty_score})</small>
-        )}
       </div>
       <FormError message={error} />
       <div className="admin-match-actions">

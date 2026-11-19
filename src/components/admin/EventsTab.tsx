@@ -18,8 +18,10 @@ const eventTypeLabels: Record<EventType, string> = {
 
 const periodLabels = {
   REGULATION: 'Tempo normal',
-  EXTRA_TIME: 'Prorrogação',
-  PENALTY_SHOOTOUT: 'Disputa de pênaltis',
+  // A FBF não tem prorrogação nem pênaltis: o período extra é o gol de ouro
+  // do mata-mata. PENALTY_SHOOTOUT só é rotulado para exibir registros antigos.
+  EXTRA_TIME: 'Gol de ouro (mata-mata)',
+  PENALTY_SHOOTOUT: 'Pênaltis (registro antigo)',
 } as const;
 
 export function EventsTab() {
@@ -184,7 +186,7 @@ function EventForm({ match }: { match: Match }) {
           }}
         >
           {Object.entries(periodLabels)
-            .filter(([value]) => value !== 'PENALTY_SHOOTOUT' || eventType === 'GOAL')
+            .filter(([value]) => value !== 'PENALTY_SHOOTOUT')
             .map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </FormSelect>
       </FormField>
