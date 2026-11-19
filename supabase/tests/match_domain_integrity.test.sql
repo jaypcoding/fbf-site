@@ -206,8 +206,10 @@ SELECT throws_ok(
   'registration RPC rejects an account without assignment to the competition'
 );
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
+-- Team 3 already has a pending registration from the fixture (approved below),
+-- so a team without any registration in this season is used here.
 SELECT lives_ok(
-  $$SELECT public.register_team_for_season('30000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000003')$$,
+  $$SELECT public.register_team_for_season('30000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000004')$$,
   'assigned organizer can register a team'
 );
 SELECT throws_ok(
@@ -548,7 +550,9 @@ SELECT is(
   (SELECT played FROM public.stage_standings
    WHERE stage_id = '60000000-0000-0000-0000-000000000001'
      AND team_id = '40000000-0000-0000-0000-000000000001'),
-  1,
+  -- Two finished matches of this team are in this stage (the event match and the
+  -- goalkeeper-return match); the cancelled one must not be counted.
+  2,
   'cancelled matches do not contribute to official standings'
 );
 SELECT is(
@@ -607,12 +611,11 @@ SELECT is(
   'ADMIN',
   'protected role-management RPC persists the authorized role change'
 );
--- The cascade reaches matches, whose BEFORE DELETE guard (matches_prevent_delete)
--- aborts the whole statement, so the competition and its history survive.
-SELECT throws_ok(
-  $$DELETE FROM public.competitions WHERE id = '20000000-0000-0000-0000-000000000001'$$,
-  '55000',
-  NULL,
+-- The competitions_admin_delete policy hides competitions that have matches,
+-- so the DELETE affects no rows (and matches_prevent_delete stays as a second guard).
+SELECT is_empty(
+  $$DELETE FROM public.competitions WHERE id = '20000000-0000-0000-0000-000000000001'
+    RETURNING id$$,
   'admin cannot delete a competition that has match history'
 );
 SELECT lives_ok(
