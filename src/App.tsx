@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowRight, BarChart3, CalendarDays, Check, ChevronRight, CircleUserRound, ClipboardList, Goal, LayoutDashboard, LogIn, Menu, Shield, Sparkles, Trophy, Users, X } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { shouldBlockOnProfile } from '@/lib/authProfile';
+import { COMPETITION_TABS, DEFAULT_COMPETITION_TAB, slugFromTab, tabFromSlug, type CompetitionTab } from '@/lib/competitionTabs';
 import { buildSeasonLeaders, type LeaderPlayer, type SeasonStatRow } from '@/lib/seasonLeaders';
 import { supabase, type Competition, type Team, type Player, type Match } from '@/lib/supabase';
 import { useCompetitions, useSeasons, useTeams, usePlayers, useSeasonTeams, useRosters, useStages } from '@/lib/hooks';
@@ -126,9 +127,20 @@ function CompetitionDetail() {
   const { id } = useParams();
   const { competitions, loading, error: competitionsError } = useCompetitions();
   const competition = competitions.find((item) => item.id === id);
-  const [tab, setTab] = useState('Visão geral');
+  // Tab and edition live in the URL (?aba=…&edicao=…) so links can be shared
+  // and the browser back button works.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = tabFromSlug(searchParams.get('aba'));
+  const selectedSeasonId = searchParams.get('edicao') ?? '';
+  const updateParams = (key: 'aba' | 'edicao', value: string, isDefault: boolean) => {
+    const next = new URLSearchParams(searchParams);
+    if (isDefault || !value) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next, { replace: true });
+  };
+  const setTab = (nextTab: CompetitionTab) => updateParams('aba', slugFromTab(nextTab), nextTab === DEFAULT_COMPETITION_TAB);
   const { seasons, loading: seasonsLoading, error: seasonsError } = useSeasons(id);
-  const [selectedSeasonId, setSelectedSeasonId] = useState('');
+  const setSelectedSeasonId = (seasonId: string) => updateParams('edicao', seasonId, seasonId === seasons[0]?.id);
   const activeSeason = seasons.find((season) => season.id === selectedSeasonId) ?? seasons[0];
   const { seasonTeams, loading: stLoading, error: seasonTeamsError } = useSeasonTeams(activeSeason?.id);
   const { stages, loading: stagesLoading, error: stagesError } = useStages(activeSeason?.id);
@@ -137,12 +149,6 @@ function CompetitionDetail() {
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState(false);
   const refreshVersion = useAdminDataVersion();
-
-  useEffect(() => {
-    if (!seasons.some((season) => season.id === selectedSeasonId)) {
-      setSelectedSeasonId(seasons[0]?.id ?? '');
-    }
-  }, [seasons, selectedSeasonId]);
 
   useEffect(() => {
     if (seasonsLoading || stagesLoading) {
@@ -224,7 +230,7 @@ function CompetitionDetail() {
   const scorers = buildSeasonLeaders(leaderData.rows, 'goals', leaderData.players, leaderData.teams);
   const assisters = buildSeasonLeaders(leaderData.rows, 'assists', leaderData.players, leaderData.teams);
 
-  return <section className="container detail-section"><Link to="/competicoes" className="back-link">← Todas as competições</Link><div className="detail-hero"><div><span className="status-pill"><span /> {statusLabels[competition.status]}</span><h1>{competition.name}</h1><p>{competition.description || 'Uma competição oficial da Federação Brasileira de Futsal.'}</p></div><div className="detail-emblem"><img src="/1389286770004463646.webp" alt="" /></div></div><div className="detail-meta"><div><span>Categoria</span><strong>{competition.category}</strong></div><div><span>Formato</span><strong>{competition.format}</strong></div><div>{seasons.length > 1 ? <label className="form-field"><span>Edição</span><select aria-label="Selecionar edição" value={activeSeason?.id ?? ''} onChange={(event) => setSelectedSeasonId(event.target.value)}>{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}</select></label> : <><span>Edição</span><strong>{activeSeason ? activeSeason.name : 'A definir'}</strong></>}</div><div><span>Equipes</span><strong>{teamCount > 0 ? teamCount : '—'}</strong></div></div><div className="detail-tabs">{['Visão geral', 'Classificação', 'Jogos', 'Times', 'Artilharia', 'Assistências', 'Goleiros / CS'].map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}>{item}</button>)}</div>
+  return <section className="container detail-section"><Link to="/competicoes" className="back-link">← Todas as competições</Link><div className="detail-hero"><div><span className="status-pill"><span /> {statusLabels[competition.status]}</span><h1>{competition.name}</h1><p>{competition.description || 'Uma competição oficial da Federação Brasileira de Futsal.'}</p></div><div className="detail-emblem"><img src="/1389286770004463646.webp" alt="" /></div></div><div className="detail-meta"><div><span>Categoria</span><strong>{competition.category}</strong></div><div><span>Formato</span><strong>{competition.format}</strong></div><div>{seasons.length > 1 ? <label className="form-field"><span>Edição</span><select aria-label="Selecionar edição" value={activeSeason?.id ?? ''} onChange={(event) => setSelectedSeasonId(event.target.value)}>{seasons.map((season) => <option key={season.id} value={season.id}>{season.name}</option>)}</select></label> : <><span>Edição</span><strong>{activeSeason ? activeSeason.name : 'A definir'}</strong></>}</div><div><span>Equipes</span><strong>{teamCount > 0 ? teamCount : '—'}</strong></div></div><div className="detail-tabs">{COMPETITION_TABS.map((item) => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}>{item}</button>)}</div>
     {seasonsError || stagesError ? <EmptyState icon={<CalendarDays />} title="Não foi possível carregar as edições" description="Tente novamente mais tarde." /> : tab === 'Visão geral' ? (activeSeason ? <div className="detail-overview"><div className="overview-card"><span className="section-kicker">Edição selecionada</span><h2>{activeSeason.name}</h2><p>{activeSeason.starts_at ? `Início: ${new Date(activeSeason.starts_at).toLocaleDateString('pt-BR')}` : 'Data a definir'}{activeSeason.ends_at ? ` — Fim: ${new Date(activeSeason.ends_at).toLocaleDateString('pt-BR')}` : ''}</p></div>{stLoading ? <LoadingCard /> : seasonTeamsError ? <EmptyState icon={<Users />} title="Não foi possível carregar os times" description="Tente novamente mais tarde." /> : teamCount > 0 && <div className="overview-teams"><h3>Equipes inscritas</h3><div className="team-chips">{seasonTeams.map((st) => <Link key={st.id} to={`/times/${st.team_id}`} className="team-chip"><TeamLogo src={st.team?.logo_url || null} name={st.team?.name || ''} size={28} /><span>{st.team?.name}</span></Link>)}</div></div>}</div> : <EmptyState icon={<CalendarDays />} title="Edição ainda não iniciada" description="Esta competição já está cadastrada na FBF. Assim que uma temporada for criada, jogos, times e estatísticas aparecerão nesta página." />)
     : tab === 'Times' ? (stLoading ? <LoadingCard /> : seasonTeamsError ? <EmptyState icon={<Users />} title="Não foi possível carregar os times" description="Tente novamente mais tarde." /> : teamCount > 0 ? <div className="team-grid">{seasonTeams.map((st) => <Link key={st.id} to={`/times/${st.team_id}`} className="team-card"><div className="team-card-logo"><TeamLogo src={st.team?.logo_url || null} name={st.team?.name || ''} size={56} /></div><h3>{st.team?.name}</h3></Link>)}</div> : <EmptyState icon={<Users />} title="Nenhum time inscrito" description="Os times serão exibidos aqui assim que forem inscritos nesta temporada." />)
     : tab === 'Classificação' ? (dataLoading ? <LoadingCard /> : dataError ? <EmptyState icon={<BarChart3 />} title="Não foi possível carregar a classificação" description="Tente novamente mais tarde." /> : <StageStandings stages={stages} />)
