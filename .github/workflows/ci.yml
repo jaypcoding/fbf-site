@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (typecheck, lint, unit tests, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          # Placeholder values for a local-only build check; no real project is contacted.
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_ANON_KEY: sb_publishable_ci_placeholder
+
+  database:
+    name: Database (local Supabase, pgTAP, integration, concurrency)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Start local Supabase stack
+        run: npx supabase start
+      - name: Show local database version
+        run: npx supabase db query "SHOW server_version;"
+      - name: Reset local database (all migrations from scratch)
+        run: npm run db:reset
+      - name: pgTAP tests
+        run: npm run db:test
+      - name: Round-robin concurrency
+        run: node scripts/test-round-robin-concurrency.mjs
+      - name: Knockout progression concurrency
+        run: node scripts/test-knockout-progression-concurrency.mjs
+      - name: Legacy migration path
+        run: node scripts/test-legacy-migration.mjs
+      - name: Stop local Supabase stack
+        if: always()
+        run: npx supabase stop --no-backup
