@@ -263,12 +263,12 @@ BEGIN
   END IF;
 
   IF NEW.status IS DISTINCT FROM OLD.status THEN
-    IF NOT CASE OLD.status
+    IF NOT (CASE OLD.status
       WHEN 'SCHEDULED' THEN NEW.status IN ('LIVE', 'POSTPONED', 'CANCELLED')
       WHEN 'LIVE' THEN NEW.status IN ('FINISHED', 'POSTPONED', 'CANCELLED')
       WHEN 'POSTPONED' THEN NEW.status IN ('SCHEDULED', 'CANCELLED')
       ELSE false
-    END THEN
+    END) THEN
       RAISE EXCEPTION 'Transição de status inválida: % -> %', OLD.status, NEW.status
         USING ERRCODE = '23514';
     END IF;

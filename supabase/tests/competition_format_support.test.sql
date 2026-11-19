@@ -286,6 +286,8 @@ SELECT throws_ok(
   NULL,
   'knockout generation cannot create duplicate fixtures'
 );
+SELECT set_config('request.jwt.claim.sub', '11000000-0000-0000-0000-000000000003', true);
+
 SELECT throws_ok(
   $$SELECT public.generate_group_stage(
     '61000000-0000-0000-0000-000000000002', '[]'::jsonb, 1, 1

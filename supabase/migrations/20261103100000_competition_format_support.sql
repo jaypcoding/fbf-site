@@ -772,6 +772,17 @@ BEGIN
   SELECT p_stage_id, name, group_order FROM pg_temp.fbf_group_plan
   GROUP BY name, group_order ORDER BY group_order;
 
+  -- Cadastra todas as equipes antes de criar qualquer rodada.
+  FOR v_group IN
+    SELECT id, group_order
+    FROM public.stage_groups WHERE stage_id = p_stage_id ORDER BY group_order
+  LOOP
+    INSERT INTO public.stage_group_teams (stage_group_id, stage_id, season_team_id, seed_order)
+    SELECT v_group.id, p_stage_id, p.team_id, p.seed_order
+    FROM pg_temp.fbf_group_plan p WHERE p.group_order = v_group.group_order;
+  END LOOP;
+
+  -- Com todas as equipes cadastradas, gera as rodadas e partidas.
   FOR v_group IN
     SELECT id, name, group_order
     FROM public.stage_groups WHERE stage_id = p_stage_id ORDER BY group_order
@@ -780,9 +791,6 @@ BEGIN
     INTO v_group_teams
     FROM pg_temp.fbf_group_plan p
     WHERE p.group_order = v_group.group_order;
-    INSERT INTO public.stage_group_teams (stage_group_id, stage_id, season_team_id, seed_order)
-    SELECT v_group.id, p_stage_id, p.team_id, p.seed_order
-    FROM pg_temp.fbf_group_plan p WHERE p.group_order = v_group.group_order;
 
     v_team_count := cardinality(v_group_teams);
     v_rotation := v_group_teams;
@@ -1179,8 +1187,8 @@ DECLARE
   v_finished_count integer;
   v_series_count integer;
 BEGIN
-  SELECT m, r.stage_id
-  INTO v_match, v_stage_id
+  SELECT m.*
+  INTO v_match
   FROM public.matches m
   JOIN public.rounds r ON r.id = m.round_id
   WHERE m.id = p_match_id AND r.phase_type = 'KNOCKOUT';
@@ -1242,10 +1250,13 @@ DECLARE
   v_other_finished integer;
   v_series_count integer;
 BEGIN
-  SELECT m, r.stage_id, r.phase_type
-  INTO v_match, v_stage_id, v_phase
+  SELECT m.*
+  INTO v_match
   FROM public.matches m JOIN public.rounds r ON r.id = m.round_id
   WHERE m.id = p_match_id;
+  IF NOT FOUND THEN RETURN false; END IF;
+  SELECT r.phase_type INTO v_phase
+  FROM public.rounds r WHERE r.id = v_match.round_id;
   v_series_id := v_match.series_id;
   IF v_phase <> 'KNOCKOUT' OR v_series_id IS NULL THEN
     RETURN p_home_score = p_away_score;
