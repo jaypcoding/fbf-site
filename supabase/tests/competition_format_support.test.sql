@@ -88,6 +88,11 @@ VALUES
   ('61000000-0000-0000-0000-000000000002', '31000000-0000-0000-0000-000000000002', 'Group stage', 'Grupos + Mata-mata', '{"group_count":2,"group_legs":1,"qualifiers_per_group":1}'::jsonb),
   ('61000000-0000-0000-0000-000000000003', '31000000-0000-0000-0000-000000000003', 'Knockout', 'Mata-mata', '{"knockout_legs":1,"third_place":true}'::jsonb);
 
+-- Stage that never receives rounds, so permission checks on group writes are
+-- not pre-empted by the structural guard that blocks changes after fixtures exist.
+INSERT INTO public.stages (id, season_id, name, stage_order, format, settings)
+VALUES ('61000000-0000-0000-0000-000000000004', '31000000-0000-0000-0000-000000000002', 'Group stage without rounds', 2, 'Grupos + Mata-mata', '{"group_count":2,"group_legs":1,"qualifiers_per_group":1}'::jsonb);
+
 SELECT plan(28);
 
 SELECT is(
@@ -280,8 +285,14 @@ SELECT is(
   1,
   'third-place match is linked to both semifinal losers'
 );
+-- A non-empty plan passes the basic plan validation, so the call reaches the
+-- duplicate-bracket guard this test is about.
 SELECT throws_ok(
-  $$SELECT public.generate_knockout_stage('61000000-0000-0000-0000-000000000003', '[]'::jsonb, 1)$$,
+  $$SELECT public.generate_knockout_stage(
+    '61000000-0000-0000-0000-000000000003',
+    jsonb_build_array(jsonb_build_object('key', 'R1M1', 'round', 1, 'matchNumber', 1, 'legs', 1)),
+    1
+  )$$,
   '23514',
   NULL,
   'knockout generation cannot create duplicate fixtures'
@@ -307,7 +318,7 @@ SELECT is(
 );
 SELECT throws_ok(
   $$INSERT INTO public.stage_groups (stage_id, name, group_order)
-    VALUES ('61000000-0000-0000-0000-000000000002', 'Anonymous group', 99)$$,
+    VALUES ('61000000-0000-0000-0000-000000000004', 'Anonymous group', 99)$$,
   '42501',
   NULL,
   'public visitors cannot create competition groups'
@@ -333,11 +344,24 @@ SELECT lives_ok(
     WHERE r.stage_id = '61000000-0000-0000-0000-000000000003'
       AND r.bracket_round = 1;
 
+    -- Semifinals are finished one statement at a time, as the admin UI does.
+    -- Finishing both in a single multi-row UPDATE currently fails (defect D19:
+    -- each row's propagation fills only its own side of the next fixture while
+    -- validate_match_progression_source already checks the sibling side). The
+    -- fix and its regression test belong to a new migration.
+    UPDATE public.matches m SET status = 'FINISHED'
+    WHERE m.id = (
+      SELECT sm.id FROM public.matches sm JOIN public.rounds sr ON sr.id = sm.round_id
+      WHERE sr.stage_id = '61000000-0000-0000-0000-000000000003'
+        AND sr.bracket_round = 1 AND sm.series_id IS NOT NULL
+      ORDER BY sm.id LIMIT 1
+    );
     UPDATE public.matches m SET status = 'FINISHED'
     FROM public.rounds r
     WHERE r.id = m.round_id
       AND r.stage_id = '61000000-0000-0000-0000-000000000003'
-      AND r.bracket_round = 1;
+      AND r.bracket_round = 1
+      AND m.status = 'LIVE';
   END
   $body$$test$,
   'finishing semifinals calculates scores and advances the bracket'

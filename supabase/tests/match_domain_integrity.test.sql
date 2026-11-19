@@ -10,6 +10,16 @@ VALUES
   ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fbf-outsider-test@example.invalid', '', now())
 ON CONFLICT (id) DO NOTHING;
 
+-- Snapshot taken before the fixture promotes two of these accounts, so the
+-- test can assert the role assigned by the profile synchronization trigger.
+CREATE TEMP TABLE fbf_initial_profile_roles ON COMMIT DROP AS
+SELECT id, role FROM public.profiles
+WHERE id IN (
+  '10000000-0000-0000-0000-000000000001',
+  '10000000-0000-0000-0000-000000000002',
+  '10000000-0000-0000-0000-000000000003'
+);
+
 UPDATE public.profiles
 SET role = CASE id
   WHEN '10000000-0000-0000-0000-000000000001'::uuid THEN 'ADMIN'
@@ -122,13 +132,7 @@ SELECT is(
   'auth user insert trigger creates a profile for every new account'
 );
 SELECT is(
-  (SELECT count(*)::integer FROM public.profiles
-   WHERE id IN (
-     '10000000-0000-0000-0000-000000000001',
-     '10000000-0000-0000-0000-000000000002',
-     '10000000-0000-0000-0000-000000000003'
-   )
-   AND role = 'USER'),
+  (SELECT count(*)::integer FROM fbf_initial_profile_roles WHERE role = 'USER'),
   3,
   'newly synchronized profiles receive the unprivileged USER role'
 );
@@ -138,13 +142,10 @@ SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002
 
 SELECT ok(public.can_manage_competition('20000000-0000-0000-0000-000000000001'), 'assigned organizer can manage their competition');
 SELECT ok(NOT public.can_manage_competition('20000000-0000-0000-0000-000000000002'), 'organizer cannot manage an unassigned competition');
-SELECT is(
-  (WITH changed AS (
-    UPDATE public.teams SET name = 'Organizer must not change global team'
+SELECT is_empty(
+  $$UPDATE public.teams SET name = 'Organizer must not change global team'
     WHERE id = '40000000-0000-0000-0000-000000000001'
-    RETURNING id
-  ) SELECT count(*)::integer FROM changed),
-  0,
+    RETURNING id$$,
   'organizer cannot update shared global team data'
 );
 SELECT throws_ok(
@@ -153,13 +154,10 @@ SELECT throws_ok(
   NULL,
   'organizer cannot insert a shared global team'
 );
-SELECT is(
-  (WITH changed AS (
-    UPDATE public.players SET nickname = 'Organizer must not change global player'
+SELECT is_empty(
+  $$UPDATE public.players SET nickname = 'Organizer must not change global player'
     WHERE id = '90000000-0000-0000-0000-000000000003'
-    RETURNING id
-  ) SELECT count(*)::integer FROM changed),
-  0,
+    RETURNING id$$,
   'organizer cannot update shared global player data'
 );
 SELECT throws_ok(
@@ -168,13 +166,10 @@ SELECT throws_ok(
   NULL,
   'organizer cannot insert a shared global player'
 );
-SELECT is(
-  (WITH changed AS (
-    UPDATE public.streamers SET display_name = 'Organizer must not change global streamer'
+SELECT is_empty(
+  $$UPDATE public.streamers SET display_name = 'Organizer must not change global streamer'
     WHERE id = 'a1000000-0000-0000-0000-000000000001'
-    RETURNING id
-  ) SELECT count(*)::integer FROM changed),
-  0,
+    RETURNING id$$,
   'organizer cannot update shared global streamer data'
 );
 SELECT throws_ok(
@@ -561,13 +556,10 @@ SELECT throws_ok(
   NULL,
   'user cannot call the privileged role-management RPC'
 );
-SELECT is(
-  (WITH changed AS (
-    UPDATE public.competitions SET name = 'User must not edit competition'
+SELECT is_empty(
+  $$UPDATE public.competitions SET name = 'User must not edit competition'
     WHERE id = '20000000-0000-0000-0000-000000000001'
-    RETURNING id
-  ) SELECT count(*)::integer FROM changed),
-  0,
+    RETURNING id$$,
   'user cannot update a competition'
 );
 RESET ROLE;
