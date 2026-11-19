@@ -19,7 +19,7 @@ npm.cmd run supabase:check
 
 O script lê explicitamente as duas variáveis do `.env.local` na raiz do projeto (sem imprimir seus valores), faz apenas `GET /auth/v1/health` e envia a chave pública no header `apikey`. Em respostas não exitosas, exibe status HTTP e uma mensagem JSON sanitizada; oculta chaves, JWTs e URLs. Na última verificação, o endpoint respondeu HTTP 200 para o host do projeto vinculado. Isso confirma a conectividade do Auth health endpoint, não valida schema, RLS nem migrations. A URL anterior de `.env` não foi copiada.
 
-O Supabase CLI está na versão local 3.0.0 e agora está vinculado localmente ao Project Ref `wybcbavgixfhvvmegkwc` em `supabase/.temp/project-ref`. O CLI reporta `environment=unverified`; o vínculo local não comprova conectividade do frontend nem valida/aplica migrations. `project_id` em `supabase/config.toml` continua sendo somente o identificador do stack local. Em outro checkout, autentique a CLI com o prompt interativo, inserindo o access token somente nele (não no repositório, `.env.local` ou chat), e vincule usando o ref copiado do Dashboard:
+O Supabase CLI está na versão local 3.0.0 e está vinculado localmente ao projeto de produção. O CLI guarda o Project Ref no arquivo local `supabase/.temp/project-ref`, que é ignorado pelo Git; o Project Ref não deve ser versionado nem copiado para a documentação. O vínculo local não comprova conectividade do frontend nem valida/aplica migrations. `project_id` em `supabase/config.toml` continua sendo somente o identificador do stack local. Em outro checkout, autentique a CLI com o prompt interativo, inserindo o access token somente nele (não no repositório, `.env.local` ou chat), e vincule usando o ref copiado do Dashboard:
 
 ```powershell
 npm.cmd exec -- supabase login
@@ -29,7 +29,12 @@ npm.cmd exec -- supabase link --project-ref $env:SUPABASE_PROJECT_REF
 
 O vínculo foi realizado sem migrations ou alterações de dados. Não execute `db push`, `migration up` remoto ou reset remoto nesta etapa.
 
-As seis migrations estão ordenadas cronologicamente na seção abaixo, mas ainda não podem ser consideradas prontas para aplicação remota: a sequência não foi executada em PostgreSQL local e os testes de integração ainda estão pendentes. Prepare Podman Desktop ou Docker Desktop, execute a validação local completa e revise os resultados; nenhuma migration remota foi aplicada.
+### Estado verificado (19/11/2026)
+
+- As sete migrations listadas na seção abaixo estão aplicadas no projeto de produção (a migration 7 foi aplicada em 17/11/2026).
+- O conteúdo das migrations no Git corresponde ao estado aplicado em produção a partir do commit `e3f3688`. A verificação foi feita somente com consultas de leitura: o SQL registrado em `supabase_migrations.schema_migrations` e o hash do corpo das funções definidas pelas migrations foram comparados com os arquivos.
+- A sequência completa ainda **não** foi executada a partir de um banco vazio, e os testes pgTAP (`supabase/tests/`) e os scripts de integração e concorrência ainda não foram executados. Eles serão executados em um ambiente de staging separado e no CI antes de qualquer nova migration.
+- Nenhuma nova migration deve ser aplicada remotamente sem validação em staging e autorização explícita do proprietário.
 
 ### Bootstrap único do primeiro ADMIN
 
@@ -98,10 +103,11 @@ O CLI executa as migrations em ordem cronológica pelo timestamp:
 4. `20261102130911_scope_organizer_write_access_to_assigned_competitions.sql` — adiciona funções para resolver a competição de cada temporada/fase/rodada/partida e restringe escritas desses dados à atribuição do ORGANIZER.
 5. `20261102133000_competition_lifecycle_and_round_robin.sql` — adiciona datas, vagas e inscrições; RPCs de inscrição/revisão; validações de ciclo de vida e relacionamentos; geração todos-contra-todos e views de classificação/estatísticas.
 6. `20261102140000_match_domain_integrity.sql` — adiciona histórico imutável de status, origem do placar, período/gol contra, validações e triggers de eventos e goleiros, índices únicos, proteção de confrontos duplicados e views oficiais; restringe alterações de registros globais compartilhados a ADMIN.
+7. `20261103100000_competition_format_support.sql` — adiciona grupos de fase (`stage_groups`, `stage_group_teams`), configurações de fase (`stages.settings`), tipo de fase, grupo, perna e rodada de chave em `rounds`, séries de ida e volta e origem de confrontos em `matches`; RPCs `generate_group_stage` e `generate_knockout_stage`; progressão automática do mata-mata (`knockout_series_winner`, `propagate_knockout_result`); validações de formato; e a view `stage_standings` com suporte a grupos.
 
-As dependências seguem a ordem: a segunda migration exige `profiles` e papéis da primeira; a terceira exige `matches`; a quarta exige tabelas e funções de permissões e `match_streamers`; a quinta exige os helpers de escopo da quarta; a sexta substitui e complementa estruturas e políticas das anteriores. Não há `DROP TABLE`, `TRUNCATE` ou exclusão geral de dados nas seis migrations. Ainda assim, a aplicação desde banco vazio **não foi executada**: a compatibilidade SQL permanece por validar com PostgreSQL local.
+As dependências seguem a ordem: a segunda migration exige `profiles` e papéis da primeira; a terceira exige `matches`; a quarta exige tabelas e funções de permissões e `match_streamers`; a quinta exige os helpers de escopo da quarta; a sexta substitui e complementa estruturas e políticas das anteriores; a sétima depende das estruturas de partidas, eventos e classificação da quinta e da sexta. Não há `DROP TABLE`, `TRUNCATE` ou exclusão geral de dados nas sete migrations. Ainda assim, a aplicação desde banco vazio **não foi executada**: a compatibilidade SQL permanece por validar com PostgreSQL local, em staging e no CI.
 
-A cadeia principal de relações é `competitions → seasons → stages → rounds → matches`; `season_teams` liga uma temporada aos registros globais de `teams`, `rosters` liga participação a `players`, e eventos/participações de goleiros apontam para partidas, times aprovados e jogadores. `competition_organizers` mapeia usuários a competições. `match_streamers` liga partidas a `streamers`. As funções e triggers posteriores validam essa cadeia; as views de classificação/estatística dependem de partidas finalizadas, eventos e participações. As views usam `security_invoker`, por isso o major PostgreSQL 15 foi definido em [config.toml](./config.toml).
+A cadeia principal de relações é `competitions → seasons → stages → rounds → matches`; `season_teams` liga uma temporada aos registros globais de `teams`, `rosters` liga participação a `players`, e eventos/participações de goleiros apontam para partidas, times aprovados e jogadores. `competition_organizers` mapeia usuários a competições. `match_streamers` liga partidas a `streamers`. As funções e triggers posteriores validam essa cadeia; as views de classificação/estatística dependem de partidas finalizadas, eventos e participações. As views usam `security_invoker` (exige PostgreSQL 15 ou superior). O major PostgreSQL 17 está definido em [config.toml](./config.toml) para corresponder à versão do projeto de produção.
 
 ### Critério de Clean Sheet e placares LEGACY
 
@@ -177,7 +183,7 @@ node scripts/test-round-robin-concurrency.mjs
 node scripts/test-legacy-migration.mjs
 ```
 
-`supabase status` deve mostrar a API local em loopback, normalmente `http://127.0.0.1:54321`; `SHOW server_version` deve mostrar PostgreSQL major 15. O `db:reset` é destrutivo para o banco local: aplica as seis migrations do zero e dados iniciais de demonstração.
+`supabase status` deve mostrar a API local em loopback, normalmente `http://127.0.0.1:54321`; `SHOW server_version` deve mostrar PostgreSQL major 17. O `db:reset` é destrutivo para o banco local: aplica as sete migrations do zero e dados iniciais de demonstração.
 
 `db:reset` e `db:test` passam por `scripts/supabase-local.mjs`, que consulta o status e exige URL loopback antes de reset/teste, além de rejeitar seletores remotos. Os testes de concorrência e legado também verificam URL local. `supabase start`/`status` são comandos locais do CLI; não use `link`, `db push`, `--db-url` ou credenciais remotas nesta validação. O teste de legado reinicia o banco local até a migration anterior à de integridade, carrega fixtures temporárias e aplica a migration final; ao fim, para retornar ao schema atual limpo, rode novamente:
 
