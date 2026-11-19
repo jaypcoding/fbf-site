@@ -40,6 +40,9 @@ jobs:
     name: Database (local Supabase, pgTAP, integration, concurrency)
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -47,20 +50,31 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: mkdir -p ci-logs
       - name: Start local Supabase stack
         run: npx supabase start
       - name: Show local database version
         run: npx supabase db query "SHOW server_version;"
       - name: Reset local database (all migrations from scratch)
-        run: npm run db:reset
+        id: reset
+        run: set -o pipefail; npm run db:reset 2>&1 | tee ci-logs/db-reset.log
+      # The remaining suites run independently once the schema is in place,
+      # so a failure in one does not hide the results of the others.
       - name: pgTAP tests
-        run: npm run db:test
+        if: always() && steps.reset.outcome == 'success'
+        run: set -o pipefail; npm run db:test 2>&1 | tee ci-logs/pgtap.log
       - name: Round-robin concurrency
-        run: node scripts/test-round-robin-concurrency.mjs
+        if: always() && steps.reset.outcome == 'success'
+        run: set -o pipefail; node scripts/test-round-robin-concurrency.mjs 2>&1 | tee ci-logs/round-robin.log
       - name: Knockout progression concurrency
-        run: node scripts/test-knockout-progression-concurrency.mjs
+        if: always() && steps.reset.outcome == 'success'
+        run: set -o pipefail; node scripts/test-knockout-progression-concurrency.mjs 2>&1 | tee ci-logs/knockout.log
       - name: Legacy migration path
-        run: node scripts/test-legacy-migration.mjs
+        if: always() && steps.reset.outcome == 'success'
+        run: set -o pipefail; node scripts/test-legacy-migration.mjs 2>&1 | tee ci-logs/legacy.log
+      - name: Publish failure details as annotations
+        if: failure()
+        run: node scripts/ci-annotate.mjs ci-logs/db-reset.log ci-logs/pgtap.log ci-logs/round-robin.log ci-logs/knockout.log ci-logs/legacy.log
       - name: Stop local Supabase stack
         if: always()
         run: npx supabase stop --no-backup
