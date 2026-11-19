@@ -6,6 +6,7 @@ import { formatClock } from '@/lib/time';
 import { isCleanSheet } from '@/lib/cleanSheet';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, FormField, FormSelect, FormError, PlayerPhoto } from '@/components/ui';
+import { useConfirm } from '@/components/site';
 
 export function GoalkeepersTab() {
   const { competitions, error: competitionsError } = useManagedCompetitions();
@@ -125,11 +126,12 @@ function SpellForm({ match }: { match: Match }) {
 }
 
 function SpellList({ matchId }: { matchId: string }) {
+  const confirm = useConfirm();
   const { spells, loading, error: loadError } = useGoalkeeperParticipations([matchId]);
   const [error, setError] = useState<string | null>(null);
 
   async function remove(id: string) {
-    if (!window.confirm('Remover esta participação?')) return;
+    if (!(await confirm({ title: 'Remover participação de goleiro', message: 'Este período deixa de contar no tempo sem sofrer gol do goleiro.', confirmLabel: 'Remover', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('goalkeeper_participations').delete().eq('id', id);
     if (err) { setError('Não foi possível remover a participação.'); return; }
     refreshAdminData();

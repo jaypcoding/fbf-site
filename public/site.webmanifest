@@ -1,0 +1,10 @@
+{
+  "name": "FBF — Federação Brasileira de Futsal",
+  "short_name": "FBF",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffaf1",
+  "theme_color": "#181818",
+  "icons": [{ "src": "/1389286770004463646.webp", "type": "image/webp", "sizes": "any" }]
+}

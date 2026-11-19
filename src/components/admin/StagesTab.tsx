@@ -5,6 +5,7 @@ import { useManagedCompetitions, useSeasons, useStages, useRounds } from '@/lib/
 import { LoadingCard, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 import { GenerateRoundsForm } from '@/components/admin/GenerateRoundsForm';
 import { refreshAdminData } from '@/lib/adminRefresh';
+import { useConfirm } from '@/components/site';
 
 const tieBreakerOptions = [
   ['Pontos', 'POINTS'],
@@ -19,6 +20,7 @@ const tieBreakerOptions = [
 const defaultTieBreakers = 'Pontos, Vitórias, Saldo de gols, Gols marcados, Nome do time';
 
 export function StagesTab() {
+  const confirm = useConfirm();
   const { competitions, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
   const { seasons } = useSeasons(selectedComp || undefined);
@@ -98,7 +100,7 @@ export function StagesTab() {
       if (countError) { setError('Não foi possível verificar se a fase possui partidas.'); return; }
       if (count) { setError('Esta fase possui partidas e não pode ser removida. Preserve o histórico e encerre a competição, se necessário.'); return; }
     }
-    if (!window.confirm('Remover esta fase e suas rodadas vazias?')) return;
+    if (!(await confirm({ title: 'Remover fase', message: 'A fase e suas rodadas vazias serão excluídas. Esta ação não pode ser desfeita.', confirmLabel: 'Remover fase', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('stages').delete().eq('id', id);
     if (err) { setError('Não foi possível remover a fase. O banco pode estar protegendo dados vinculados.'); return; }
     refreshAdminData();
@@ -123,7 +125,7 @@ export function StagesTab() {
     const { count, error: countError } = await supabase.from('matches').select('id', { count: 'exact', head: true }).eq('round_id', id);
     if (countError) { setError('Não foi possível verificar se a rodada possui partidas.'); return; }
     if (count) { setError('Esta rodada possui partidas e não pode ser removida. Preserve o histórico da competição.'); return; }
-    if (!window.confirm('Remover esta rodada vazia?')) return;
+    if (!(await confirm({ title: 'Remover rodada', message: 'A rodada vazia será excluída. Esta ação não pode ser desfeita.', confirmLabel: 'Remover rodada', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('rounds').delete().eq('id', id);
     if (err) { setError('Não foi possível remover a rodada. O banco pode estar protegendo dados vinculados.'); return; }
     refreshAdminData();

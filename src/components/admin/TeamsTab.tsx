@@ -4,8 +4,10 @@ import { supabase, type Team } from '@/lib/supabase';
 import { useTeams } from '@/lib/hooks';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, TeamLogo, FormField, FormInput, FormError } from '@/components/ui';
+import { useConfirm } from '@/components/site';
 
 export function TeamsTab() {
+  const confirm = useConfirm();
   const { teams, loading, error: teamsError } = useTeams();
   const [name, setName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -25,7 +27,7 @@ export function TeamsTab() {
   }
 
   async function deleteTeam(id: string) {
-    if (!window.confirm('Remover este time?')) return;
+    if (!(await confirm({ title: 'Remover time', message: 'O cadastro do time será excluído. Esta ação não pode ser desfeita.', confirmLabel: 'Remover time', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('teams').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o time. Ele pode estar inscrito em alguma temporada.'); return; }
     refreshAdminData();

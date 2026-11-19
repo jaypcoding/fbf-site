@@ -4,8 +4,10 @@ import { supabase, type Season } from '@/lib/supabase';
 import { useManagedCompetitions, useSeasons } from '@/lib/hooks';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
+import { useConfirm } from '@/components/site';
 
 export function SeasonsTab() {
+  const confirm = useConfirm();
   const { competitions, loading: compLoading, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState<string>('');
   const { seasons, loading, error: seasonsError } = useSeasons(selectedComp || undefined);
@@ -42,7 +44,7 @@ export function SeasonsTab() {
       setError('Esta temporada possui equipes inscritas ou fases cadastradas e não pode ser removida. Preserve o histórico da competição.');
       return;
     }
-    if (!window.confirm('Remover esta temporada vazia?')) return;
+    if (!(await confirm({ title: 'Remover temporada', message: 'A temporada está vazia e será excluída. Esta ação não pode ser desfeita.', confirmLabel: 'Remover temporada', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('seasons').delete().eq('id', id);
     if (err) { setError('Não foi possível remover a temporada. O banco pode estar protegendo dados vinculados.'); return; }
     refreshAdminData();

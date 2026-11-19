@@ -49,7 +49,3 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   }, [onClose]);
   return <div className="modal-backdrop" onClick={onClose}><div className="modal-card" role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}><div className="modal-header"><h3>{title}</h3><button type="button" className="icon-button" onClick={onClose} aria-label="Fechar"><X size={16} /></button></div>{children}</div></div>;
 }
-
-export function ConfirmButton({ onConfirm, children, className }: { onConfirm: () => void; children: React.ReactNode; className?: string }) {
-  return <button type="button" className={className || 'button button-ghost-danger'} onClick={() => { if (window.confirm('Tem certeza que deseja remover este item?')) onConfirm(); }}>{children}</button>;
-}

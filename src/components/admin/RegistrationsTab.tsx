@@ -4,8 +4,10 @@ import { supabase, type TeamRegistration } from '@/lib/supabase';
 import { useManagedCompetitions, useSeasons, useTeams, useSeasonTeams } from '@/lib/hooks';
 import { refreshAdminData, useAdminDataVersion } from '@/lib/adminRefresh';
 import { LoadingCard, TeamLogo, FormField, FormSelect, FormError } from '@/components/ui';
+import { useConfirm } from '@/components/site';
 
 export function RegistrationsTab() {
+  const confirm = useConfirm();
   const { competitions, loading: competitionsLoading, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
   const { seasons, loading: seasonsLoading, error: seasonsError } = useSeasons(selectedComp || undefined);
@@ -115,7 +117,7 @@ export function RegistrationsTab() {
   }
 
   async function withdraw(registration: TeamRegistration) {
-    if (!window.confirm('Retirar este time? A retirada só será permitida se ainda não houver elenco ou partidas vinculadas.')) return;
+    if (!(await confirm({ title: 'Retirar time da temporada', message: 'A retirada só é permitida se o time ainda não tiver elenco nem partidas nesta temporada.', confirmLabel: 'Retirar time', tone: 'danger' }))) return;
     setBusy(true);
     setError(null);
     const { error: rpcError } = await supabase.rpc('withdraw_team_registration', {

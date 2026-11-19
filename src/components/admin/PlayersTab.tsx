@@ -4,10 +4,12 @@ import { supabase, type Player } from '@/lib/supabase';
 import { usePlayers } from '@/lib/hooks';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, PlayerPhoto, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
+import { useConfirm } from '@/components/site';
 
 const positions: Player['position'][] = ['Goleiro', 'Volante', 'Pivô'];
 
 export function PlayersTab() {
+  const confirm = useConfirm();
   const { players, loading, error: playersError } = usePlayers();
   const [nickname, setNickname] = useState('');
   const [fullName, setFullName] = useState('');
@@ -30,7 +32,7 @@ export function PlayersTab() {
   }
 
   async function deletePlayer(id: string) {
-    if (!window.confirm('Remover este jogador?')) return;
+    if (!(await confirm({ title: 'Remover jogador', message: 'O cadastro do jogador será excluído. Esta ação não pode ser desfeita.', confirmLabel: 'Remover jogador', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('players').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o jogador. Ele pode estar em algum elenco ou partida.'); return; }
     refreshAdminData();

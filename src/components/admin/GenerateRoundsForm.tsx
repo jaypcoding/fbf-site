@@ -15,6 +15,7 @@ import {
 } from '@/lib/competitionFormats';
 import { buildRoundRobin } from '@/lib/roundRobin';
 import { FormError } from '@/components/ui';
+import { useConfirm } from '@/components/site';
 
 type Props = { stage: Stage; seasonId: string };
 
@@ -46,6 +47,7 @@ function stageErrorMessage(message: string) {
 }
 
 export function GenerateRoundsForm({ stage, seasonId }: Props) {
+  const confirm = useConfirm();
   const { seasonTeams, loading, error: seasonTeamsError } = useSeasonTeams(seasonId);
   const refreshVersion = useAdminDataVersion();
   const [error, setError] = useState<string | null>(null);
@@ -206,7 +208,7 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
   async function generateRoundRobin() {
     if (!roundRobinMatches) return;
     const roundLabel = legs === 2 ? 'turno e returno' : 'turno único';
-    if (!window.confirm(`Gerar ${roundRobinRounds.length} rodadas e ${roundRobinMatches} partidas (${roundLabel})? A operação será transacional e não alterará partidas já existentes.`)) return;
+    if (!(await confirm({ title: 'Gerar tabela de jogos', message: `Serão criadas ${roundRobinRounds.length} rodadas e ${roundRobinMatches} partidas (${roundLabel}). A operação é feita de uma só vez e não altera partidas já existentes.`, confirmLabel: 'Gerar partidas' }))) return;
     setBusy(true); setError(null);
     const { data, error: generationError } = await supabase.rpc('generate_round_robin', { p_stage_id: stage.id });
     setBusy(false);
@@ -225,7 +227,7 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
       return;
     }
     const preview = manualGroups.map((group) => `${group.name}: ${group.teamIds.map((id) => names.get(id)).join(', ')}`).join('\n');
-    if (!window.confirm(`Gerar ${groupMatches} jogos em ${groupCount} grupos?\n\n${preview}`)) return;
+    if (!(await confirm({ title: 'Gerar fase de grupos', message: `Serão criados ${groupMatches} jogos em ${groupCount} grupos.\n\n${preview}`, confirmLabel: 'Gerar grupos' }))) return;
     setBusy(true); setError(null);
     const { error: generationError } = await supabase.rpc('generate_group_stage', {
       p_stage_id: stage.id,
@@ -241,7 +243,7 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
   async function generateKnockout(plan: NonNullable<typeof knockoutPlan>) {
     const series = [...plan.rounds.flat(), ...(plan.thirdPlace ? [plan.thirdPlace] : [])];
     const matchCount = series.reduce((count, item) => count + item.legs, 0);
-    if (!window.confirm(`Confirmar a chave com ${series.length} confrontos e ${matchCount} partidas? A etapa só poderá ser criada uma vez.`)) return;
+    if (!(await confirm({ title: 'Confirmar chave eliminatória', message: `Serão criados ${series.length} confrontos e ${matchCount} partidas. A chave desta fase só pode ser gerada uma vez.`, confirmLabel: 'Gerar chave' }))) return;
     setBusy(true); setError(null);
     const { error: generationError } = await supabase.rpc('generate_knockout_stage', {
       p_stage_id: stage.id,

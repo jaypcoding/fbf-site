@@ -4,6 +4,8 @@ import { Goal } from 'lucide-react';
 import { useMatch, useMatchEvents } from '@/lib/hooks';
 import { matchStatusLabels } from '@/lib/labels';
 import { formatClock } from '@/lib/time';
+import { formatMatchDate } from '@/lib/format';
+import { usePageTitle } from '@/lib/pageTitle';
 import { LoadingCard, EmptyState, TeamLogo, PlayerPhoto, PageIntro } from '@/components/ui';
 import type { MatchEvent } from '@/lib/supabase';
 
@@ -33,6 +35,7 @@ export function MatchPage() {
   const { match: rawMatch, loading: matchLoading, error: matchError } = useMatch(id);
   const { events, loading: eventsLoading, error: eventsError } = useMatchEvents(id);
   const match = rawMatch as unknown as MatchDetail | null;
+  usePageTitle(match ? `${match.home_team?.team?.name || 'A definir'} x ${match.away_team?.team?.name || 'A definir'}` : matchLoading ? null : 'Partida');
 
   const scorers = useMemo(() => {
     const totals = new Map<string, { id: string; name: string; photo: string | null; goals: number }>();
@@ -60,7 +63,7 @@ export function MatchPage() {
   return (
     <section className="container detail-section">
       {competition && <Link to={`/competicoes/${competition.id}`} className="back-link">← {competition.name}</Link>}
-      <PageIntro eyebrow={match.round?.name || 'Partida'} title={`${homeName} x ${awayName}`} description={match.scheduled_at ? new Date(match.scheduled_at).toLocaleString('pt-BR') : 'Data a definir'} />
+      <PageIntro eyebrow={match.round?.name || 'Partida'} title={`${homeName} x ${awayName}`} description={formatMatchDate(match.scheduled_at)} />
       <div className="score-banner">
         <div className="score-team"><TeamLogo src={match.home_team?.team?.logo_url ?? null} name={homeName} size={56} /><span>{homeName}</span></div>
         <strong>

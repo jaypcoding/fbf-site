@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /painel
+Disallow: /login
+
+Sitemap: https://fbfhax.com/sitemap.xml

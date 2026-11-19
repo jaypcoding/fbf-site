@@ -4,8 +4,10 @@ import { supabase, type Roster } from '@/lib/supabase';
 import { useManagedCompetitions, useSeasons, useSeasonTeams, useRosters, usePlayers } from '@/lib/hooks';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, PlayerPhoto, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
+import { useConfirm } from '@/components/site';
 
 export function RostersTab() {
+  const confirm = useConfirm();
   const { competitions, loading: competitionsLoading, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
   const { seasons, loading: seasonsLoading, error: seasonsError } = useSeasons(selectedComp || undefined);
@@ -48,7 +50,7 @@ export function RostersTab() {
   }
 
   async function removePlayer(id: string) {
-    if (!window.confirm('Remover este jogador do elenco?')) return;
+    if (!(await confirm({ title: 'Remover do elenco', message: 'O jogador deixa de fazer parte do elenco desta temporada.', confirmLabel: 'Remover', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('rosters').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o jogador do elenco.'); return; }
     refreshAdminData();

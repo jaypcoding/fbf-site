@@ -32,3 +32,16 @@ test('allows HTTP only for local Supabase', () => {
     'http://127.0.0.1:54321',
   );
 });
+
+test('keeps only the project base URL when a service path was pasted', () => {
+  for (const url of [
+    'https://project.supabase.co/rest/v1/',
+    'https://project.supabase.co/rest/v1',
+    'https://project.supabase.co/auth/v1',
+    'https://project.supabase.co///',
+  ]) {
+    assert.equal(getSupabaseBrowserConfig(url, 'sb_publishable_test').url, 'https://project.supabase.co');
+  }
+  assert.equal(getSupabaseBrowserConfig('https://project.supabase.co/rest/v1/', jwt('anon')).url, 'https://project.supabase.co');
+  assert.equal(getSupabaseBrowserConfig('http://127.0.0.1:54321/rest/v1/', jwt('anon')).url, 'http://127.0.0.1:54321');
+});

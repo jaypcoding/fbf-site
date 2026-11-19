@@ -5,6 +5,7 @@ import { useManagedCompetitions, useSeasons, useStages, useRounds, useMatches, u
 import { parseClock, formatClock } from '@/lib/time';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
+import { useConfirm } from '@/components/site';
 
 type EventType = MatchEvent['event_type'];
 
@@ -241,11 +242,12 @@ function EventForm({ match }: { match: Match }) {
 }
 
 function MatchEventList({ matchId }: { matchId: string }) {
+  const confirm = useConfirm();
   const { events, loading, error: loadError } = useMatchEvents(matchId);
   const [error, setError] = useState<string | null>(null);
 
   async function remove(id: string) {
-    if (!window.confirm('Remover este evento?')) return;
+    if (!(await confirm({ title: 'Remover evento', message: 'O evento sai da linha do tempo e as estatísticas da partida são recalculadas.', confirmLabel: 'Remover evento', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('match_events').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o evento.'); return; }
     refreshAdminData();

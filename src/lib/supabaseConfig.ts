@@ -22,6 +22,17 @@ function getJwtRole(key: string): string | null {
   }
 }
 
+// supabase-js appends `rest/v1`, `auth/v1`, … to the project URL. A value that
+// already ends in one of those service paths (copied from the API settings
+// page, for example) would produce `/rest/v1/rest/v1/…` and every request,
+// including login, would fail. Only the base URL is kept.
+function projectBaseUrl(parsedUrl: URL): string {
+  const path = parsedUrl.pathname
+    .replace(/\/+$/, '')
+    .replace(/\/(rest|auth|storage|realtime|functions)\/v1$/, '');
+  return `${parsedUrl.origin}${path}`;
+}
+
 export function getSupabaseBrowserConfig(
   url: string | undefined,
   anonKey: string | undefined,
@@ -50,7 +61,7 @@ export function getSupabaseBrowserConfig(
   }
 
   if (anonKey.startsWith('sb_publishable_')) {
-    return { url: parsedUrl.toString().replace(/\/$/, ''), anonKey };
+    return { url: projectBaseUrl(parsedUrl), anonKey };
   }
 
   const role = getJwtRole(anonKey);
@@ -61,5 +72,5 @@ export function getSupabaseBrowserConfig(
     throw new Error('VITE_SUPABASE_ANON_KEY deve ser uma chave pública anon/publishable.');
   }
 
-  return { url: parsedUrl.toString().replace(/\/$/, ''), anonKey };
+  return { url: projectBaseUrl(parsedUrl), anonKey };
 }

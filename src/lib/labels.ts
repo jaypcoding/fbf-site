@@ -6,7 +6,7 @@ export const competitionStatusLabels: Record<Competition['status'], string> = {
   REGISTRATION: 'Inscrições abertas',
   ACTIVE: 'Em andamento',
   FINISHED: 'Finalizada',
-  CANCELLED: 'Cancelada',
+  CANCELLED: 'Arquivada',
 };
 
 export const matchStatusLabels: Record<Match['status'], string> = {

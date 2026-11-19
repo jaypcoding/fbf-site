@@ -4,6 +4,7 @@ import { supabase, type Profile } from '@/lib/supabase';
 import { useCompetitions } from '@/lib/hooks';
 import { LoadingCard, FormField, FormSelect, FormError } from '@/components/ui';
 import { refreshAdminData, useAdminDataVersion } from '@/lib/adminRefresh';
+import { useConfirm } from '@/components/site';
 
 type RoleValue = Profile['role'];
 const roleOptions: { value: RoleValue; label: string }[] = [
@@ -68,6 +69,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
 type Organizer = { user_id: string };
 
 export function OrganizersTab() {
+  const confirm = useConfirm();
   const { competitions, error: competitionsError } = useCompetitions();
   const refreshVersion = useAdminDataVersion();
   const [selectedComp, setSelectedComp] = useState('');
@@ -122,7 +124,7 @@ export function OrganizersTab() {
   }
 
   async function unassign(userId: string) {
-    if (!window.confirm('Remover este organizador da competição?')) return;
+    if (!(await confirm({ title: 'Remover organizador', message: 'Esta conta perde o acesso de gestão a esta competição.', confirmLabel: 'Remover acesso', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('competition_organizers').delete().eq('competition_id', selectedComp).eq('user_id', userId);
     if (err) { setError('Não foi possível remover o organizador.'); return; }
     setOrganizers((prev) => prev.filter((o) => o.user_id !== userId));

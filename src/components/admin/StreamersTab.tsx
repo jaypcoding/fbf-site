@@ -3,6 +3,7 @@ import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import { supabase, type Streamer } from '@/lib/supabase';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 import { refreshAdminData, useAdminDataVersion } from '@/lib/adminRefresh';
+import { useConfirm } from '@/components/site';
 
 type Platform = Streamer['platform'];
 
@@ -15,6 +16,7 @@ type MatchOption = {
 };
 
 export function StreamersTab() {
+  const confirm = useConfirm();
   const refreshVersion = useAdminDataVersion();
   const [streamers, setStreamers] = useState<Streamer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export function StreamersTab() {
   }
 
   async function remove(id: string) {
-    if (!window.confirm('Remover este streamer? Ele será desvinculado de todas as partidas.')) return;
+    if (!(await confirm({ title: 'Remover streamer', message: 'O streamer será excluído e desvinculado de todas as partidas.', confirmLabel: 'Remover streamer', tone: 'danger' }))) return;
     const { error: err } = await supabase.from('streamers').delete().eq('id', id);
     if (err) { setError('Não foi possível remover o streamer.'); return; }
     refreshAdminData();
