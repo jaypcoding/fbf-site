@@ -1,0 +1,16 @@
+-- Public visitors (role anon) could not read competitions or seasons at all.
+--
+-- The policies competitions_public_select and seasons_public_select are
+-- granted TO anon, authenticated and evaluate
+--   status <> 'DRAFT' OR public.is_fbf_manager()
+-- but EXECUTE on public.is_fbf_manager() was revoked from anon in the first
+-- migration. PostgreSQL checks function privileges for the whole expression,
+-- so every anonymous SELECT on competitions, seasons and the statistics views
+-- built on them failed with "permission denied for function is_fbf_manager"
+-- (SQLSTATE 42501), and the public pages could not load competitions.
+--
+-- is_fbf_manager() only reports whether the current auth.uid() has an
+-- ADMIN/ORGANIZER profile. For anon there is no auth.uid(), so it returns
+-- false: draft competitions stay hidden and no data is exposed. This is purely
+-- additive; reverting is `REVOKE EXECUTE ... FROM anon`.
+GRANT EXECUTE ON FUNCTION public.is_fbf_manager() TO anon;
