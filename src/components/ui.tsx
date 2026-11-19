@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, X } from 'lucide-react';
 
@@ -14,14 +14,21 @@ export function PageIntro({ eyebrow, title, description }: { eyebrow: string; ti
   return <section className="page-intro"><div className="container"><span className="section-kicker">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div></section>;
 }
 
+// Falls back to the initial when the image URL is missing or broken (a broken
+// logo would otherwise show the alt text squeezed inside the circle).
+function Avatar({ src, name, size, imgClass, fallbackClass }: { src: string | null; name: string; size: number; imgClass: string; fallbackClass: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  if (src && !failed) return <img src={src} alt={name} loading="lazy" decoding="async" onError={() => setFailed(true)} style={{ width: size, height: size }} className={imgClass} />;
+  return <div className={fallbackClass} role="img" aria-label={name} style={{ width: size, height: size, fontSize: size * 0.4 }}>{name.charAt(0).toUpperCase()}</div>;
+}
+
 export function TeamLogo({ src, name, size = 40 }: { src: string | null; name: string; size?: number }) {
-  if (src) return <img src={src} alt={name} style={{ width: size, height: size }} className="team-logo-img" />;
-  return <div className="team-logo-fallback" style={{ width: size, height: size, fontSize: size * 0.4 }}>{name.charAt(0).toUpperCase()}</div>;
+  return <Avatar src={src} name={name} size={size} imgClass="team-logo-img" fallbackClass="team-logo-fallback" />;
 }
 
 export function PlayerPhoto({ src, name, size = 40 }: { src: string | null; name: string; size?: number }) {
-  if (src) return <img src={src} alt={name} style={{ width: size, height: size }} className="player-photo-img" />;
-  return <div className="player-photo-fallback" style={{ width: size, height: size, fontSize: size * 0.4 }}>{name.charAt(0).toUpperCase()}</div>;
+  return <Avatar src={src} name={name} size={size} imgClass="player-photo-img" fallbackClass="player-photo-fallback" />;
 }
 
 export function FormField({ label, children }: { label: string; children: React.ReactNode }) {

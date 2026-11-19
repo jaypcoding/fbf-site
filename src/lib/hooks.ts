@@ -316,6 +316,11 @@ export function useMatchEvents(matchId?: string) {
   return { events, loading, error };
 }
 
+// Public match page: the match itself must load even when the visitor cannot
+// read seasons/competitions, so the competition breadcrumb is fetched apart and
+// simply omitted if that read fails.
+const PUBLIC_MATCH_SELECT = MATCH_SELECT.replace(/, stage:stage_id \( .* \) \) \) \)$/, ' )');
+
 export function useMatch(matchId?: string) {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -325,12 +330,18 @@ export function useMatch(matchId?: string) {
     if (!matchId) { setMatch(null); setLoading(false); setError(false); return; }
     let active = true;
     setLoading(true);
-    supabase.from('matches').select(MATCH_SELECT).eq('id', matchId).maybeSingle().then(({ data, error: queryError }) => {
+    (async () => {
+      const { data, error: queryError } = await supabase.from('matches').select(PUBLIC_MATCH_SELECT).eq('id', matchId).maybeSingle();
+      const row = (data as unknown as (Match & { round?: Match['round'] & { stage?: unknown } }) | null) ?? null;
+      if (!queryError && row?.round?.stage_id) {
+        const { data: stage } = await supabase.from('stages').select('id, season_id, name, season:season_id ( id, name, competition_id, competition:competition_id ( id, name ) )').eq('id', row.round.stage_id).maybeSingle();
+        if (stage) row.round.stage = stage;
+      }
       if (!active) return;
       setError(Boolean(queryError));
-      setMatch(queryError ? null : ((data as unknown as Match | null) ?? null));
+      setMatch(queryError ? null : row);
       setLoading(false);
-    });
+    })();
     return () => { active = false; };
   }, [matchId, refreshVersion]);
   return { match, loading, error };

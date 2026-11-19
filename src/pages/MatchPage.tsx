@@ -6,7 +6,7 @@ import { matchStatusLabels } from '@/lib/labels';
 import { formatClock } from '@/lib/time';
 import { formatMatchDate } from '@/lib/format';
 import { usePageTitle } from '@/lib/pageTitle';
-import { LoadingCard, EmptyState, TeamLogo, PlayerPhoto, PageIntro } from '@/components/ui';
+import { LoadingCard, EmptyState, TeamLogo, PlayerPhoto } from '@/components/ui';
 import type { MatchEvent } from '@/lib/supabase';
 
 const eventLabels: Record<MatchEvent['event_type'], string> = {
@@ -27,7 +27,7 @@ type MatchDetail = {
   away_penalty_score: number | null;
   home_team: { team: { name: string; logo_url: string | null } | null } | null;
   away_team: { team: { name: string; logo_url: string | null } | null } | null;
-  round: { name: string; stage: { name: string; season: { name: string; competition: { id: string; name: string } | null } | null } | null } | null;
+  round: { name: string; stage_id?: string; stage: { name: string; season: { name: string; competition: { id: string; name: string } | null } | null } | null } | null;
 };
 
 export function MatchPage() {
@@ -62,19 +62,22 @@ export function MatchPage() {
 
   return (
     <section className="container detail-section">
-      {competition && <Link to={`/competicoes/${competition.id}`} className="back-link">← {competition.name}</Link>}
-      <PageIntro eyebrow={match.round?.name || 'Partida'} title={`${homeName} x ${awayName}`} description={formatMatchDate(match.scheduled_at)} />
-      <div className="score-banner">
-        <div className="score-team"><TeamLogo src={match.home_team?.team?.logo_url ?? null} name={homeName} size={56} /><span>{homeName}</span></div>
-        <strong>
-          {finished || live ? `${match.home_score} × ${match.away_score}` : 'vs'}
-        </strong>
-        <div className="score-team"><TeamLogo src={match.away_team?.team?.logo_url ?? null} name={awayName} size={56} /><span>{awayName}</span></div>
+      <Link to={competition ? `/competicoes/${competition.id}?aba=jogos` : '/competicoes'} className="back-link">← {competition ? competition.name : 'Competições'}</Link>
+      <h1 className="sr-only">{homeName} x {awayName}</h1>
+      <div className={`score-banner score-${match.status.toLowerCase()}`}>
+        <div className="score-meta">
+          <span>{[match.round?.stage?.name, match.round?.name].filter(Boolean).join(' · ') || 'Partida'}</span>
+          <span className={`match-status-tag tag-${match.status.toLowerCase()}`}>{match.status === 'LIVE' && <i aria-hidden="true" />}{matchStatusLabels[match.status]}{decidedByGoldenGoal ? ' · gol de ouro' : ''}</span>
+        </div>
+        <div className="score-row">
+          <div className="score-team"><TeamLogo src={match.home_team?.team?.logo_url ?? null} name={homeName} size={64} /><span>{homeName}</span></div>
+          <strong aria-label={finished || live ? `Placar ${match.home_score} a ${match.away_score}` : 'Partida sem placar'}>
+            {finished || live ? <>{match.home_score}<small>×</small>{match.away_score}</> : <small className="score-vs">vs</small>}
+          </strong>
+          <div className="score-team"><TeamLogo src={match.away_team?.team?.logo_url ?? null} name={awayName} size={64} /><span>{awayName}</span></div>
+        </div>
+        <p className="score-date">{formatMatchDate(match.scheduled_at)}</p>
       </div>
-      <p className="admin-hint">
-        {matchStatusLabels[match.status]}
-        {decidedByGoldenGoal ? ' · Decidida no gol de ouro' : ''}
-      </p>
 
       <div className="match-page-grid">
         <div>
