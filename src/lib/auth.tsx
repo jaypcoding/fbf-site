@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, type Profile } from './supabase';
+import { profileUserKey } from './authProfile';
 
 type AuthContextValue = {
   session: Session | null;
@@ -46,8 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Keyed on the user id, not on the session object: token refreshes and
+  // focus-triggered SIGNED_IN events for the same user must not reset the
+  // profile, otherwise the admin panel unmounts and unsaved forms are lost.
+  const userId = profileUserKey(session);
+
   useEffect(() => {
-    if (!session?.user) {
+    if (!userId) {
       setProfile(null);
       setProfileLoading(false);
       setProfileError(false);
@@ -60,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase
       .from('profiles')
       .select('id, display_name, role')
-      .eq('id', session.user.id)
+      .eq('id', userId)
       .maybeSingle()
       .then(({ data, error }) => {
         if (active) {
@@ -72,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [session]);
+  }, [userId]);
 
   return (
     <AuthContext.Provider value={{ session, profile, loading, profileLoading, profileError }}>

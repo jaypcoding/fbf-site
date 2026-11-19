@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, BarChart3, CalendarDays, Check, ChevronRight, CircleUserRound, ClipboardList, Goal, LayoutDashboard, LogIn, Menu, Shield, Sparkles, Trophy, Users, X } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { shouldBlockOnProfile } from '@/lib/authProfile';
 import { supabase, type Competition, type Team, type Player, type Match, type MatchEvent } from '@/lib/supabase';
 import { useCompetitions, useSeasons, useTeams, usePlayers, useSeasonTeams, useRosters, useStages } from '@/lib/hooks';
 import { LoadingCard, EmptyState, PageIntro, TeamLogo, PlayerPhoto } from '@/components/ui';
@@ -437,7 +438,7 @@ function Login() {
 function Dashboard() {
   const { session, profile, profileLoading, profileError } = useAuth();
   if (!session) return <section className="container auth-section"><div className="auth-card"><Shield className="success-icon" /><h1>Entre para acessar o painel</h1><p>O painel é reservado para usuários autorizados pela FBF.</p><Link to="/login" className="button button-primary">Fazer login <ArrowRight size={17} /></Link></div></section>;
-  if (profileLoading) return <section className="container auth-section"><LoadingCard /></section>;
+  if (shouldBlockOnProfile(profileLoading, Boolean(profile))) return <section className="container auth-section"><LoadingCard /></section>;
   if (profileError || !profile) return <section className="container auth-section"><EmptyState icon={<Shield />} title="Não foi possível confirmar seu perfil" description="As permissões não foram carregadas. Tente novamente mais tarde ou contate a administração da FBF." /></section>;
   const isManager = profile?.role === 'ADMIN' || profile?.role === 'ORGANIZER';
   if (!isManager) return <section className="container dashboard-section"><div className="dashboard-heading"><div><span className="section-kicker">Área administrativa</span><h1>{profile?.display_name || 'Sua conta'}</h1><p>Acompanhe seu acesso e as novidades da FBF.</p></div><span className="role-badge">{profile?.role || 'USER'}</span></div><div className="admin-empty"><div className="admin-empty-icon"><Shield /></div><div><h2>Acesso de visualização</h2><p>Seu perfil pode acompanhar todas as informações públicas da plataforma. A gestão é reservada a administradores e organizadores.</p></div></div></section>;
