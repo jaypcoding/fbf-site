@@ -132,6 +132,7 @@ export function StagesTab() {
   }
 
   return (
+    <div className="admin-stack">
     <div className="admin-grid">
       <div className="admin-form-card">
         <h3>Nova fase</h3>
@@ -270,8 +271,13 @@ export function StagesTab() {
           </div>
         )}
       </div>
+    </div>
       {/* Fixture generators need room (whole tables of rounds), so they get a
-          full-width card instead of the narrow form column. */}
+          full-width card instead of the narrow form column. It lives OUTSIDE
+          .admin-grid on purpose: the "Nova fase" card is position: sticky, and
+          a sticky element travels across its whole containing block. Inside
+          the grid it slid down over this card and covered the group
+          selectors; outside it, the sticky card stops at the end of the grid. */}
       {selectedStage && selectedSeason && stages.find((stage) => stage.id === selectedStage) && (
         <div className="admin-wide-card">
           <GenerateRoundsForm stage={stages.find((stage) => stage.id === selectedStage) as Stage} seasonId={selectedSeason} />
