@@ -4,10 +4,10 @@ import { supabase, type Season } from '@/lib/supabase';
 import { useManagedCompetitions, useSeasons } from '@/lib/hooks';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
-import { useConfirm } from '@/components/site';
+import { DeleteRecordDialog } from '@/components/admin/DeleteRecordDialog';
 
 export function SeasonsTab() {
-  const confirm = useConfirm();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { competitions, loading: compLoading, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState<string>('');
   const { seasons, loading, error: seasonsError } = useSeasons(selectedComp || undefined);
@@ -31,22 +31,6 @@ export function SeasonsTab() {
     setBusy(false);
     if (err) { setError(err.message || 'Não foi possível criar a temporada.'); return; }
     setName(''); setStartsAt(''); setEndsAt('');
-    refreshAdminData();
-  }
-
-  async function deleteSeason(id: string) {
-    const [teamResult, stageResult] = await Promise.all([
-      supabase.from('season_teams').select('id', { count: 'exact', head: true }).eq('season_id', id),
-      supabase.from('stages').select('id', { count: 'exact', head: true }).eq('season_id', id),
-    ]);
-    if (teamResult.error || stageResult.error) { setError('Não foi possível verificar os dados vinculados à temporada.'); return; }
-    if (teamResult.count || stageResult.count) {
-      setError('Esta temporada possui equipes inscritas ou fases cadastradas e não pode ser removida. Preserve o histórico da competição.');
-      return;
-    }
-    if (!(await confirm({ title: 'Remover temporada', message: 'A temporada está vazia e será excluída. Esta ação não pode ser desfeita.', confirmLabel: 'Remover temporada', tone: 'danger' }))) return;
-    const { error: err } = await supabase.from('seasons').delete().eq('id', id);
-    if (err) { setError('Não foi possível remover a temporada. O banco pode estar protegendo dados vinculados.'); return; }
     refreshAdminData();
   }
 
@@ -90,7 +74,7 @@ export function SeasonsTab() {
                   </div>
                   <div className="admin-list-actions">
                     <button className="icon-button" onClick={() => setEditing(s)} title="Editar"><Pencil size={15} /></button>
-                    <button className="icon-button-danger" onClick={() => deleteSeason(s.id)} title="Remover"><Trash2 size={15} /></button>
+                    <button className="icon-button-danger" onClick={() => setDeletingId(s.id)} title={`Excluir temporada ${s.name}`} aria-label={`Excluir temporada ${s.name}`}><Trash2 size={15} /></button>
                   </div>
                 </div>
               );
@@ -103,6 +87,7 @@ export function SeasonsTab() {
           <SeasonEditForm season={editing} onSaved={() => setEditing(null)} />
         </Modal>
       )}
+      {deletingId && <DeleteRecordDialog kind="SEASON" id={deletingId} onClose={() => setDeletingId(null)} />}
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ArrowRight, Pencil } from 'lucide-react';
+import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import { supabase, type Competition } from '@/lib/supabase';
 import { useManagedCompetitions } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
+import { DeleteRecordDialog } from '@/components/admin/DeleteRecordDialog';
 
 type Status = Competition['status'];
 type CompetitionFields = Pick<Competition, 'name' | 'description' | 'category' | 'format' | 'max_teams' | 'registration_starts_at' | 'registration_ends_at'>;
@@ -52,6 +53,7 @@ export function CompetitionsTab() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Competition | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const isAdmin = profile?.role === 'ADMIN';
 
   async function changeStatus(id: string, status: Status) {
@@ -88,6 +90,8 @@ export function CompetitionsTab() {
                   <FormSelect value={competition.status} disabled={busyId === competition.id} onChange={(event) => changeStatus(competition.id, event.target.value as Status)} aria-label={`Status de ${competition.name}`}>
                     {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </FormSelect>
+                  {/* Only admins delete competitions (the database checks it again). */}
+                  {isAdmin && <button className="icon-button-danger" onClick={() => setDeletingId(competition.id)} title={`Excluir competição ${competition.name}`} aria-label={`Excluir competição ${competition.name}`}><Trash2 size={15} /></button>}
                 </div>
               </div>
             ))}
@@ -99,6 +103,7 @@ export function CompetitionsTab() {
           <CompetitionEditForm competition={editing} onSaved={() => setEditing(null)} />
         </Modal>
       )}
+      {deletingId && isAdmin && <DeleteRecordDialog kind="COMPETITION" id={deletingId} onClose={() => setDeletingId(null)} />}
     </div>
   );
 }

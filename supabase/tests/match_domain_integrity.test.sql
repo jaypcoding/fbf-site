@@ -611,11 +611,13 @@ SELECT is(
   'ADMIN',
   'protected role-management RPC persists the authorized role change'
 );
--- The competitions_admin_delete policy hides competitions that have matches,
--- so the DELETE affects no rows (and matches_prevent_delete stays as a second guard).
-SELECT is_empty(
+-- Direct deletes are no longer granted (20261121100000_safe_record_deletion):
+-- every deletion goes through delete_competition_record, which blocks match
+-- history (and matches_prevent_delete stays as a second guard).
+SELECT throws_ok(
   $$DELETE FROM public.competitions WHERE id = '20000000-0000-0000-0000-000000000001'
     RETURNING id$$,
+  '42501', NULL,
   'admin cannot delete a competition that has match history'
 );
 SELECT lives_ok(

@@ -197,3 +197,23 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .admin-wide-card > .generate-rounds > .admin-divider:first-child { display: none; }
 .group-schedule-assign { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .standings-notice { font-size: 13px; color: #9a4a0c; background: #fff0d5; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; max-width: 68ch; }
+/* Safe deletion dialog */
+.button-danger { color: #fff; background: #b3261e; }
+.button-danger:hover:not(:disabled) { background: #8f1d17; }
+.button-danger:disabled { opacity: .45; cursor: not-allowed; }
+.deletion-dialog { display: grid; gap: 14px; font-size: 13px; color: #30251d; }
+.deletion-path { font-weight: 800; color: #181818; word-break: break-word; }
+.deletion-intro { margin-bottom: 8px; }
+.deletion-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+.deletion-table td { padding: 7px 10px; border-top: 1px solid #f0e6d6; }
+.deletion-table td:last-child { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.deletion-warnings { margin: 0 0 12px; padding: 10px 14px 10px 28px; background: #fff0d5; color: #9a4a0c; border-radius: 8px; display: grid; gap: 4px; }
+.deletion-blocked { background: #fdecea; color: #8f1d17; border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; }
+.deletion-blocked strong { display: flex; align-items: center; gap: 6px; }
+.deletion-blocked ul { padding-left: 18px; display: grid; gap: 3px; }
+.deletion-confirm { display: grid; gap: 6px; font-size: 12px; }
+.deletion-confirm strong { word-break: break-word; }
+.deletion-confirm .form-input { margin: 0; }
+.deletion-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.deletion-actions .button:not(.button-danger) { background: #f6efe2; color: #30251d; }
+.deletion-done { background: #e7f0e4; color: #2f5238; border-radius: 8px; padding: 12px 14px; }

@@ -5,7 +5,8 @@ import { useManagedCompetitions, useSeasons, useStages, useRounds } from '@/lib/
 import { LoadingCard, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 import { GenerateRoundsForm } from '@/components/admin/GenerateRoundsForm';
 import { refreshAdminData } from '@/lib/adminRefresh';
-import { useConfirm } from '@/components/site';
+import { DeleteRecordDialog } from '@/components/admin/DeleteRecordDialog';
+import type { DeletionKind } from '@/lib/deletion';
 
 const tieBreakerOptions = [
   ['Pontos', 'POINTS'],
@@ -20,7 +21,7 @@ const tieBreakerOptions = [
 const defaultTieBreakers = 'Pontos, Vitórias, Saldo de gols, Gols marcados, Nome do time';
 
 export function StagesTab() {
-  const confirm = useConfirm();
+  const [deleting, setDeleting] = useState<{ kind: DeletionKind; id: string } | null>(null);
   const { competitions, error: competitionsError } = useManagedCompetitions();
   const [selectedComp, setSelectedComp] = useState('');
   const { seasons } = useSeasons(selectedComp || undefined);
@@ -92,20 +93,6 @@ export function StagesTab() {
     refreshAdminData();
   }
 
-  async function deleteStage(id: string) {
-    if (roundsError) { setError('Não foi possível verificar as rodadas desta fase.'); return; }
-    const roundIds = rounds.filter((round) => round.stage_id === id).map((round) => round.id);
-    if (roundIds.length > 0) {
-      const { count, error: countError } = await supabase.from('matches').select('id', { count: 'exact', head: true }).in('round_id', roundIds);
-      if (countError) { setError('Não foi possível verificar se a fase possui partidas.'); return; }
-      if (count) { setError('Esta fase possui partidas e não pode ser removida. Preserve o histórico e encerre a competição, se necessário.'); return; }
-    }
-    if (!(await confirm({ title: 'Remover fase', message: 'A fase e suas rodadas vazias serão excluídas. Esta ação não pode ser desfeita.', confirmLabel: 'Remover fase', tone: 'danger' }))) return;
-    const { error: err } = await supabase.from('stages').delete().eq('id', id);
-    if (err) { setError('Não foi possível remover a fase. O banco pode estar protegendo dados vinculados.'); return; }
-    refreshAdminData();
-  }
-
   async function createRound(event: React.FormEvent) {
     event.preventDefault();
     if (!selectedStage || !roundName.trim()) { setError('Selecione uma fase e dê um nome à rodada.'); return; }
@@ -121,15 +108,6 @@ export function StagesTab() {
     refreshAdminData();
   }
 
-  async function deleteRound(id: string) {
-    const { count, error: countError } = await supabase.from('matches').select('id', { count: 'exact', head: true }).eq('round_id', id);
-    if (countError) { setError('Não foi possível verificar se a rodada possui partidas.'); return; }
-    if (count) { setError('Esta rodada possui partidas e não pode ser removida. Preserve o histórico da competição.'); return; }
-    if (!(await confirm({ title: 'Remover rodada', message: 'A rodada vazia será excluída. Esta ação não pode ser desfeita.', confirmLabel: 'Remover rodada', tone: 'danger' }))) return;
-    const { error: err } = await supabase.from('rounds').delete().eq('id', id);
-    if (err) { setError('Não foi possível remover a rodada. O banco pode estar protegendo dados vinculados.'); return; }
-    refreshAdminData();
-  }
 
   return (
     <div className="admin-stack">
@@ -256,12 +234,12 @@ export function StagesTab() {
                 <div key={s.id} className="admin-stage-block">
                   <div className="admin-list-item admin-stage-header">
                     <div><strong>{s.name}</strong><span>Ordem {s.stage_order} · {s.format} · Desempate: {s.tie_breakers.map((criterion) => tieBreakerOptions.find(([, id]) => id === criterion)?.[0] ?? criterion).join(' → ')}</span></div>
-                    <button className="icon-button-danger" onClick={() => deleteStage(s.id)} title="Remover fase"><Trash2 size={15} /></button>
+                    <button className="icon-button-danger" onClick={() => setDeleting({ kind: 'STAGE', id: s.id })} title={`Excluir fase ${s.name}`} aria-label={`Excluir fase ${s.name}`}><Trash2 size={15} /></button>
                   </div>
                   {stageRounds.map((r) => (
                     <div key={r.id} className="admin-list-item admin-round-item">
                       <div><strong>{r.name}</strong><span>Ordem {r.round_order}</span></div>
-                      <button className="icon-button-danger" onClick={() => deleteRound(r.id)} title="Remover rodada"><Trash2 size={13} /></button>
+                      <button className="icon-button-danger" onClick={() => setDeleting({ kind: 'ROUND', id: r.id })} title={`Excluir rodada ${r.name}`} aria-label={`Excluir rodada ${r.name}`}><Trash2 size={13} /></button>
                     </div>
                   ))}
                   {stageRounds.length === 0 && <p className="admin-sub-empty">Sem rodadas nesta fase.</p>}
@@ -283,6 +261,7 @@ export function StagesTab() {
           <GenerateRoundsForm stage={stages.find((stage) => stage.id === selectedStage) as Stage} seasonId={selectedSeason} />
         </div>
       )}
+      {deleting && <DeleteRecordDialog kind={deleting.kind} id={deleting.id} onClose={() => setDeleting(null)} />}
     </div>
   );
 }
