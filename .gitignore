@@ -21,7 +21,9 @@ dist-ssr
 *.sln
 *.sw?
 .env
-.env.local
+.env.*
+!.env.example
+!.env.*.example
 supabase/.temp
 
 .bolt/

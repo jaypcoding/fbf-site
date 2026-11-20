@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:staging": "vite --mode staging",
     "build": "vite build",
+    "build:staging": "vite build --mode staging",
     "lint": "eslint .",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "db:start": "supabase start",
@@ -14,7 +16,11 @@
     "test:integration": "npm run db:start && npm run db:reset && npm run db:test && node scripts/test-round-robin-concurrency.mjs && node scripts/test-knockout-progression-concurrency.mjs && node scripts/test-legacy-migration.mjs",
     "supabase:check": "node --experimental-strip-types scripts/check-supabase-connection.mjs",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "staging:dry-run": "node scripts/staging.mjs dry-run",
+    "staging:migrations": "node scripts/staging.mjs migration-list",
+    "staging:push": "node scripts/staging.mjs push",
+    "staging:test-db": "node scripts/staging.mjs test-db"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

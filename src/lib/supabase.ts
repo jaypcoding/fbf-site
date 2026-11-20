@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseBrowserConfig } from './supabaseConfig';
+import { assertSupabaseUrlForMode } from './supabaseEnvironment';
 
 const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseBrowserConfig(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY,
 );
+assertSupabaseUrlForMode(import.meta.env.MODE, supabaseUrl);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
