@@ -177,3 +177,13 @@ test('third-place match uses semifinal losers', () => {
   assert.equal(plan.thirdPlace.home.kind, 'loser');
   assert.equal(plan.thirdPlace.away.kind, 'loser');
 });
+
+test('standings view rows keep names and goals for ranking', async () => {
+  const { standingFromView, rankStandings } = await import('../src/lib/competitionFormats.ts');
+  const view = (id, name, gf, ga, points) => ({ season_team_id: id, team_name: name, played: 1, wins: points === 3 ? 1 : 0, draws: 0, losses: points === 3 ? 0 : 1, goals_for: gf, goals_against: ga, points });
+  const rows = [view('a', 'Alfa', 1, 3, 0), view('b', 'Beta', 3, 1, 3), view('c', 'Gama', 0, 1, 0)].map(standingFromView);
+  assert.equal(rows[0].teamName, 'Alfa');
+  assert.equal(rows[0].goalsFor, 1);
+  const ranked = rankStandings(rows, ['POINTS', 'GOAL_DIFF', 'TEAM_NAME']);
+  assert.deepEqual(ranked.map((row) => row.teamName), ['Beta', 'Gama', 'Alfa'], 'goal difference breaks the tie between the two teams without points');
+});

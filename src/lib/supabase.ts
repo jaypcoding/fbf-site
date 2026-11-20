@@ -127,6 +127,9 @@ export type Match = {
   home_source_outcome: 'WINNER' | 'LOSER' | null;
   away_source_match_id: string | null;
   away_source_outcome: 'WINNER' | 'LOSER' | null;
+  // Present only after migration 20261120120000 and only where selected.
+  duration_is_presumed?: boolean;
+  recorded_retroactively?: boolean;
   home_team?: SeasonTeam;
   away_team?: SeasonTeam;
   round?: Round;
@@ -143,6 +146,7 @@ export type MatchEvent = {
   team_id: string | null;
   player_id: string | null;
   related_player_id: string | null;
+  metadata?: { minute_unknown?: boolean; source?: string } | null;
   player?: Player;
   related_player?: Player | null;
   team?: SeasonTeam | null;

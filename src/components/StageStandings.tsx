@@ -149,7 +149,9 @@ export function StageStandings({ stages }: { stages: Stage[] }) {
         </label>
       )}
       {groupedRows.size > 1 || (stage?.format === 'Grupos + Mata-mata' && [...groupedRows.keys()][0] !== '')
-        ? Array.from(groupedRows.values()).map((group) => (
+        // Groups in name order (Grupo A, B, C…), not in the order their
+        // leaders appear in the points-sorted rows.
+        ? Array.from(groupedRows.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true })).map((group) => (
             <section className="content-section" key={group.name}>
               <h3>{group.name}</h3>
               {renderTable(group.rows)}

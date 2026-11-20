@@ -302,7 +302,7 @@ export function useMatchEvents(matchId?: string) {
       return () => { active = false; };
     }
     setLoading(true);
-    let q = supabase.from('match_events').select('id, match_id, event_type, period, is_own_goal, goal_event_id, minute_seconds, team_id, player_id, related_player_id, player:player_id ( id, nickname, full_name, photo_url, nationality, position ), related_player:related_player_id ( id, nickname ), team:team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) )').order('minute_seconds', { ascending: true });
+    let q = supabase.from('match_events').select('id, match_id, event_type, period, is_own_goal, goal_event_id, minute_seconds, team_id, player_id, related_player_id, metadata, player:player_id ( id, nickname, full_name, photo_url, nationality, position ), related_player:related_player_id ( id, nickname ), team:team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) )').order('minute_seconds', { ascending: true });
     q = q.eq('match_id', matchId);
     q.then(({ data, error: queryError }) => {
       if (active) {

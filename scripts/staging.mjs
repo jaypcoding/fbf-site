@@ -59,21 +59,37 @@ function readOnly(sql) {
   return parseRows(runCli('query-readonly', [sql], { quiet: true }));
 }
 
-function preflight() {
-  const localLatest = readdirSync(migrationsDir).filter((name) => /^\d{14}_.*\.sql$/.test(name)).sort().at(-1)?.slice(0, 14);
+// The staging history must end at the newest local migration, or — when a
+// pending migration is being validated — at the one right before it.
+function preflight(pendingVersion) {
+  const versions = readdirSync(migrationsDir).filter((name) => /^\d{14}_.*\.sql$/.test(name)).sort().map((name) => name.slice(0, 14));
+  const expected = pendingVersion ? versions.filter((version) => version < pendingVersion).at(-1) : versions.at(-1);
   const [row] = readOnly('SELECT max(version) AS latest, count(*)::int AS total FROM supabase_migrations.schema_migrations');
-  if (!row || String(row.latest) !== localLatest) {
-    throw new Error(`Destino inesperado: a última migration do staging (${row?.latest ?? 'nenhuma'}) difere da local (${localLatest}).`);
+  if (!row || String(row.latest) !== expected) {
+    throw new Error(`Destino inesperado: a última migration do staging (${row?.latest ?? 'nenhuma'}) difere da esperada (${expected}).`);
   }
   console.log(`✔ Destino confirmado (somente leitura): staging com ${row.total} migrations, última ${row.latest}.`);
   return snapshotFromRows(readOnly(STAGING_SNAPSHOT_SQL));
 }
 
-function runPgtapFiles() {
+function pendingMigration(args) {
+  const index = args.indexOf('--with-pending');
+  if (index === -1) return null;
+  const file = args[index + 1] ?? '';
+  const name = file.replace(/\\/g, '/').split('/').at(-1);
+  if (!/^\d{14}_[a-z0-9_]+\.sql$/.test(name) || !readdirSync(migrationsDir).includes(name)) {
+    throw new Error('--with-pending exige um arquivo de supabase/migrations/.');
+  }
+  return { name, version: name.slice(0, 14), sql: readFileSync(join(migrationsDir, name), 'utf8') };
+}
+
+function runPgtapFiles(args) {
+  const pending = pendingMigration(args);
   const files = readdirSync(testsDir).filter((name) => name.endsWith('.test.sql')).sort();
   // Every file is converted (and refused if unsafe) before anything remote runs.
-  const scripts = files.map((name) => [name, buildRemotePgtapScript(readFileSync(join(testsDir, name), 'utf8'))]);
-  const before = preflight();
+  const scripts = files.map((name) => [name, buildRemotePgtapScript(readFileSync(join(testsDir, name), 'utf8'), { prelude: pending?.sql ?? '' })]);
+  if (pending) console.log(`Migration pendente validada dentro da transação, sem aplicar: ${pending.name}`);
+  const before = preflight(pending?.version);
   const workDir = mkdtempSync(join(tmpdir(), 'fbf-pgtap-'));
   let failures = 0;
   try {
@@ -120,7 +136,7 @@ function main() {
   console.log(`Projeto de destino: ${STAGING_PROJECT_REF} (staging)`);
 
   if (command === 'test-db') {
-    runPgtapFiles();
+    runPgtapFiles(process.argv.slice(3));
     return;
   }
   if (command === 'push') {

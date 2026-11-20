@@ -9,6 +9,7 @@ import {
   buildKnockoutBracket,
   distributeTeamsIntoGroups,
   rankStandings,
+  standingFromView,
   type GroupAssignment,
   type StandingStats,
   type TieBreaker,
@@ -16,6 +17,7 @@ import {
 import { buildRoundRobin } from '@/lib/roundRobin';
 import { FormError } from '@/components/ui';
 import { useConfirm } from '@/components/site';
+import { GroupSchedulePanel } from './GroupSchedulePanel';
 
 type Props = { stage: Stage; seasonId: string };
 
@@ -28,6 +30,9 @@ type GroupRow = StandingStats & {
 type GroupProgress = {
   groups: { id: string; name: string; order: number; teamIds: string[]; rows: StandingStats[] }[];
   allMatchesFinished: boolean;
+  // Rounds of the legacy model (one round per group). When absent, a
+  // home-and-away group stage uses shared rounds (GroupSchedulePanel).
+  hasGroupRounds: boolean;
 };
 
 const groupLabel = (index: number) => `Grupo ${String.fromCharCode(65 + index)}`;
@@ -102,7 +107,7 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
         supabase.from('stage_groups').select('id, name, group_order').eq('stage_id', stage.id).order('group_order'),
         supabase.from('stage_group_teams').select('stage_group_id, season_team_id, seed_order').eq('stage_id', stage.id).order('seed_order'),
         supabase.from('stage_standings').select('season_team_id, stage_group_id, group_name, team_name, played, wins, draws, losses, goals_for, goals_against, points').eq('stage_id', stage.id).not('stage_group_id', 'is', null),
-        supabase.from('rounds').select('id').eq('stage_id', stage.id).eq('phase_type', 'GROUP'),
+        supabase.from('rounds').select('id, phase_type').eq('stage_id', stage.id).in('phase_type', ['GROUP', 'ROUND_ROBIN']),
       ]);
       if (!active) return;
       if (groupResult.error || memberResult.error || standingResult.error || roundResult.error) {
@@ -112,7 +117,10 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
         return;
       }
 
+      // Group matches live in GROUP rounds (legacy model) or in the stage's
+      // shared ROUND_ROBIN rounds; both count for the end of the group phase.
       const roundIds = (roundResult.data ?? []).map((round) => round.id);
+      const hasGroupRounds = (roundResult.data ?? []).some((round) => round.phase_type === 'GROUP');
       const matchResult = roundIds.length
         ? await supabase.from('matches').select('status').in('round_id', roundIds)
         : { data: [], error: null };
@@ -130,10 +138,10 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
         groupMembers.push(member.season_team_id);
         membersByGroup.set(member.stage_group_id, groupMembers);
       }
-      const rows = (standingResult.data ?? []).map((row) => ({
-        ...row,
-        teamId: row.season_team_id,
-      })) as unknown as GroupRow[];
+      // stage_standings uses snake_case; rankStandings and the labels read
+      // StandingStats (camelCase), including goals for the goal-difference
+      // tie-breaker.
+      const rows = (standingResult.data ?? []).map(standingFromView) as unknown as GroupRow[];
       const tieBreakers = stage.tie_breakers as TieBreaker[];
       const groups = (groupResult.data ?? []).map((group) => ({
         id: group.id,
@@ -147,6 +155,7 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
       }));
       setGroupProgress({
         groups,
+        hasGroupRounds,
         allMatchesFinished: roundIds.length > 0
           && (matchResult.data ?? []).length > 0
           && (matchResult.data ?? []).every((match) => match.status === 'FINISHED'),
@@ -328,6 +337,8 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
             <p className="admin-hint">Verificando os grupos existentes...</p>
           ) : groupProgressError ? (
             <FormError message="Não foi possível verificar os grupos e resultados desta fase. Atualize os dados antes de continuar." />
+          ) : groupLegs === 2 && !groupProgress?.hasGroupRounds && !groupProgress?.groups.length ? (
+            <GroupSchedulePanel stage={stage} seasonTeams={seasonTeams} />
           ) : !groupProgress?.groups.length ? (
             <>
               <p className="admin-hint">Distribua cada equipe manualmente entre os grupos. A prévia inclui os jogos de turno {groupLegs === 2 ? 'e returno' : 'único'}.</p>
@@ -352,6 +363,7 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
             </>
           ) : (
             <>
+              {groupLegs === 2 && !groupProgress.hasGroupRounds && <GroupSchedulePanel stage={stage} seasonTeams={seasonTeams} />}
               <p className="admin-hint">{groupProgress.allMatchesFinished
                 ? `Todos os jogos dos grupos terminaram. Serão classificados os ${qualifiersPerGroup} primeiros de cada grupo.`
                 : 'A chave será liberada após todas as partidas da fase de grupos serem finalizadas.'}</p>

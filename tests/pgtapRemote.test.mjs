@@ -54,6 +54,21 @@ test('snapshot diff reports every changed, added or removed item', () => {
   assert.throws(() => snapshotFromRows([]), /nenhuma tabela/);
 });
 
+test('a pending migration runs inside the same never-committed transaction', () => {
+  const script = buildRemotePgtapScript('BEGIN;\nSELECT ok(true);\nROLLBACK;\n', { prelude: 'ALTER TABLE t ADD COLUMN c int;\nCREATE FUNCTION f() RETURNS int LANGUAGE sql AS $$ SELECT 1; $$;' });
+  const lines = script.split(';\n');
+  assert.equal(lines[0], 'BEGIN');
+  assert.ok(lines.indexOf('ALTER TABLE t ADD COLUMN c int') > 0);
+  assert.ok(lines.findIndex((line) => line.startsWith('CREATE FUNCTION f()')) < lines.findIndex((line) => line.includes('SELECT ok(true)')));
+  assert.doesNotMatch(script, /^(COMMIT|ROLLBACK|END)\b/im);
+  assert.throws(() => buildRemotePgtapScript('BEGIN; ROLLBACK;', { prelude: 'BEGIN; CREATE TABLE x (); COMMIT;' }), /migration pendente/);
+});
+
+test('every migration without top-level transaction control can be used as a pending prelude', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20261120120000_group_schedule_recovery.sql', import.meta.url), 'utf8');
+  assert.doesNotThrow(() => buildRemotePgtapScript('BEGIN; SELECT 1; ROLLBACK;', { prelude: sql }));
+});
+
 test('every pgTAP file in the repository can be converted', () => {
   const dir = new URL('../supabase/tests/', import.meta.url);
   for (const name of readdirSync(dir).filter((file) => file.endsWith('.test.sql'))) {

@@ -244,9 +244,6 @@ export function StagesTab() {
             </form>
           </>
         )}
-        {selectedStage && selectedSeason && stages.find((stage) => stage.id === selectedStage)
-          ? <GenerateRoundsForm stage={stages.find((stage) => stage.id === selectedStage) as Stage} seasonId={selectedSeason} />
-          : null}
       </div>
       <div className="admin-list-card">
         <h3>Fases e rodadas</h3>
@@ -273,6 +270,13 @@ export function StagesTab() {
           </div>
         )}
       </div>
+      {/* Fixture generators need room (whole tables of rounds), so they get a
+          full-width card instead of the narrow form column. */}
+      {selectedStage && selectedSeason && stages.find((stage) => stage.id === selectedStage) && (
+        <div className="admin-wide-card">
+          <GenerateRoundsForm stage={stages.find((stage) => stage.id === selectedStage) as Stage} seasonId={selectedSeason} />
+        </div>
+      )}
     </div>
   );
 }

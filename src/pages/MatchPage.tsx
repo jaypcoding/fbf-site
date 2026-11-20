@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Goal } from 'lucide-react';
 import { useMatch, useMatchEvents } from '@/lib/hooks';
@@ -7,7 +7,7 @@ import { formatClock } from '@/lib/time';
 import { formatMatchDate } from '@/lib/format';
 import { usePageTitle } from '@/lib/pageTitle';
 import { LoadingCard, EmptyState, TeamLogo, PlayerPhoto } from '@/components/ui';
-import type { MatchEvent } from '@/lib/supabase';
+import { supabase, type MatchEvent } from '@/lib/supabase';
 
 const eventLabels: Record<MatchEvent['event_type'], string> = {
   GOAL: 'Gol',
@@ -30,11 +30,29 @@ type MatchDetail = {
   round: { name: string; stage_id?: string; stage: { name: string; season: { name: string; competition: { id: string; name: string } | null } | null } | null } | null;
 };
 
+type RecordMarkers = { recorded_retroactively: boolean; duration_is_presumed: boolean; duration_seconds: number | null };
+
+// Read apart and tolerant to failure, so the page works whether or not the
+// database already has these columns.
+function useRecordMarkers(matchId?: string) {
+  const [markers, setMarkers] = useState<RecordMarkers | null>(null);
+  useEffect(() => {
+    let active = true;
+    setMarkers(null);
+    if (!matchId) return () => { active = false; };
+    supabase.from('matches').select('recorded_retroactively, duration_is_presumed, duration_seconds').eq('id', matchId).maybeSingle()
+      .then(({ data, error }) => { if (active && !error && data) setMarkers(data as RecordMarkers); });
+    return () => { active = false; };
+  }, [matchId]);
+  return markers;
+}
+
 export function MatchPage() {
   const { id } = useParams();
   const { match: rawMatch, loading: matchLoading, error: matchError } = useMatch(id);
   const { events, loading: eventsLoading, error: eventsError } = useMatchEvents(id);
   const match = rawMatch as unknown as MatchDetail | null;
+  const markers = useRecordMarkers(id);
   usePageTitle(match ? `${match.home_team?.team?.name || 'A definir'} x ${match.away_team?.team?.name || 'A definir'}` : matchLoading ? null : 'Partida');
 
   const scorers = useMemo(() => {
@@ -77,6 +95,12 @@ export function MatchPage() {
           <div className="score-team"><TeamLogo src={match.away_team?.team?.logo_url ?? null} name={awayName} size={64} /><span>{awayName}</span></div>
         </div>
         <p className="score-date">{formatMatchDate(match.scheduled_at)}</p>
+        {markers?.recorded_retroactively && (
+          <p className="score-note">
+            Resultado registrado após a partida
+            {markers.duration_is_presumed && markers.duration_seconds ? ` · duração presumida (${formatClock(markers.duration_seconds)})` : ''}
+          </p>
+        )}
       </div>
 
       <div className="match-page-grid">
@@ -88,9 +112,9 @@ export function MatchPage() {
             <div className="timeline">
               {events.map((ev) => (
                 <div key={ev.id} className="timeline-item">
-                  <span className="timeline-minute">{formatClock(ev.minute_seconds)}</span>
+                  <span className="timeline-minute" title={ev.metadata?.minute_unknown ? 'Tempo não informado' : undefined}>{ev.metadata?.minute_unknown ? '—' : formatClock(ev.minute_seconds)}</span>
                   <div className="timeline-body">
-                    <strong>{ev.is_own_goal ? `${ev.player?.nickname || '—'} (gol contra)` : ev.player?.nickname || '—'}{ev.related_player ? ` ↔ ${ev.related_player.nickname}` : ''}</strong>
+                    <strong>{ev.is_own_goal ? `${ev.player?.nickname || 'Autor não informado'} (gol contra)` : ev.player?.nickname || 'Autor não informado'}{ev.related_player ? ` ↔ ${ev.related_player.nickname}` : ''}</strong>
                     <span>{ev.team?.team?.name || '—'}</span>
                   </div>
                   <span className="timeline-type">{eventLabels[ev.event_type]}{ev.period === 'EXTRA_TIME' ? ' · Gol de ouro' : ''}</span>

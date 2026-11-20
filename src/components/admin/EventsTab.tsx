@@ -264,7 +264,7 @@ function MatchEventList({ matchId }: { matchId: string }) {
         <div key={ev.id} className="admin-list-item">
           <div>
             <strong>
-              {formatClock(ev.minute_seconds)} · {ev.is_own_goal ? 'Gol contra' : eventTypeLabels[ev.event_type]}
+              {ev.metadata?.minute_unknown ? 'Tempo não informado' : formatClock(ev.minute_seconds)} · {ev.is_own_goal ? 'Gol contra' : eventTypeLabels[ev.event_type]}
               {' · '}{periodLabels[ev.period]}
             </strong>
             <span>{ev.player?.nickname || '—'}{ev.related_player ? ` (saiu: ${ev.related_player.nickname})` : ''} · {ev.team?.team?.name || '—'}</span>

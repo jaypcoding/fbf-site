@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Pencil } from 'lucide-react';
+import { ArrowRight, CalendarClock, ClipboardCheck, Pencil } from 'lucide-react';
 import { supabase, type Match, type SeasonTeam } from '@/lib/supabase';
 import { useManagedCompetitions, useSeasons, useStages, useRounds, useMatches, useSeasonTeams } from '@/lib/hooks';
 import { matchStatusLabels } from '@/lib/labels';
@@ -7,17 +7,12 @@ import { availableMatchStatuses } from '@/lib/matchRules';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 import { formatClock, parseClock } from '@/lib/time';
 import { refreshAdminData } from '@/lib/adminRefresh';
+import { RetroactiveResultForm, RoundScheduleForm } from './MatchRecoveryForms';
+import { toLocalInput } from '@/lib/matchRecovery';
 
 type MatchStatus = Match['status'];
 
 const statusOptions = (Object.keys(matchStatusLabels) as MatchStatus[]).map((value) => ({ value, label: matchStatusLabels[value] }));
-
-function toLocalInput(iso: string | null) {
-  if (!iso) return '';
-  const date = new Date(iso);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
-}
 
 function formatDate(iso: string | null) {
   return iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Data a definir';
@@ -44,6 +39,8 @@ export function MatchesTab() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Match | null>(null);
+  const [recovering, setRecovering] = useState<Match | null>(null);
+  const [schedulingRound, setSchedulingRound] = useState(false);
 
   useEffect(() => {
     if (!selectedComp && competitions.length > 0) setSelectedComp(competitions[0].id);
@@ -124,15 +121,28 @@ export function MatchesTab() {
         </form>
       </div>
       <div className="admin-list-card">
-        <h3>Partidas da rodada</h3>
+        <div className="admin-list-heading">
+          <h3>Partidas da rodada</h3>
+          {matches.length > 0 && <button type="button" className="button button-outline" onClick={() => setSchedulingRound(true)}><CalendarClock size={15} /> Datas da rodada</button>}
+        </div>
         {matchesError || seasonTeamsError ? <FormError message="Não foi possível carregar as partidas ou as equipes inscritas. Verifique suas permissões e tente novamente." /> : loading ? <LoadingCard /> : !selectedRound ? <p className="admin-empty-text">Selecione uma rodada para ver as partidas.</p> : matches.length === 0 ? <p className="admin-empty-text">Nenhuma partida nesta rodada.</p> : (
           <div className="admin-list">
             {matches.map((m) => (
-              <MatchRow key={m.id} match={m} onEdit={() => setEditing(m)} />
+              <MatchRow key={m.id} match={m} onEdit={() => setEditing(m)} onRecover={() => setRecovering(m)} />
             ))}
           </div>
         )}
       </div>
+      {recovering && (
+        <Modal title={`Resultado já disputado: ${teamName(recovering.home_team)} × ${teamName(recovering.away_team)}`} onClose={() => setRecovering(null)}>
+          <RetroactiveResultForm match={recovering} onDone={() => setRecovering(null)} />
+        </Modal>
+      )}
+      {schedulingRound && (
+        <Modal title="Datas da rodada" onClose={() => setSchedulingRound(false)}>
+          <RoundScheduleForm matches={matches} onDone={() => setSchedulingRound(false)} />
+        </Modal>
+      )}
       {editing && (
         <Modal title="Editar partida" onClose={() => setEditing(null)}>
           <MatchEditForm match={editing} seasonTeams={seasonTeams} onSaved={() => setEditing(null)} />
@@ -142,7 +152,7 @@ export function MatchesTab() {
   );
 }
 
-function MatchRow({ match, onEdit }: { match: Match; onEdit: () => void }) {
+function MatchRow({ match, onEdit, onRecover }: { match: Match; onEdit: () => void; onRecover: () => void }) {
   const [statusValue, setStatusValue] = useState<MatchStatus>(match.status);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -174,6 +184,9 @@ function MatchRow({ match, onEdit }: { match: Match; onEdit: () => void }) {
         <FormSelect value={statusValue} disabled={busy} onChange={(e) => changeStatus(e.target.value as MatchStatus)} aria-label="Status da partida">
           {statusOptions.filter((option) => availableMatchStatuses(statusValue).includes(option.value)).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </FormSelect>
+        {(statusValue === 'SCHEDULED' || statusValue === 'POSTPONED') && (
+          <button className="icon-button" onClick={onRecover} title="Registrar resultado de partida já disputada"><ClipboardCheck size={15} /></button>
+        )}
         <button className="icon-button" onClick={onEdit} title="Editar partida"><Pencil size={15} /></button>
       </div>
     </div>

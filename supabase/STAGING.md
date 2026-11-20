@@ -41,7 +41,15 @@ O site em modo `staging` (`vite --mode staging`) recusa iniciar se a URL não fo
 - antes do primeiro teste, uma consulta somente leitura confirma que o staging respondeu e que a última migration dele é igual à local, e registra a contagem de linhas de cada tabela (`public`, `auth`, `supabase_migrations`) e as extensões instaladas;
 - cada `SELECT` do teste grava suas linhas TAP numa tabela temporária, lida no último comando;
 - o `ROLLBACK` final é removido e nada é confirmado: a API descarta a transação aberta ao fim da requisição (comportamento verificado no staging antes do primeiro uso), então os dados de teste nunca permanecem;
-- ao final, a mesma consulta somente leitura é repetida e o comando falha se qualquer contagem ou extensão tiver mudado.
+- ao final, a mesma consulta somente leitura é repetida (inclusive impressões digitais de colunas, funções e triggers do schema `public`) e o comando falha se qualquer item tiver mudado.
+
+### Validar uma migration antes de aplicá-la
+
+```bash
+npm run staging:test-db -- --with-pending supabase/migrations/<arquivo>.sql
+```
+
+A migration é executada dentro da mesma transação dos testes, que nunca é confirmada: ela é validada contra o schema real do staging sem ser aplicada. A migration não pode conter `BEGIN`/`COMMIT` no nível superior. O destino precisa estar na migration imediatamente anterior.
 
 ## Configuração local
 

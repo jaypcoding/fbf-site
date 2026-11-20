@@ -96,6 +96,14 @@ export function buildGroupRoundRobin(groups: GroupAssignment[], legs: 1 | 2 = 1)
   }));
 }
 
+// Row of the stage_standings view (snake_case) as StandingStats.
+export function standingFromView<T extends {
+  season_team_id: string; team_name: string; played: number; wins: number; draws: number;
+  losses: number; goals_for: number; goals_against: number; points: number;
+}>(row: T): T & StandingStats {
+  return { ...row, teamId: row.season_team_id, teamName: row.team_name, goalsFor: row.goals_for, goalsAgainst: row.goals_against };
+}
+
 export function rankStandings(rows: StandingStats[], tieBreakers: TieBreaker[]): StandingStats[] {
   if (!tieBreakers.length || new Set(tieBreakers).size !== tieBreakers.length) {
     throw new Error('Os critérios de desempate precisam ser únicos e conter ao menos um item.');
