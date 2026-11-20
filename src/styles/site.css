@@ -194,3 +194,4 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .admin-wide-card { grid-column: 1 / -1; background: #fff; border: 1px solid #eadcc7; border-radius: 8px; padding: 24px; }
 .admin-wide-card > .generate-rounds > .admin-divider:first-child { display: none; }
 .group-schedule-assign { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.standings-notice { font-size: 13px; color: #9a4a0c; background: #fff0d5; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; max-width: 68ch; }

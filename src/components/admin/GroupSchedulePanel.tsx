@@ -117,6 +117,30 @@ export function GroupSchedulePanel({ stage, seasonTeams }: Props) {
     setEntered((current) => current.filter((item) => !(item.round === match.round && item.homeId === match.homeId && item.awayId === match.awayId)));
   }
 
+  // Registers only the groups (register_stage_groups): no round or match is
+  // created, and the standings start showing one table per group.
+  const groupsReady = !storedGroups.length && unassigned.length === 0
+    && groups.every((group) => group.teamIds.length === groups[0].teamIds.length && group.teamIds.length >= 2);
+  async function registerGroupsOnly() {
+    if (!groupsReady) return;
+    const ok = await confirm({
+      title: 'Registrar só os grupos',
+      message: `Os ${groups.length} grupos serão registrados e a classificação passará a mostrar uma tabela por grupo. `
+        + 'Nenhuma partida será criada ou alterada. Depois de registrados, os grupos não podem ser mudados.',
+      confirmLabel: 'Registrar grupos',
+    });
+    if (!ok) return;
+    setBusy(true); setError(null); setResult(null);
+    const { error: rpcError } = await supabase.rpc('register_stage_groups', {
+      p_stage_id: stage.id,
+      p_groups: groups.map((group) => ({ name: group.name, team_ids: group.teamIds })),
+    });
+    setBusy(false);
+    if (rpcError) { setError(rpcError.message || 'Não foi possível registrar os grupos. Nada foi alterado.'); return; }
+    setResult('Grupos registrados. Nenhuma partida foi criada.');
+    refreshAdminData();
+  }
+
   async function generate() {
     if (!plan || plan.conflicts.length) return;
     if (proposedCount > 0 && !reviewed) {
@@ -196,6 +220,12 @@ export function GroupSchedulePanel({ stage, seasonTeams }: Props) {
             </label>
           ))}
           {unassigned.length > 0 && <p className="admin-hint">Distribua todas as equipes: {unassigned.length} sem grupo.</p>}
+          {groupsReady && (
+            <div className="group-schedule-register">
+              <p className="admin-hint">Você pode registrar só os grupos agora, sem gerar nenhuma partida: a classificação passa a separar os grupos imediatamente.</p>
+              <button type="button" className="button button-outline" disabled={busy} onClick={registerGroupsOnly}>Registrar só os grupos</button>
+            </div>
+          )}
         </div>
       )}
 

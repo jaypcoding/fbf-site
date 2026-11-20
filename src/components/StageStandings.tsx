@@ -4,33 +4,7 @@ import type { Stage } from '@/lib/supabase';
 import { supabase } from '@/lib/supabase';
 import { EmptyState, LoadingCard, TeamLogo } from '@/components/ui';
 import { useAdminDataVersion } from '@/lib/adminRefresh';
-import { compareTeamNames } from '@/lib/competitionFormats';
-
-type StandingsRow = {
-  stage_id: string;
-  season_team_id: string;
-  team_id: string;
-  team_name: string;
-  team_logo_url: string | null;
-  stage_group_id: string | null;
-  group_name: string | null;
-  played: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goals_for: number;
-  goals_against: number;
-  points: number;
-};
-
-const numericCriteria: Record<string, keyof Pick<StandingsRow, 'points' | 'wins' | 'draws' | 'losses' | 'goals_for' | 'goals_against'>> = {
-  POINTS: 'points',
-  WINS: 'wins',
-  DRAWS: 'draws',
-  LOSSES: 'losses',
-  GOALS_FOR: 'goals_for',
-  GOALS_AGAINST: 'goals_against',
-};
+import { buildStandingsLayout, type StandingsRow } from '@/lib/standings';
 
 export function StageStandings({ stages }: { stages: Stage[] }) {
   const [selectedStageId, setSelectedStageId] = useState('');
@@ -74,30 +48,8 @@ export function StageStandings({ stages }: { stages: Stage[] }) {
     return () => { active = false; };
   }, [selectedStageId, refreshVersion]);
 
-  const standings = useMemo(() => {
-    if (!stage) return [];
-    return [...rows].sort((a, b) => {
-      for (const criterion of stage.tie_breakers) {
-        if (criterion === 'TEAM_NAME') {
-          const result = compareTeamNames(a.team_name, b.team_name);
-          if (result !== 0) return result;
-          continue;
-        }
-        if (criterion === 'GOAL_DIFF') {
-          const result = (b.goals_for - b.goals_against) - (a.goals_for - a.goals_against);
-          if (result !== 0) return result;
-          continue;
-        }
-        const key = numericCriteria[criterion];
-        if (key && a[key] !== b[key]) {
-          return key === 'losses' || key === 'goals_against'
-            ? a[key] - b[key]
-            : b[key] - a[key];
-        }
-      }
-      return compareTeamNames(a.team_name, b.team_name);
-    });
-  }, [rows, stage]);
+  const layout = useMemo(() => (stage ? buildStandingsLayout(rows, stage) : null), [rows, stage]);
+  const standings = layout ? layout.tables.flatMap((table) => table.rows) : [];
 
   if (error) return <p className="admin-hint">Não foi possível carregar a classificação oficial.</p>;
   if (!stages.length) return <EmptyState icon={<BarChart3 />} title="Fase ainda não configurada" description="A classificação será exibida depois que uma fase for criada." />;
@@ -107,14 +59,6 @@ export function StageStandings({ stages }: { stages: Stage[] }) {
   if (loading) return <LoadingCard />;
   if (standings.length === 0 || standings.every((row) => row.played === 0)) {
     return <EmptyState icon={<BarChart3 />} title="Sem classificação ainda" description="A tabela considera somente partidas finalizadas com placar oficial." />;
-  }
-
-  const groupedRows = new Map<string, { name: string; rows: StandingsRow[] }>();
-  for (const row of standings) {
-    const key = row.stage_group_id ?? '';
-    const group = groupedRows.get(key) ?? { name: row.group_name || 'Classificação', rows: [] };
-    group.rows.push(row);
-    groupedRows.set(key, group);
   }
 
   function renderTable(tableRows: StandingsRow[]) {
@@ -148,16 +92,24 @@ export function StageStandings({ stages }: { stages: Stage[] }) {
           </select>
         </label>
       )}
-      {groupedRows.size > 1 || (stage?.format === 'Grupos + Mata-mata' && [...groupedRows.keys()][0] !== '')
-        // Groups in name order (Grupo A, B, C…), not in the order their
-        // leaders appear in the points-sorted rows.
-        ? Array.from(groupedRows.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true })).map((group) => (
-            <section className="content-section" key={group.name}>
+      {layout?.mode === 'groups'
+        ? layout.tables.map((group) => (
+            <section className="content-section standings-group" key={group.key || 'sem-grupo'} aria-label={group.name}>
               <h3>{group.name}</h3>
               {renderTable(group.rows)}
             </section>
           ))
-        : renderTable(standings)}
+        : (
+          <>
+            {layout?.mode === 'groups-pending' && (
+              <p className="standings-notice" role="note">
+                Os grupos desta fase ainda não foram cadastrados. Enquanto isso, a tabela abaixo reúne todas as equipes
+                de forma provisória; a classificação por grupo aparece assim que os grupos forem registrados.
+              </p>
+            )}
+            {renderTable(layout?.tables[0]?.rows ?? [])}
+          </>
+        )}
     </>
   );
 }
