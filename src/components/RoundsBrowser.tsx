@@ -3,11 +3,12 @@ import { ChevronLeft, ChevronRight, Goal, ListOrdered } from 'lucide-react';
 import { supabase, type Match, type Stage } from '@/lib/supabase';
 import { buildRoundsView, currentRoundIndex, roundStateLabels, type GroupOfTeam, type RoundInfo } from '@/lib/roundsView';
 import { plural } from '@/lib/format';
+import { buildKnockoutPreview, type KnockoutPreviewSeries } from '@/lib/knockoutPreview';
 import { EmptyState, LoadingCard } from '@/components/ui';
 import { MatchCard } from '@/components/site';
 
 type GroupRow = { stage_group_id: string; season_team_id: string };
-type GroupMeta = { id: string; name: string; group_order: number };
+type GroupMeta = { id: string; stage_id: string; name: string; group_order: number };
 
 /**
  * Every round of the season (played, in progress and future), one at a time
@@ -22,6 +23,7 @@ export function RoundsBrowser({ stages, matches, selected, onSelect }: {
 }) {
   const [rounds, setRounds] = useState<RoundInfo[]>([]);
   const [groupOf, setGroupOf] = useState<GroupOfTeam>(new Map());
+  const [groupNames, setGroupNames] = useState<Map<string, string[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const stageKey = stages.map((stage) => stage.id).join(',');
@@ -33,7 +35,7 @@ export function RoundsBrowser({ stages, matches, selected, onSelect }: {
     setLoading(true);
     Promise.all([
       supabase.from('rounds').select('id, stage_id, name, round_order, phase_type, leg_number, stage_group:stage_group_id ( name, group_order )').in('stage_id', stageIds),
-      supabase.from('stage_groups').select('id, name, group_order').in('stage_id', stageIds),
+      supabase.from('stage_groups').select('id, stage_id, name, group_order').in('stage_id', stageIds),
       supabase.from('stage_group_teams').select('stage_group_id, season_team_id').in('stage_id', stageIds),
     ]).then(([roundsResult, groupsResult, membersResult]) => {
       if (!active) return;
@@ -46,6 +48,9 @@ export function RoundsBrowser({ stages, matches, selected, onSelect }: {
       }
       setRounds(((roundsResult.data || []) as unknown as RoundInfo[]).filter((round) => round.phase_type !== 'KNOCKOUT'));
       setGroupOf(map);
+      const byStage = new Map<string, string[]>();
+      for (const group of [...meta.values()].sort((a, b) => a.group_order - b.group_order)) byStage.set(group.stage_id, [...(byStage.get(group.stage_id) ?? []), group.name]);
+      setGroupNames(byStage);
       setError(false);
       setLoading(false);
     });
@@ -57,10 +62,31 @@ export function RoundsBrowser({ stages, matches, selected, onSelect }: {
     stageOrder: new Map(stages.map((stage) => [stage.id, stage.stage_order])),
   }), [rounds, matches, groupOf, stages]);
 
+  // Planned knockout of group stages whose bracket was not generated yet.
+  const previews = stages
+    .filter((stage) => stage.format === 'Grupos + Mata-mata' && !matches.some((match) => match.round?.phase_type === 'KNOCKOUT' && match.round?.stage_id === stage.id))
+    .map((stage) => ({ stage, preview: buildKnockoutPreview(groupNames.get(stage.id) ?? [], stage.settings as Record<string, unknown>) }))
+    .filter((item) => item.preview);
+  const seriesRow = (series: KnockoutPreviewSeries) => (
+    <div className="knockout-preview-series" key={series.label}>
+      <strong>{series.label}</strong>
+      <span>{series.legs === 2 ? 'Ida' : 'Jogo único'}: {series.home} × {series.away}</span>
+      {series.legs === 2 && <span>Volta: {series.away} × {series.home}</span>}
+    </div>
+  );
+  const knockoutPreview = previews.map(({ stage, preview }) => (
+    <section className="round-panel knockout-preview" key={stage.id} aria-label="Mata-mata previsto">
+      <div className="round-panel-head"><h3>Mata-mata</h3><span className="round-state state-future">Previsto</span></div>
+      <p className="round-empty">Os classificados saem da classificação final dos grupos{preview!.rounds[0]?.series[0]?.legs === 2 ? '; cada confronto tem ida e volta, com o mando invertido na volta' : ''}. Datas a definir.</p>
+      {preview!.rounds.map((round) => <div className="knockout-preview-round" key={round.label}><h4>{round.label}</h4>{round.series.map(seriesRow)}</div>)}
+      {preview!.thirdPlace && <div className="knockout-preview-round"><h4>Terceiro lugar</h4>{seriesRow(preview!.thirdPlace)}</div>}
+    </section>
+  ));
+
   if (loading) return <LoadingCard />;
   if (error) return <EmptyState icon={<Goal />} title="Não foi possível carregar as rodadas" description="Tente novamente mais tarde." />;
   if (views.length === 0) {
-    return matches.length > 0 ? null : <EmptyState icon={<Goal />} title="Rodadas ainda não publicadas" description="A fase e os grupos já estão definidos. As rodadas e partidas aparecerão aqui assim que a organização publicar a tabela." />;
+    return matches.length > 0 ? <>{knockoutPreview}</> : <><EmptyState icon={<Goal />} title="Rodadas ainda não publicadas" description="A fase e os grupos já estão definidos. As rodadas e partidas aparecerão aqui assim que a organização publicar a tabela." />{knockoutPreview}</>;
   }
 
   const showAll = selected === 'todas';
@@ -109,6 +135,7 @@ export function RoundsBrowser({ stages, matches, selected, onSelect }: {
         {(['finished', 'in_progress', 'live', 'future'] as const).map((state) => <span key={state} className={`round-state state-${state}`}>{roundStateLabels[state]}</span>)}
       </div>
       {showAll ? views.map(roundPanel) : current && roundPanel(current)}
+      {knockoutPreview}
     </div>
   );
 }

@@ -259,3 +259,9 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
   .round-panel { padding: 14px 12px; }
   .round-panel-head small { margin-left: 0; width: 100%; }
 }
+.knockout-preview-round { margin-top: 14px; }
+.knockout-preview-round h4 { margin: 0 0 8px; font: 11px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .08em; color: #8c4f16; }
+.knockout-preview-series { display: grid; gap: 3px; padding: 10px 12px; margin-bottom: 8px; border: 1px dashed #e4d3b8; border-radius: 12px; background: #fff; }
+.knockout-preview-series strong { font-size: 14px; }
+.knockout-preview-series span { font-size: 13px; color: #5c4d40; }
+.knockout-preview .round-empty { font-size: 13px; line-height: 1.5; }
