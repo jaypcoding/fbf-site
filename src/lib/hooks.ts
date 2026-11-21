@@ -313,6 +313,35 @@ export function useMatches(roundId?: string) {
   return { matches, loading, error };
 }
 
+// Every match of every round of one stage (admin rounds overview).
+export function useStageMatches(roundIds: string[]) {
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const refreshVersion = useAdminDataVersion();
+  const key = roundIds.join(',');
+  useEffect(() => {
+    let active = true;
+    const ids = key ? key.split(',') : [];
+    if (ids.length === 0) {
+      setMatches([]);
+      setLoading(false);
+      setError(false);
+      return () => { active = false; };
+    }
+    setLoading(true);
+    supabase.from('matches').select(MATCH_SELECT).in('round_id', ids).then(({ data, error: queryError }) => {
+      if (active) {
+        setError(Boolean(queryError));
+        setMatches(queryError ? [] : (data || []) as unknown as Match[]);
+        setLoading(false);
+      }
+    });
+    return () => { active = false; };
+  }, [key, refreshVersion]);
+  return { matches, loading, error };
+}
+
 export function useMatchEvents(matchId?: string) {
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [loading, setLoading] = useState(true);

@@ -194,21 +194,33 @@ export function planGroupSchedule({
       return;
     }
 
-    // Unknown home teams: balance first-leg home games, earlier seed first.
+    // Unknown home teams (known ones are never changed): balance first-leg
+    // home games; on a tie, alternate (the team that played at home in the
+    // previous round plays away); then earlier seed first.
     const homeCount = new Map(group.teamIds.map((id) => [id, 0]));
+    const playedHome = new Map<string, boolean>(); // `${round}:${team}`
     for (const round of firstRounds) {
       for (const pair of firstLeg.get(round) ?? []) {
         const home = firstLegHome.get(pair);
-        if (home) homeCount.set(home, (homeCount.get(home) ?? 0) + 1);
+        if (!home) continue;
+        const [a, b] = pair.split('|');
+        homeCount.set(home, (homeCount.get(home) ?? 0) + 1);
+        playedHome.set(`${round}:${home}`, true);
+        playedHome.set(`${round}:${home === a ? b : a}`, false);
       }
     }
     for (const round of firstRounds) {
       for (const pair of firstLeg.get(round) ?? []) {
         if (firstLegHome.has(pair)) continue;
         const [a, b] = pair.split('|');
-        const ordered = [a, b].sort((x, y) => (homeCount.get(x)! - homeCount.get(y)!) || group.teamIds.indexOf(x) - group.teamIds.indexOf(y));
+        const wasHome = (id: string) => (playedHome.get(`${round - 1}:${id}`) ? 1 : 0);
+        const ordered = [a, b].sort((x, y) => (homeCount.get(x)! - homeCount.get(y)!)
+          || wasHome(x) - wasHome(y)
+          || group.teamIds.indexOf(x) - group.teamIds.indexOf(y));
         firstLegHome.set(pair, ordered[0]);
         homeCount.set(ordered[0], homeCount.get(ordered[0])! + 1);
+        playedHome.set(`${round}:${ordered[0]}`, true);
+        playedHome.set(`${round}:${ordered[1]}`, false);
       }
     }
 

@@ -21,11 +21,16 @@ function sideName(match: Match, side: 'home' | 'away') {
   return 'A definir';
 }
 
-export function MatchCard({ match, context }: { match: Match; context?: string }) {
+// `detailed` (rounds view) shows the situation and, when defined, the date of every match.
+export function MatchCard({ match, context, detailed = false }: { match: Match; context?: string; detailed?: boolean }) {
+  const statusText = match.status === 'SCHEDULED'
+    ? (detailed ? `${matchStatusLabels.SCHEDULED} · ${formatMatchDate(match.scheduled_at)}` : formatMatchDate(match.scheduled_at))
+    : detailed && match.scheduled_at ? `${matchStatusLabels[match.status]} · ${formatMatchDate(match.scheduled_at)}` : matchStatusLabels[match.status];
   const homeName = sideName(match, 'home');
   const awayName = sideName(match, 'away');
   const hasScore = (match.status === 'FINISHED' || match.status === 'LIVE') && match.home_score !== null && match.away_score !== null;
-  const roundLabel = [match.round?.stage_group?.name, match.round?.name].filter(Boolean).join(' · ');
+  // In the rounds view the round is the panel title, so the card shows only the group.
+  const roundLabel = detailed ? '' : [match.round?.stage_group?.name, match.round?.name].filter(Boolean).join(' · ');
   const homeWon = match.status === 'FINISHED' && hasScore && (match.home_score ?? 0) > (match.away_score ?? 0);
   const awayWon = match.status === 'FINISHED' && hasScore && (match.away_score ?? 0) > (match.home_score ?? 0);
   return (
@@ -34,7 +39,7 @@ export function MatchCard({ match, context }: { match: Match; context?: string }
         <span>{[context, roundLabel].filter(Boolean).join(' · ') || 'Partida'}</span>
         <span className={`match-status-tag tag-${match.status.toLowerCase()}`}>
           {match.status === 'LIVE' && <i aria-hidden="true" />}
-          {match.status === 'SCHEDULED' ? formatMatchDate(match.scheduled_at) : matchStatusLabels[match.status]}
+          {statusText}
         </span>
       </div>
       <div className="match-teams">

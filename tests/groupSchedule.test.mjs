@@ -130,3 +130,60 @@ test('retroactive score counts own goals for the other team', async () => {
     { side: 'away', ownGoal: true }, { side: 'away', ownGoal: false }, { side: 'home', ownGoal: true },
   ]), { home: 3, away: 2 });
 });
+
+test('official home teams are never changed; the return leg inverts every one of them', () => {
+  const plan = planGroupSchedule({ groups, entered: official, existing });
+  for (const f of official) {
+    assert.ok(plan.matches.some((m) => m.round === f.round && m.homeId === f.homeId && m.awayId === f.awayId), `${f.homeId} x ${f.awayId} kept in round ${f.round}`);
+    assert.ok(plan.matches.some((m) => m.round === f.round + 3 && m.homeId === f.awayId && m.awayId === f.homeId), `return of ${f.homeId} x ${f.awayId} in round ${f.round + 3}`);
+  }
+});
+
+test('the round 3 proposal of the panel is the one in the prepared FBF 20 script (still to be confirmed)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const path = 'C:/Users/Leticia/Documents/FBF-operacao-20261120/tabela_fbf20_rodada3.json';
+  let prepared;
+  try { prepared = JSON.parse(readFileSync(path, 'utf8')); } catch { return; } // file only exists on the operator machine
+  const plan = planGroupSchedule({ groups, entered: official, existing });
+  const proposed = plan.matches.filter((m) => m.round === 3).map((m) => `${m.homeId}>${m.awayId}`).sort();
+  assert.deepEqual(proposed, prepared.partidas.map((p) => `${p.mandante}>${p.visitante}`).sort());
+});
+
+function maxStreak(plan, team) {
+  const roles = plan.matches.filter((m) => m.homeId === team || m.awayId === team).sort((a, b) => a.round - b.round).map((m) => m.homeId === team);
+  let best = 0; let run = 0; let last = null;
+  for (const role of roles) { run = role === last ? run + 1 : 1; last = role; best = Math.max(best, run); }
+  return best;
+}
+
+test('a table generated from scratch balances and alternates home games', () => {
+  for (const size of [4, 6]) {
+    const teams = Array.from({ length: size }, (_, i) => `T${i + 1}`);
+    const others = Array.from({ length: size }, (_, i) => `U${i + 1}`);
+    const plan = planGroupSchedule({ groups: [{ name: 'Grupo A', teamIds: teams }, { name: 'Grupo B', teamIds: others }], entered: [], existing: [] });
+    assert.deepEqual(plan.conflicts, []);
+    const half = size - 1;
+    assert.equal(plan.matches.length, 2 * size * half, `${size} teams: every pairing twice in each group`);
+    for (const team of [...teams, ...others]) {
+      const homeFirstLeg = plan.matches.filter((m) => m.round <= half && m.homeId === team).length;
+      assert.ok(Math.abs(homeFirstLeg - half / 2) <= 0.5 + (size === 6 ? 1 : 0), `${team} home games in the first leg: ${homeFirstLeg}`);
+      assert.ok(maxStreak({ matches: plan.matches.filter((m) => m.round <= half) }, team) <= 2, `${team} never plays three first-leg rounds in a row with the same role`);
+    }
+    const pairs = new Set(plan.matches.filter((m) => m.round <= half).map((m) => [m.homeId, m.awayId].sort().join('|')));
+    assert.equal(pairs.size, size * half, 'no pairing repeated within the first leg');
+  }
+});
+
+test('home and away alternate: few consecutive rounds with the same role (regression limits)', () => {
+  const limits = { 4: 6, 6: 14, 8: 20 }; // the previous planner produced 12, 20 and 44
+  for (const [size, limit] of Object.entries(limits).map(([s, l]) => [Number(s), l])) {
+    const teams = Array.from({ length: size }, (_, i) => `T${i + 1}`);
+    const plan = planGroupSchedule({ groups: [{ name: 'A', teamIds: teams }, { name: 'B', teamIds: teams.map((t) => `${t}b`) }], entered: [], existing: [] });
+    let breaks = 0;
+    for (const team of teams) {
+      const roles = plan.matches.filter((m) => m.homeId === team || m.awayId === team).sort((a, b) => a.round - b.round).map((m) => m.homeId === team);
+      for (let i = 1; i < roles.length; i += 1) if (roles[i] === roles[i - 1]) breaks += 1;
+    }
+    assert.ok(breaks <= limit, `${size} teams: ${breaks} breaks (limit ${limit})`);
+  }
+});

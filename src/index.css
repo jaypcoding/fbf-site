@@ -283,3 +283,37 @@ h1, h2, h3, p { margin: 0; }
   .score-team { font-size: 10px; }
   .score-team img { width: 42px; height: 42px; }
 }
+
+/* Admin rounds overview */
+.admin-rounds { display: grid; gap: 18px; }
+.admin-rounds-selects { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.admin-rounds-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.admin-rounds-summary span { padding: 6px 10px; border-radius: 10px; background: #f6efe2; font-size: 12px; color: #5c4d40; }
+.admin-rounds-summary strong { font-size: 14px; margin-right: 3px; color: #3e2d20; }
+.admin-rounds-summary .is-warning { background: #fff0d5; color: #b85a15; }
+.admin-rounds-summary .is-live { background: #fde8e6; color: #c0392b; }
+.admin-rounds-filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.admin-round-card .admin-list-heading h3 { display: flex; align-items: center; gap: 8px; }
+.admin-round-count { font: 11px 'DM Mono', monospace; color: #8c8072; margin-right: auto; }
+.admin-list-item.admin-round-match { display: grid; grid-template-columns: 70px minmax(180px, 1.6fr) 60px minmax(120px, 1fr) auto auto auto; align-items: center; gap: 10px; }
+.admin-round-group { font: 10px 'DM Mono', monospace; text-transform: uppercase; color: #8c4f16; }
+.admin-round-score { font-weight: 700; text-align: center; }
+.admin-round-date { font-size: 12px; color: #5c4d40; }
+.admin-attention { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 50px; font-size: 11px; background: #f6efe2; color: #756b61; white-space: nowrap; }
+.admin-attention.attention-locked { background: #e7f0e4; color: #496b52; }
+.admin-attention.attention-overdue { background: #fff0d5; color: #b85a15; font-weight: 700; }
+.admin-attention.attention-undated { background: #f3ece4; color: #9b8d7e; }
+.admin-round-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.admin-round-date-edit { display: inline-flex; align-items: center; gap: 4px; }
+.admin-round-date-edit input { width: auto; min-width: 0; padding: 6px 8px; font-size: 12px; }
+.admin-check { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0; font-size: 13px; }
+@media (max-width: 900px) {
+  .admin-list-item.admin-round-match { grid-template-columns: 1fr auto; }
+  .admin-round-group, .admin-round-date { grid-column: 1 / -1; }
+  .admin-round-actions { grid-column: 1 / -1; }
+}
+.admin-list-item .admin-round-teams { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 13px; color: #181818; }
+.admin-list-item .admin-round-teams strong { display: inline; }
+.admin-list-item .admin-round-teams .match-vs { font-size: 11px; }
+.admin-list-item .admin-round-score { font-size: 13px; color: #181818; }
+.admin-list-item .admin-round-date { font-size: 12px; color: #5c4d40; }

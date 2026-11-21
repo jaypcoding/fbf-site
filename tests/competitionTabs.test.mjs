@@ -19,3 +19,8 @@ test('unknown or missing slugs fall back to the overview', () => {
   assert.equal(tabFromSlug(undefined), DEFAULT_COMPETITION_TAB);
   assert.equal(tabFromSlug('nao-existe'), DEFAULT_COMPETITION_TAB);
 });
+
+test('old matches links open the rounds tab', () => {
+  assert.equal(tabFromSlug('jogos'), 'Rodadas');
+  assert.equal(slugFromTab('Rodadas'), 'rodadas');
+});

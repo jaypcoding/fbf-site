@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BadgeCheck, CalendarDays, CircleUserRound, ClipboardList, Flag, Goal, Hand, LayoutDashboard, Mic, Shirt, Swords, Trophy, UserCog, Users } from 'lucide-react';
+import { BadgeCheck, CalendarDays, CircleUserRound, ClipboardList, Flag, Goal, Hand, LayoutDashboard, ListOrdered, Mic, Shirt, Swords, Trophy, UserCog, Users } from 'lucide-react';
 import type { Profile } from '@/lib/supabase';
 import { OverviewTab } from '@/components/admin/OverviewTab';
 import { CompetitionsTab } from '@/components/admin/CompetitionsTab';
@@ -10,12 +10,13 @@ import { RegistrationsTab } from '@/components/admin/RegistrationsTab';
 import { RostersTab } from '@/components/admin/RostersTab';
 import { StagesTab } from '@/components/admin/StagesTab';
 import { MatchesTab } from '@/components/admin/MatchesTab';
+import { RoundsAdminTab } from '@/components/admin/RoundsAdminTab';
 import { EventsTab } from '@/components/admin/EventsTab';
 import { GoalkeepersTab } from '@/components/admin/GoalkeepersTab';
 import { StreamersTab } from '@/components/admin/StreamersTab';
 import { OrganizersTab, UsersTab } from '@/components/admin/UsersTab';
 
-type Tab = 'overview' | 'competitions' | 'seasons' | 'teams' | 'players' | 'registrations' | 'rosters' | 'stages' | 'matches' | 'events' | 'goalkeepers' | 'streamers' | 'organizers' | 'users';
+type Tab = 'overview' | 'competitions' | 'seasons' | 'teams' | 'players' | 'registrations' | 'rosters' | 'stages' | 'rounds' | 'matches' | 'events' | 'goalkeepers' | 'streamers' | 'organizers' | 'users';
 
 const tabs: { id: Tab; label: string; icon: typeof Trophy; adminOnly?: boolean }[] = [
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
@@ -26,6 +27,7 @@ const tabs: { id: Tab; label: string; icon: typeof Trophy; adminOnly?: boolean }
   { id: 'registrations', label: 'Inscrições', icon: ClipboardList },
   { id: 'rosters', label: 'Elencos', icon: Shirt },
   { id: 'stages', label: 'Fases & Rodadas', icon: Flag },
+  { id: 'rounds', label: 'Rodadas', icon: ListOrdered },
   { id: 'matches', label: 'Partidas', icon: Swords },
   { id: 'events', label: 'Eventos', icon: Goal },
   { id: 'goalkeepers', label: 'Goleiros', icon: Hand },
@@ -65,6 +67,7 @@ export function AdminPanel({ profile }: { profile: Profile | null }) {
         {tab === 'registrations' && <RegistrationsTab />}
         {tab === 'rosters' && <RostersTab />}
         {tab === 'stages' && <StagesTab />}
+        {tab === 'rounds' && <RoundsAdminTab />}
         {tab === 'matches' && <MatchesTab />}
         {tab === 'events' && <EventsTab />}
         {tab === 'goalkeepers' && <GoalkeepersTab />}

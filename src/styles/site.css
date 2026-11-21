@@ -232,3 +232,30 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .team-view-tabs { margin-bottom: 22px; }
 .team-view-count { margin-left: 7px; font: 10px 'DM Mono', monospace; color: #8c8072; }
 .team-card-category { font: 10px 'DM Mono', monospace; color: #8c8072; text-transform: uppercase; letter-spacing: .06em; }
+
+/* Rounds browser (competition "Rodadas" tab) */
+.rounds-browser { margin-top: 8px; }
+.round-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.round-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.round-chip { min-width: 40px; padding: 7px 10px; border-radius: 10px; border: 1px solid #ead9bf; background: #fff; color: #3e2d20; font: 600 12px 'DM Mono', monospace; cursor: pointer; }
+.round-chip:hover { border-color: #d4b896; }
+.round-chip.state-finished { background: #e7f0e4; border-color: #cfe0ca; color: #496b52; }
+.round-chip.state-in_progress { background: #fff4df; border-color: #f0d6a8; color: #8c4f16; }
+.round-chip.state-live { background: #fde8e6; border-color: #f5c3bd; color: #c0392b; }
+.round-chip.state-empty { color: #9b8d7e; border-style: dashed; }
+.round-chip.active { outline: 2px solid #8c4f16; outline-offset: 1px; }
+.round-all.active { border-color: #8c4f16; }
+.round-legend { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }
+.round-state { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 50px; font: 10px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .06em; background: #f6efe2; color: #756b61; }
+.round-state.state-finished { background: #e7f0e4; color: #496b52; }
+.round-state.state-in_progress { background: #fff4df; color: #8c4f16; }
+.round-state.state-live { background: #fde8e6; color: #c0392b; font-weight: 700; }
+.round-panel { margin-top: 18px; padding: 18px; border: 1px solid #f0e4d2; border-radius: 16px; background: #fffdf9; }
+.round-panel-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.round-panel-head h3 { margin: 0; font-size: 18px; }
+.round-panel-head small { margin-left: auto; font: 11px 'DM Mono', monospace; color: #8c8072; }
+.round-empty { margin: 0; color: #8c8072; }
+@media (max-width: 600px) {
+  .round-panel { padding: 14px 12px; }
+  .round-panel-head small { margin-left: 0; width: 100%; }
+}

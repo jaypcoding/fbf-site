@@ -80,7 +80,7 @@ export function MatchPage() {
 
   return (
     <section className="container detail-section">
-      <Link to={competition ? `/competicoes/${competition.id}?aba=jogos` : '/competicoes'} className="back-link">← {competition ? competition.name : 'Competições'}</Link>
+      <Link to={competition ? `/competicoes/${competition.id}?aba=rodadas` : '/competicoes'} className="back-link">← {competition ? competition.name : 'Competições'}</Link>
       <h1 className="sr-only">{homeName} x {awayName}</h1>
       <div className={`score-banner score-${match.status.toLowerCase()}`}>
         <div className="score-meta">

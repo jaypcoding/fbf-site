@@ -15,28 +15,12 @@ import { FBF_LOGO, MatchCard } from '@/components/site';
 import { GoalkeeperRanking } from '@/components/GoalkeeperRanking';
 import { StageStandings } from '@/components/StageStandings';
 import { KnockoutBracket } from '@/components/KnockoutBracket';
+import { RoundsBrowser } from '@/components/RoundsBrowser';
 
 type LeaderData = { rows: SeasonStatRow[]; players: Map<string, LeaderPlayer>; teams: Map<string, string> };
 const EMPTY_LEADER_DATA: LeaderData = { rows: [], players: new Map(), teams: new Map() };
 
 const MATCH_LIST_SELECT = 'id, round_id, home_team_id, away_team_id, scheduled_at, home_score, away_score, status, series_id, series_leg, home_source_match_id, home_source_outcome, away_source_match_id, away_source_outcome, home_team:home_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), away_team:away_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), round:round_id ( id, stage_id, name, round_order, phase_type, stage_group_id, leg_number, bracket_round, stage_group:stage_group_id ( id, name, group_order ) )';
-
-// Groups the non-knockout matches by round, keeping the round order.
-function groupByRound(matches: Match[]) {
-  const groups = new Map<string, { key: string; label: string; order: number; matches: Match[] }>();
-  for (const match of matches) {
-    const key = match.round_id;
-    const group = groups.get(key) ?? {
-      key,
-      label: [match.round?.stage_group?.name, match.round?.name].filter(Boolean).join(' · ') || 'Partidas',
-      order: (match.round?.stage_group?.group_order ?? 0) * 1000 + (match.round?.round_order ?? 0),
-      matches: [],
-    };
-    group.matches.push(match);
-    groups.set(key, group);
-  }
-  return [...groups.values()].sort((a, b) => a.order - b.order);
-}
 
 function LeaderTable({ leaders }: { leaders: ReturnType<typeof buildSeasonLeaders> }) {
   return (
@@ -63,12 +47,13 @@ export function CompetitionDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = tabFromSlug(searchParams.get('aba'));
   const selectedSeasonId = searchParams.get('edicao') ?? '';
-  const updateParams = (key: 'aba' | 'edicao', value: string, isDefault: boolean) => {
+  const updateParams = (key: 'aba' | 'edicao' | 'rodada', value: string, isDefault: boolean) => {
     const next = new URLSearchParams(searchParams);
     if (isDefault || !value) next.delete(key);
     else next.set(key, value);
     setSearchParams(next, { replace: true });
   };
+  const setRound = (value: string | null) => updateParams('rodada', value ?? '', !value);
   const setTab = (nextTab: CompetitionTab) => updateParams('aba', slugFromTab(nextTab), nextTab === DEFAULT_COMPETITION_TAB);
   const { seasons, loading: seasonsLoading, error: seasonsError } = useSeasons(id);
   const setSelectedSeasonId = (seasonId: string) => updateParams('edicao', seasonId, seasonId === seasons[0]?.id);
@@ -162,7 +147,6 @@ export function CompetitionDetailPage() {
   const teamCount = seasonTeams.length;
   const scorers = buildSeasonLeaders(leaderData.rows, 'goals', leaderData.players, leaderData.teams);
   const assisters = buildSeasonLeaders(leaderData.rows, 'assists', leaderData.players, leaderData.teams);
-  const groupMatches = allMatches.filter((match) => match.round?.phase_type !== 'KNOCKOUT');
   const finishedCount = allMatches.filter((match) => match.status === 'FINISHED').length;
   const nextMatch = allMatches.find((match) => match.status === 'LIVE') ?? allMatches.find((match) => match.status === 'SCHEDULED' && match.scheduled_at && Date.parse(match.scheduled_at) >= Date.now());
   const lastResult = [...allMatches].reverse().find((match) => match.status === 'FINISHED');
@@ -217,18 +201,13 @@ export function CompetitionDetailPage() {
         if (dataLoading) return <LoadingCard />;
         if (dataError) return <EmptyState icon={<BarChart3 />} title="Não foi possível carregar a classificação" description="Tente novamente mais tarde." />;
         return <StageStandings stages={stages} />;
-      case 'Jogos':
+      case 'Rodadas':
         if (dataLoading) return <LoadingCard />;
         if (dataError) return <EmptyState icon={<Goal />} title="Não foi possível carregar as partidas" description="Tente novamente mais tarde." />;
-        if (allMatches.length === 0) return <EmptyState icon={<Goal />} title="Sem partidas agendadas" description="As partidas aparecerão aqui assim que forem criadas pela organização." />;
+        if (stages.length === 0) return <EmptyState icon={<Goal />} title="Tabela ainda não publicada" description="As rodadas aparecerão aqui assim que a organização criar a fase e a tabela da competição." />;
         return <>
           <KnockoutBracket matches={allMatches} stages={stages} />
-          {groupByRound(groupMatches).map((group) => (
-            <div className="round-block" key={group.key}>
-              <h3 className="round-heading">{group.label}</h3>
-              <div className="matches-list">{group.matches.map((match) => <MatchCard key={match.id} match={match} />)}</div>
-            </div>
-          ))}
+          <RoundsBrowser stages={stages} matches={allMatches} selected={searchParams.get('rodada')} onSelect={setRound} />
         </>;
       case 'Artilharia':
         if (dataLoading) return <LoadingCard />;
