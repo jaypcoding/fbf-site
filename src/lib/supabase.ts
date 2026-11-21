@@ -8,6 +8,10 @@ const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseBrowserConfig(
 );
 assertSupabaseUrlForMode(import.meta.env.MODE, supabaseUrl);
 
+// The URL fragment as the page was opened, read before the client below
+// consumes and clears it (password recovery links; see passwordRecovery.ts).
+export const initialAuthHash = typeof window === 'undefined' ? '' : window.location.hash;
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type Profile = {

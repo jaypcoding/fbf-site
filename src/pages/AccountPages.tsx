@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { shouldBlockOnProfile } from '@/lib/authProfile';
 import { authErrorMessage } from '@/lib/authErrors';
+import { FORGOT_PASSWORD_PATH } from '@/lib/passwordRecovery';
 import { usePageTitle } from '@/lib/pageTitle';
 import { EmptyState, LoadingCard } from '@/components/ui';
 import { FBF_LOGO } from '@/components/site';
@@ -81,6 +82,7 @@ export function LoginPage() {
               <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
             </span>
           </label>
+          {mode === 'login' && <Link to={FORGOT_PASSWORD_PATH} className="forgot-password-link">Esqueci minha senha?</Link>}
           {message && <div className={`form-message${message.tone === 'success' ? ' is-success' : ''}`} role={message.tone === 'error' ? 'alert' : 'status'}>{message.text}</div>}
           <button className="button button-primary full-width" disabled={busy}>{busy ? 'Aguarde…' : mode === 'login' ? 'Entrar na plataforma' : 'Criar minha conta'} <ArrowRight size={17} /></button>
         </form>
