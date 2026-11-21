@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
+import { ArrowRight, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { supabase, type Competition } from '@/lib/supabase';
 import { useManagedCompetitions } from '@/lib/hooks';
 import { useAuth } from '@/lib/auth';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 import { DeleteRecordDialog } from '@/components/admin/DeleteRecordDialog';
+import { CompetitionResetDialog } from '@/components/admin/CompetitionResetDialog';
 
 type Status = Competition['status'];
 type CompetitionFields = Pick<Competition, 'name' | 'description' | 'category' | 'format' | 'max_teams' | 'registration_starts_at' | 'registration_ends_at'>;
@@ -54,6 +55,7 @@ export function CompetitionsTab() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Competition | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
   const isAdmin = profile?.role === 'ADMIN';
 
   async function changeStatus(id: string, status: Status) {
@@ -74,7 +76,15 @@ export function CompetitionsTab() {
     <div className="admin-grid">
       {isAdmin && <CompetitionCreateForm />}
       <div className="admin-list-card">
-        <h3>Competições</h3>
+        <div className="admin-list-heading">
+          <h3>Competições</h3>
+          {/* Only admins reset competitions (the database checks it again). */}
+          {isAdmin && competitions.length > 0 && (
+            <button type="button" className="button button-danger reset-open" onClick={() => setResetting(true)}>
+              <RotateCcw size={15} /> Reset geral
+            </button>
+          )}
+        </div>
         <p className="admin-hint">As fases da temporada definem geração, classificação e avanço das equipes. Organizadores só alteram competições atribuídas; partidas concluídas são preservadas no histórico.</p>
         <FormError message={error} />
         {competitionsError ? <FormError message="Não foi possível carregar as competições autorizadas para sua conta." /> : loading ? <LoadingCard /> : competitions.length === 0 ? <p className="admin-empty-text">{isAdmin ? 'Nenhuma competição cadastrada.' : 'Nenhuma competição foi atribuída à sua conta.'}</p> : (
@@ -104,6 +114,7 @@ export function CompetitionsTab() {
         </Modal>
       )}
       {deletingId && isAdmin && <DeleteRecordDialog kind="COMPETITION" id={deletingId} onClose={() => setDeletingId(null)} />}
+      {resetting && isAdmin && <CompetitionResetDialog competitions={competitions} onClose={() => setResetting(false)} />}
     </div>
   );
 }
