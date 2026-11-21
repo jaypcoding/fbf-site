@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { BarChart3, CircleUserRound, ClipboardList, LayoutDashboard, LogIn, LogOut, Menu, Trophy, Users, X } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { initialAuthHash, supabase } from '@/lib/supabase';
+import { FORGOT_PASSWORD_PATH, RESET_PASSWORD_PATH, parseRecoveryHash } from '@/lib/passwordRecovery';
 import { LiveMiniPlayer } from '@/components/LiveMiniPlayer';
 import { ConfirmProvider, ErrorBoundary, FBF_LOGO, PageFallback, ScrollToTop } from '@/components/site';
 import { HomePage, NotFoundPage } from '@/pages/HomePage';
@@ -19,6 +20,8 @@ const StatsPage = lazy(() => import('@/pages/StatsPage').then((m) => ({ default:
 const MatchPage = lazy(() => import('@/pages/MatchPage').then((m) => ({ default: m.MatchPage })));
 const LoginPage = lazy(() => import('@/pages/AccountPages').then((m) => ({ default: m.LoginPage })));
 const DashboardPage = lazy(() => import('@/pages/AccountPages').then((m) => ({ default: m.DashboardPage })));
+const ForgotPasswordPage = lazy(() => import('@/pages/PasswordPages').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('@/pages/PasswordPages').then((m) => ({ default: m.ResetPasswordPage })));
 
 const navItems = [
   { label: 'Início', to: '/', icon: Trophy, end: true },
@@ -45,9 +48,19 @@ function AppShell() {
   const [authActionError, setAuthActionError] = useState('');
   const { session, profile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isManager = Boolean(session && profile && (profile.role === 'ADMIN' || profile.role === 'ORGANIZER'));
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
+  // A recovery link that landed on another page (e.g. the site URL, when the
+  // redirect address is not allowed) still opens the reset form.
+  useEffect(() => {
+    if (parseRecoveryHash(initialAuthHash).kind === 'recovery' && location.pathname !== RESET_PASSWORD_PATH) {
+      navigate(RESET_PASSWORD_PATH, { replace: true });
+    }
+    // Only on the first render: the fragment is read once, when the site opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileOpen(false); };
@@ -103,6 +116,8 @@ function AppShell() {
               <Route path="/partidas/:id" element={<MatchPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/painel" element={<DashboardPage />} />
+              <Route path={FORGOT_PASSWORD_PATH} element={<ForgotPasswordPage />} />
+              <Route path={RESET_PASSWORD_PATH} element={<ResetPasswordPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>

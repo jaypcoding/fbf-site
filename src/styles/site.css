@@ -103,6 +103,9 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .password-field button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); margin-top: 3px; border: 0; background: none; color: #8c8072; cursor: pointer; padding: 6px; border-radius: 6px; display: grid; place-items: center; }
 .password-field button:hover { color: #181818; background: #fff0d5; }
 .form-message.is-success { color: #3e6b47; background: #e7f0e4; }
+.forgot-password-link { justify-self: end; margin-top: -6px; font-size: 13px; font-weight: 700; color: #9a4a0c; text-decoration: none; }
+.forgot-password-link:hover, .forgot-password-link:focus-visible { text-decoration: underline; }
+.auth-card .form-message.is-success svg { vertical-align: -2px; }
 .button-outline { background: #fff; color: #3e2d20; border: 1px solid #ead9bf; }
 .button-outline:hover { border-color: #d4b896; background: #fffdf8; }
 .button-danger { background: #b03a2e; color: #fff; }
