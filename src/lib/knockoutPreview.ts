@@ -3,7 +3,7 @@
 // standings). It uses the same bracket builder as the admin panel, with
 // placeholders such as "1º do Grupo A" instead of teams, so the preview
 // matches what the system will generate.
-import { buildGroupKnockoutBracket, type GroupCrossoverMode, type KnockoutSlot } from './competitionFormats.ts';
+import { applyKnockoutOptions, buildGroupKnockoutBracket, type GroupCrossoverMode, type KnockoutSlot } from './competitionFormats.ts';
 
 export type KnockoutPreviewSeries = {
   label: string;
@@ -18,6 +18,8 @@ export type KnockoutSettings = {
   knockout_legs?: number;
   third_place?: boolean;
   group_crossing?: string;
+  final_legs?: number;
+  better_seed_hosts_second_leg?: boolean;
 };
 
 export function knockoutRoundLabel(roundNumber: number, finalRound: number): string {
@@ -27,6 +29,14 @@ export function knockoutRoundLabel(roundNumber: number, finalRound: number): str
   if (remaining === 2) return 'Quartas de final';
   if (remaining === 3) return 'Oitavas de final';
   return `Fase eliminatória ${roundNumber}`;
+}
+
+/** "Semifinal 1", "Quartas 2", "Final"... for a series key such as R1M2 in a bracket with finalRound rounds. */
+export function knockoutSeriesName(sourceKey: string, finalRound: number, seriesInRound: (round: number) => number): string {
+  const match = /^R(\d+)M(\d+)$/.exec(sourceKey);
+  if (!match) return sourceKey;
+  const round = Number(match[1]);
+  return seriesName(knockoutRoundLabel(round, finalRound), Number(match[2]), seriesInRound(round));
 }
 
 function seriesName(roundLabel: string, matchNumber: number, count: number): string {
@@ -44,13 +54,16 @@ export function buildKnockoutPreview(groupNames: string[], settings: KnockoutSet
   if (mode === 'DRAW') return null; // drawn crossings are only known after the draw
   let plan;
   try {
-    plan = buildGroupKnockoutBracket(
+    plan = applyKnockoutOptions(buildGroupKnockoutBracket(
       groupNames.map((name) => ({ name, teamIds: Array.from({ length: qualifiers }, (_, i) => `${i + 1}º do ${name}`) })),
       qualifiers,
       legs,
       settings.third_place ?? false,
       mode,
-    );
+    ), {
+      finalLegs: settings.final_legs === 1 || settings.final_legs === 2 ? settings.final_legs : undefined,
+      betterSeedHostsSecondLeg: settings.better_seed_hosts_second_leg === true,
+    });
   } catch {
     return null;
   }
@@ -64,7 +77,8 @@ export function buildKnockoutPreview(groupNames: string[], settings: KnockoutSet
   const describe = (slot: KnockoutSlot): string => {
     if (slot.kind === 'team') return slot.teamId;
     const source = names.get(slot.sourceKey) ?? slot.sourceKey;
-    return `${slot.kind === 'winner' ? 'Vencedor' : 'Perdedor'} da ${source}`;
+    const article = /^(Quartas|Oitavas)/.test(source) ? 'das' : 'da';
+    return `${slot.kind === 'winner' ? 'Vencedor' : 'Perdedor'} ${article} ${source}`;
   };
   return {
     rounds: rounds.map((round) => ({

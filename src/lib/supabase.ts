@@ -98,6 +98,10 @@ export type Stage = {
     qualifiers_per_group?: number;
     group_crossing?: 'RANKED' | 'DRAW';
     third_place?: boolean;
+    /** Games of the final when it differs from knockout_legs (e.g. two-legged ties, single-match final). */
+    final_legs?: 1 | 2;
+    /** In two-legged ties between known teams, the better-placed team plays the second leg at home. */
+    better_seed_hosts_second_leg?: boolean;
   };
 };
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  applyKnockoutOptions,
   buildGroupRoundRobin,
   buildGroupKnockoutBracket,
   buildKnockoutBracket,
@@ -186,4 +187,13 @@ test('standings view rows keep names and goals for ranking', async () => {
   assert.equal(rows[0].goalsFor, 1);
   const ranked = rankStandings(rows, ['POINTS', 'GOAL_DIFF', 'TEAM_NAME']);
   assert.deepEqual(ranked.map((row) => row.teamName), ['Beta', 'Gama', 'Alfa'], 'goal difference breaks the tie between the two teams without points');
+});
+
+test('knockout options: single-match final and second leg at the better-placed team, leaving other ties unchanged', () => {
+  const plan = buildGroupKnockoutBracket([{ name: 'A', teamIds: ['a1', 'a2'] }, { name: 'B', teamIds: ['b1', 'b2'] }], 2, 2, true, 'RANKED');
+  const adjusted = applyKnockoutOptions(plan, { finalLegs: 1, betterSeedHostsSecondLeg: true });
+  assert.deepEqual(adjusted.rounds[0].map((s) => [s.home.teamId, s.away.teamId, s.legs]), [['b2', 'a1', 2], ['a2', 'b1', 2]]);
+  assert.deepEqual([adjusted.rounds[1][0].legs, adjusted.rounds[1][0].home.kind], [1, 'winner']);
+  assert.equal(adjusted.thirdPlace.legs, 2, 'third place keeps the regular number of games');
+  assert.deepEqual(applyKnockoutOptions(plan, {}), plan, 'no options: identical plan');
 });

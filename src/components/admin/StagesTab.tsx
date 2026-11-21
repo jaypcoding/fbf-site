@@ -36,6 +36,8 @@ export function StagesTab() {
   const [qualifiersPerGroup, setQualifiersPerGroup] = useState(2);
   const [groupCrossing, setGroupCrossing] = useState<'RANKED' | 'DRAW'>('RANKED');
   const [thirdPlace, setThirdPlace] = useState(false);
+  const [finalLegs, setFinalLegs] = useState<1 | 2>(1);
+  const [betterSeedSecondLeg, setBetterSeedSecondLeg] = useState(true);
   const [stageOrder, setStageOrder] = useState('1');
   const [tieBreakerInput, setTieBreakerInput] = useState(defaultTieBreakers);
   const [selectedStage, setSelectedStage] = useState('');
@@ -85,6 +87,7 @@ export function StagesTab() {
             qualifiers_per_group: qualifiersPerGroup,
             group_crossing: groupCrossing,
             third_place: thirdPlace,
+            ...(knockoutLegs === 2 ? { final_legs: finalLegs, better_seed_hosts_second_leg: betterSeedSecondLeg } : {}),
           },
     });
     setBusy(false);
@@ -183,6 +186,22 @@ export function StagesTab() {
                   <option value={2}>Ida e volta</option>
                 </FormSelect>
               </FormField>
+              {knockoutLegs === 2 && (
+                <>
+                  <FormField label="Final">
+                    <FormSelect value={finalLegs} onChange={(e) => setFinalLegs(Number(e.target.value) as 1 | 2)}>
+                      <option value={1}>Jogo único</option>
+                      <option value={2}>Ida e volta</option>
+                    </FormSelect>
+                  </FormField>
+                  <FormField label="Mando nos confrontos de ida e volta">
+                    <FormSelect value={betterSeedSecondLeg ? 'better' : 'first'} onChange={(e) => setBetterSeedSecondLeg(e.target.value === 'better')}>
+                      <option value="better">Melhor colocado decide em casa (volta)</option>
+                      <option value="first">Melhor colocado joga a ida em casa</option>
+                    </FormSelect>
+                  </FormField>
+                </>
+              )}
               <FormField label="Disputa de terceiro lugar">
                 <FormSelect value={thirdPlace ? 'yes' : 'no'} onChange={(e) => setThirdPlace(e.target.value === 'yes')}>
                   <option value="no">Não</option>

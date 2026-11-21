@@ -3,8 +3,9 @@ import { ArrowDown, ArrowRight, ArrowUp, Shuffle } from 'lucide-react';
 import { supabase, type Stage } from '@/lib/supabase';
 import { refreshAdminData, useAdminDataVersion } from '@/lib/adminRefresh';
 import { useSeasonTeams } from '@/lib/hooks';
+import { knockoutSeriesName } from '@/lib/knockoutPreview';
 import {
-  buildGroupKnockoutBracket,
+  applyKnockoutOptions, buildGroupKnockoutBracket,
   buildGroupRoundRobin,
   buildKnockoutBracket,
   distributeTeamsIntoGroups,
@@ -40,10 +41,12 @@ const groupLabel = (index: number) => `Grupo ${String.fromCharCode(65 + index)}`
 function slotLabel(
   slot: { kind: 'team'; teamId: string } | { kind: 'winner' | 'loser'; sourceKey: string },
   names: Map<string, string>,
+  plan?: { rounds: unknown[][] },
 ) {
-  return slot.kind === 'team'
-    ? names.get(slot.teamId) ?? 'Equipe'
-    : `${slot.kind === 'winner' ? 'Vencedor' : 'Perdedor'} de ${slot.sourceKey}`;
+  if (slot.kind === 'team') return names.get(slot.teamId) ?? 'Equipe';
+  const source = plan ? knockoutSeriesName(slot.sourceKey, plan.rounds.length, (round) => plan.rounds[round - 1]?.length ?? 1) : slot.sourceKey;
+  const article = /^(Quartas|Oitavas)/.test(source) ? 'das' : 'da';
+  return `${slot.kind === 'winner' ? 'Vencedor' : 'Perdedor'} ${article} ${source}`;
 }
 
 function stageErrorMessage(message: string) {
@@ -199,20 +202,20 @@ export function GenerateRoundsForm({ stage, seasonId }: Props) {
   const groupKnockoutPlan = useMemo(() => {
     if (!groupProgress?.allMatchesFinished || !groupRankings.length) return null;
     if (groupProgress.groups.some((group) => group.rows.length < qualifiersPerGroup)) return null;
-    return buildGroupKnockoutBracket(
+    return applyKnockoutOptions(buildGroupKnockoutBracket(
       groupRankings,
       qualifiersPerGroup,
       knockoutLegs,
       stage.settings.third_place ?? false,
       stage.settings.group_crossing ?? 'RANKED',
       groupDrawVersion,
-    );
-  }, [groupProgress, groupRankings, qualifiersPerGroup, knockoutLegs, stage.settings.third_place, stage.settings.group_crossing, groupDrawVersion]);
+    ), { finalLegs: stage.settings.final_legs, betterSeedHostsSecondLeg: stage.settings.better_seed_hosts_second_leg });
+  }, [groupProgress, groupRankings, qualifiersPerGroup, knockoutLegs, stage.settings.third_place, stage.settings.group_crossing, stage.settings.final_legs, stage.settings.better_seed_hosts_second_leg, groupDrawVersion]);
   const knockoutPlan = useMemo(() => (
     stage.format === 'Mata-mata' && teamOrder.length >= 2
-      ? buildKnockoutBracket(teamOrder, knockoutLegs, stage.settings.third_place ?? false)
+      ? applyKnockoutOptions(buildKnockoutBracket(teamOrder, knockoutLegs, stage.settings.third_place ?? false), { finalLegs: stage.settings.final_legs, betterSeedHostsSecondLeg: stage.settings.better_seed_hosts_second_leg })
       : null
-  ), [stage.format, teamOrder, knockoutLegs, stage.settings.third_place]);
+  ), [stage.format, teamOrder, knockoutLegs, stage.settings.third_place, stage.settings.final_legs, stage.settings.better_seed_hosts_second_leg]);
 
   async function generateRoundRobin() {
     if (!roundRobinMatches) return;
@@ -403,7 +406,9 @@ function KnockoutPreview({
         <div className="admin-list-item" key={item.key}>
           <div>
             <strong>{item.thirdPlace ? 'Terceiro lugar' : `Fase ${item.round} · Confronto ${item.matchNumber}`}</strong>
-            <span>{slotLabel(item.home, names)} × {slotLabel(item.away, names)} · {item.legs === 2 ? 'ida e volta' : 'jogo único'}</span>
+            <span>{item.legs === 2
+              ? `Ida: ${slotLabel(item.home, names, plan)} × ${slotLabel(item.away, names, plan)} · Volta: ${slotLabel(item.away, names, plan)} × ${slotLabel(item.home, names, plan)}`
+              : `Jogo único: ${slotLabel(item.home, names, plan)} × ${slotLabel(item.away, names, plan)}`}</span>
           </div>
         </div>
       ))}

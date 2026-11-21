@@ -295,6 +295,31 @@ export function buildGroupKnockoutBracket(
   return buildKnockoutFromSeedSlots(seedSlots, legs, includeThirdPlace);
 }
 
+/**
+ * Per-stage knockout options applied to a plan built by buildKnockoutBracket /
+ * buildGroupKnockoutBracket:
+ * - finalLegs: games of the final (e.g. two-legged semifinals, single-match final);
+ * - betterSeedHostsSecondLeg: in two-legged ties between known teams the
+ *   better-placed team (the plan's home side) plays the second leg at home, so
+ *   the first leg is at the other team's home. Ties fed by previous winners keep
+ *   their order, because the better-placed team is not known yet.
+ */
+export function applyKnockoutOptions(
+  plan: KnockoutPlan,
+  { finalLegs, betterSeedHostsSecondLeg = false }: { finalLegs?: 1 | 2; betterSeedHostsSecondLeg?: boolean },
+): KnockoutPlan {
+  const lastRound = plan.rounds.length - 1;
+  const adjust = (series: KnockoutSeries, isFinal: boolean): KnockoutSeries => {
+    const legs = isFinal && finalLegs ? finalLegs : series.legs;
+    const swap = betterSeedHostsSecondLeg && legs === 2 && series.home.kind === 'team' && series.away.kind === 'team';
+    return { ...series, legs, home: swap ? series.away : series.home, away: swap ? series.home : series.away };
+  };
+  return {
+    rounds: plan.rounds.map((round, index) => round.map((series) => adjust(series, index === lastRound))),
+    thirdPlace: plan.thirdPlace ? adjust(plan.thirdPlace, false) : null,
+  };
+}
+
 export function seedGroupQualifiers(
   rankedGroups: { name: string; teamIds: string[] }[],
   qualifiersPerGroup: number,
