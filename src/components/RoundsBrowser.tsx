@@ -59,7 +59,9 @@ export function RoundsBrowser({ stages, matches, selected, onSelect }: {
 
   if (loading) return <LoadingCard />;
   if (error) return <EmptyState icon={<Goal />} title="Não foi possível carregar as rodadas" description="Tente novamente mais tarde." />;
-  if (views.length === 0) return null;
+  if (views.length === 0) {
+    return matches.length > 0 ? null : <EmptyState icon={<Goal />} title="Rodadas ainda não publicadas" description="A fase e os grupos já estão definidos. As rodadas e partidas aparecerão aqui assim que a organização publicar a tabela." />;
+  }
 
   const showAll = selected === 'todas';
   const requested = selected && !showAll ? Number(selected) - 1 : Number.NaN;

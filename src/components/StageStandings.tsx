@@ -54,10 +54,13 @@ export function StageStandings({ stages }: { stages: Stage[] }) {
   if (error) return <p className="admin-hint">Não foi possível carregar a classificação oficial.</p>;
   if (!stages.length) return <EmptyState icon={<BarChart3 />} title="Fase ainda não configurada" description="A classificação será exibida depois que uma fase for criada." />;
   if (stage?.format === 'Mata-mata') {
-    return <EmptyState icon={<Goal />} title="A classificação é eliminatória" description="Acompanhe os confrontos, resultados e avanços na aba Jogos." />;
+    return <EmptyState icon={<Goal />} title="A classificação é eliminatória" description="Acompanhe os confrontos, resultados e avanços na aba Rodadas." />;
   }
   if (loading) return <LoadingCard />;
-  if (standings.length === 0 || standings.every((row) => row.played === 0)) {
+  const nothingPlayed = standings.every((row) => row.played === 0);
+  // Registered groups are shown even before the first match (every team at
+  // zero), so the public can already see who is in each group.
+  if (standings.length === 0 || (nothingPlayed && layout?.mode !== 'groups')) {
     return <EmptyState icon={<BarChart3 />} title="Sem classificação ainda" description="A tabela considera somente partidas finalizadas com placar oficial." />;
   }
 
@@ -91,6 +94,9 @@ export function StageStandings({ stages }: { stages: Stage[] }) {
             {stages.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
         </label>
+      )}
+      {layout?.mode === 'groups' && nothingPlayed && (
+        <p className="standings-notice" role="note">Nenhuma partida disputada ainda. Os grupos já estão definidos; a classificação é atualizada a cada resultado oficial.</p>
       )}
       {layout?.mode === 'groups'
         ? layout.tables.map((group) => (
