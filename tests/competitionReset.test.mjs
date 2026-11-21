@@ -10,11 +10,12 @@ import {
   resetTotal,
 } from '../src/lib/competitionReset.ts';
 
-// Totals like the production preview of the six competitions.
+// Real totals of the six production competitions (staging rehearsal with the
+// official backup of 2026-11-21 00:11 UTC).
 const totals = {
-  competitions: 6, competition_organizers: 4, seasons: 6, season_teams: 40, team_registrations: 40, rosters: 78,
-  stages: 3, stage_groups: 8, stage_group_teams: 32, rounds: 13, matches: 25, match_events: 15,
-  goalkeeper_participations: 2, match_streamers: 0, match_status_history: 30, round_robin_pair_claims: 24,
+  competitions: 6, competition_organizers: 4, seasons: 5, season_teams: 40, team_registrations: 40, rosters: 78,
+  stages: 3, stage_groups: 8, stage_group_teams: 32, rounds: 18, matches: 25, match_events: 15,
+  goalkeeper_participations: 2, match_streamers: 0, match_status_history: 31, round_robin_pair_claims: 25,
 };
 
 test('every table the database removes has a label, and nothing else', () => {
@@ -29,7 +30,7 @@ test('rows skip empty tables and keep the reading order', () => {
 });
 
 test('the total counts every removed row', () => {
-  assert.equal(resetTotal(totals), 326);
+  assert.equal(resetTotal(totals), 332);
   assert.equal(resetTotal({}), 0);
   assert.equal(resetTotal({ teams: 24, players: 80 }), 0, 'teams and players are never counted as removed');
 });
