@@ -1,8 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { CircleUserRound, Users } from 'lucide-react';
 import { supabase, type Team } from '@/lib/supabase';
-import { useRosters, useTeams } from '@/lib/hooks';
+import { useRosters, useTeamParticipation, useTeams } from '@/lib/hooks';
+import {
+  DEFAULT_TEAM_VIEW,
+  NO_COMPETITION_LABEL,
+  TEAM_VIEWS,
+  teamCategoryLabels,
+  teamsForView,
+  viewDefinition,
+  viewFromParam,
+  type TeamView,
+} from '@/lib/teamCategories';
 import { useAdminDataVersion } from '@/lib/adminRefresh';
 import { usePageTitle } from '@/lib/pageTitle';
 import { matchesSearch } from '@/lib/search';
@@ -13,24 +23,63 @@ import { TeamRecordStats } from '@/components/TeamRecordStats';
 
 export function TeamsPage() {
   usePageTitle('Times');
-  const { teams, loading, error } = useTeams();
+  const { teams, loading: teamsLoading, error: teamsError } = useTeams();
+  const { links, loading: linksLoading, error: linksError } = useTeamParticipation();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('busca') ?? '';
-  const setQuery = (value: string) => setSearchParams(value ? { busca: value } : {}, { replace: true });
-  const filtered = teams.filter((team) => matchesSearch(query, team.name));
+  const view = viewFromParam(searchParams.get('categoria'));
+  // Old links (/times, /times?busca=...) keep opening TODOS; only other views add ?categoria=.
+  const updateParams = (next: { busca?: string; categoria?: TeamView }) => {
+    const busca = next.busca ?? query;
+    const categoria = next.categoria ?? view;
+    const params: Record<string, string> = {};
+    if (categoria !== DEFAULT_TEAM_VIEW) params.categoria = categoria;
+    if (busca) params.busca = busca;
+    setSearchParams(params, { replace: true });
+  };
+  const loading = teamsLoading || linksLoading;
+  const error = teamsError || linksError;
+  const labels = useMemo(() => teamCategoryLabels(links), [links]);
+  const counts = useMemo(() => Object.fromEntries(TEAM_VIEWS.map((item) => [item.slug, teamsForView(teams, links, item.slug).teams.length])), [teams, links]);
+  const { teams: inView, edition } = teamsForView(teams, links, view);
+  const filtered = inView.filter((team) => matchesSearch(query, team.name));
+  const definition = viewDefinition(view);
+  const heading = view === 'todos' ? 'Todos os times' : `Times ${definition.label}`;
 
   return <>
     <PageIntro eyebrow="Universo FBF" title="Times" description="Conheça as equipes que fazem parte da história da FBF." />
     <section className="container directory-section">
-      <div className="directory-toolbar">
-        <div><span className="section-kicker">Base pública</span><h2>Todos os times</h2>{!loading && !error && <p className="directory-count">{plural(filtered.length, 'time', 'times')}{query ? ' encontrados' : ''}</p>}</div>
-        <SearchField value={query} onChange={setQuery} placeholder="Buscar time" label="Buscar time" />
+      <div className="detail-tabs team-view-tabs" role="tablist" aria-label="Categorias de times">
+        {TEAM_VIEWS.map((item) => (
+          <button key={item.slug} type="button" role="tab" aria-selected={view === item.slug} className={view === item.slug ? 'active' : ''}
+            onClick={() => updateParams({ categoria: item.slug })}>
+            {item.label}{!loading && !error && <span className="team-view-count">{counts[item.slug]}</span>}
+          </button>
+        ))}
       </div>
-      {loading ? <LoadingCard />
-        : error ? <EmptyState icon={<Users />} title="Não foi possível carregar os times" description="Tente novamente mais tarde." />
-        : teams.length === 0 ? <EmptyState icon={<Users />} title="Ainda não há times cadastrados" description="Assim que os organizadores cadastrarem os primeiros times, eles aparecerão aqui com logo e elenco." />
-        : filtered.length === 0 ? <EmptyState icon={<Users />} title="Nenhum time encontrado" description={`Nenhum time corresponde a “${query}”.`} />
-        : <div className="team-grid">{filtered.map((team) => <Link key={team.id} to={`/times/${team.id}`} className="team-card"><div className="team-card-logo"><TeamLogo src={team.logo_url} name={team.name} size={56} /></div><h3>{team.name}</h3></Link>)}</div>}
+      <div className="directory-toolbar">
+        <div>
+          <span className="section-kicker">{edition ? `${edition.competitionName} · ${edition.seasonName}` : 'Base pública'}</span>
+          <h2>{heading}</h2>
+          {!loading && !error && <p className="directory-count">{plural(filtered.length, 'time', 'times')}{query ? ' encontrados' : ''}</p>}
+        </div>
+        <SearchField value={query} onChange={(value) => updateParams({ busca: value })} placeholder="Buscar time" label="Buscar time" />
+      </div>
+      <div role="tabpanel">
+        {loading ? <LoadingCard />
+          : error ? <EmptyState icon={<Users />} title="Não foi possível carregar os times" description="Tente novamente mais tarde." />
+          : teams.length === 0 ? <EmptyState icon={<Users />} title="Ainda não há times cadastrados" description="Assim que os organizadores cadastrarem os primeiros times, eles aparecerão aqui com logo e elenco." />
+          : view !== 'todos' && !edition ? <EmptyState icon={<Users />} title={`Nenhuma competição ${definition.label} em andamento`} description="Quando a próxima edição for publicada, os times inscritos aparecerão aqui." />
+          : inView.length === 0 ? <EmptyState icon={<Users />} title="Ainda não há times nesta categoria" description="Os times aparecem aqui assim que forem aprovados na temporada." />
+          : filtered.length === 0 ? <EmptyState icon={<Users />} title="Nenhum time encontrado" description={`Nenhum time desta aba corresponde a “${query}”.`} />
+          : <div className="team-grid">{filtered.map((team) => (
+            <Link key={team.id} to={`/times/${team.id}`} className="team-card">
+              <div className="team-card-logo"><TeamLogo src={team.logo_url} name={team.name} size={56} /></div>
+              <h3>{team.name}</h3>
+              {view === 'todos' && <span className="team-card-category">{(labels.get(team.id) ?? [NO_COMPETITION_LABEL]).join(' · ')}</span>}
+            </Link>
+          ))}</div>}
+      </div>
     </section>
   </>;
 }

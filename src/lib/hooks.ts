@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase, type Competition, type Season, type Team, type Player, type SeasonTeam, type Roster, type Stage, type Round, type Match, type MatchEvent, type GoalkeeperParticipation, type Streamer } from './supabase';
 import { useAdminDataVersion } from './adminRefresh';
 import { useAuth } from './auth';
+import { linksFromRows, type ParticipationLink, type RawParticipationRow } from './teamCategories';
 
 export function useCompetitions() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
@@ -124,6 +125,30 @@ export function useTeams() {
     return () => { active = false; };
   }, [refreshVersion]);
   return { teams, loading, error };
+}
+
+// Which season (and competition) each team takes part in: season_teams with
+// its season and competition embedded. Draft competitions are hidden from the
+// public by RLS, so they never show up here for visitors.
+export function useTeamParticipation() {
+  const [links, setLinks] = useState<ParticipationLink[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const refreshVersion = useAdminDataVersion();
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    supabase.from('season_teams')
+      .select('team_id, season_id, seasons!inner(id, name, created_at, competitions!inner(id, name, category, status, created_at))')
+      .then(({ data, error: queryError }) => {
+        if (!active) return;
+        setError(Boolean(queryError));
+        setLinks(queryError ? [] : linksFromRows((data || []) as unknown as RawParticipationRow[]));
+        setLoading(false);
+      });
+    return () => { active = false; };
+  }, [refreshVersion]);
+  return { links, loading, error };
 }
 
 export function usePlayers() {
