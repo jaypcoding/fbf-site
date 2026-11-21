@@ -7,25 +7,38 @@
 --   * only FBF admins can add, replace or remove files;
 --   * PNG, WebP or JPEG only (no SVG), up to 2 MB.
 -- teams.logo_url itself is not changed here.
+--
+-- The hosted projects always have the storage schema. The local stack used by
+-- CI applies migrations before the Storage service creates it, so there the
+-- bucket is skipped with a notice (the storage test is skipped too).
 
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('team-logos', 'team-logos', true, 2097152, ARRAY['image/png', 'image/webp', 'image/jpeg'])
-ON CONFLICT (id) DO UPDATE
-SET public = EXCLUDED.public,
-    file_size_limit = EXCLUDED.file_size_limit,
-    allowed_mime_types = EXCLUDED.allowed_mime_types;
+DO $migration$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'storage schema not available yet: team-logos bucket not created in this environment';
+    RETURN;
+  END IF;
 
-DROP POLICY IF EXISTS team_logos_admin_insert ON storage.objects;
-DROP POLICY IF EXISTS team_logos_admin_update ON storage.objects;
-DROP POLICY IF EXISTS team_logos_admin_delete ON storage.objects;
+  INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  VALUES ('team-logos', 'team-logos', true, 2097152, ARRAY['image/png', 'image/webp', 'image/jpeg'])
+  ON CONFLICT (id) DO UPDATE
+  SET public = EXCLUDED.public,
+      file_size_limit = EXCLUDED.file_size_limit,
+      allowed_mime_types = EXCLUDED.allowed_mime_types;
 
-CREATE POLICY team_logos_admin_insert ON storage.objects
-  FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'team-logos' AND public.is_fbf_admin());
-CREATE POLICY team_logos_admin_update ON storage.objects
-  FOR UPDATE TO authenticated
-  USING (bucket_id = 'team-logos' AND public.is_fbf_admin())
-  WITH CHECK (bucket_id = 'team-logos' AND public.is_fbf_admin());
-CREATE POLICY team_logos_admin_delete ON storage.objects
-  FOR DELETE TO authenticated
-  USING (bucket_id = 'team-logos' AND public.is_fbf_admin());
+  DROP POLICY IF EXISTS team_logos_admin_insert ON storage.objects;
+  DROP POLICY IF EXISTS team_logos_admin_update ON storage.objects;
+  DROP POLICY IF EXISTS team_logos_admin_delete ON storage.objects;
+
+  CREATE POLICY team_logos_admin_insert ON storage.objects
+    FOR INSERT TO authenticated
+    WITH CHECK (bucket_id = 'team-logos' AND public.is_fbf_admin());
+  CREATE POLICY team_logos_admin_update ON storage.objects
+    FOR UPDATE TO authenticated
+    USING (bucket_id = 'team-logos' AND public.is_fbf_admin())
+    WITH CHECK (bucket_id = 'team-logos' AND public.is_fbf_admin());
+  CREATE POLICY team_logos_admin_delete ON storage.objects
+    FOR DELETE TO authenticated
+    USING (bucket_id = 'team-logos' AND public.is_fbf_admin());
+END
+$migration$;
