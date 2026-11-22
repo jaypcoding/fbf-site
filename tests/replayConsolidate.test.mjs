@@ -251,3 +251,77 @@ test('own goals from a recording: automatic only when the defender also touched 
   const author = run([file('a', 'j.hbr2', [doubtful])], { goals: { 'a:0:0': { ownGoal: false, scorer: 'p-ana' } } });
   assert.deepEqual([author.goals[0].ownGoal, author.goals[0].scorerPlayerId, author.canConfirm], [false, 'p-ana', true], 'or credited to the attacker');
 });
+
+// ---------------------------------------------------------------- overlaps second by second
+import { secondOwners } from '../src/lib/replay/consolidate.ts';
+import { existsSync as fixtureExists, readFileSync as readFixture } from 'node:fs';
+import { fileURLToPath as toPath } from 'node:url';
+
+/** Copy of a real segment restricted to the clock stretch [a, b), as a recording of only that stretch would be. */
+function restrict(s, a, b) {
+  const t = s.timeline;
+  const keep = (i) => t.from + i >= Math.floor(a) && t.from + i < Math.ceil(b);
+  const cut = (arr) => arr.map((v, i) => (keep(i) ? v : 0));
+  const cutHeat = (rows) => rows.map((r, i) => (keep(i) ? r : []));
+  const sum = (arr) => arr.reduce((x, y) => x + y, 0);
+  const timeline = {
+    from: t.from,
+    players: Object.fromEntries(Object.entries(t.players).map(([k, p]) => [k, Object.fromEntries(Object.entries(p).map(([f, arr]) => [f, cut(arr)]))])),
+    teams: { red: Object.fromEntries(Object.entries(t.teams.red).map(([f, arr]) => [f, cut(arr)])), blue: Object.fromEntries(Object.entries(t.teams.blue).map(([f, arr]) => [f, cut(arr)])) },
+    thirds: t.thirds.map(cut), ballHeat: cutHeat(t.ballHeat), heat: Object.fromEntries(Object.entries(t.heat).map(([k, h]) => [k, cutHeat(h)])),
+  };
+  const before = s.goals.filter((g) => g.time < a);
+  const goals = s.goals.filter((g) => g.time >= a && g.time < b);
+  const grid = (base, rows) => { const cells = new Array(base.cells.length).fill(0); rows.forEach((r) => { for (let k = 0; k < r.length; k += 2) cells[r[k]] += r[k + 1]; }); return { ...base, cells }; };
+  return {
+    ...s, clockStart: a, clockEnd: b, startedMidGame: a > 0,
+    initialScore: [s.initialScore[0] + before.filter((g) => g.team === 1).length, s.initialScore[1] + before.filter((g) => g.team === 2).length],
+    score: [s.initialScore[0] + [...before, ...goals].filter((g) => g.team === 1).length, s.initialScore[1] + [...before, ...goals].filter((g) => g.team === 2).length],
+    goals, timeline, endReason: b < s.clockEnd ? 'recording_ended' : s.endReason,
+    playingTicks: sum(timeline.thirds[0]) + sum(timeline.thirds[1]) + sum(timeline.thirds[2]),
+    ballThirds: timeline.thirds.map(sum), ballHeat: grid(s.ballHeat, timeline.ballHeat),
+    teams: {
+      red: { ...s.teams.red, kicks: sum(timeline.teams.red.kicks), passes: sum(timeline.teams.red.passes), shots: sum(timeline.teams.red.shots), shotsOnTarget: sum(timeline.teams.red.shotsOnTarget), possessionTicks: sum(timeline.teams.red.possession) },
+      blue: { ...s.teams.blue, kicks: sum(timeline.teams.blue.kicks), passes: sum(timeline.teams.blue.passes), shots: sum(timeline.teams.blue.shots), shotsOnTarget: sum(timeline.teams.blue.shotsOnTarget), possessionTicks: sum(timeline.teams.blue.possession) },
+    },
+    players: s.players.map((p) => { const tp = timeline.players[p.key]; if (!tp) return p; return { ...p, ticksRed: sum(tp.red), ticksBlue: sum(tp.blue), kicks: sum(tp.kicks), passes: sum(tp.passes), shots: sum(tp.shots), shotsOnTarget: sum(tp.shotsOnTarget), possessionTicks: sum(tp.possession), touches: sum(tp.touches), sumX: sum(tp.sumX), heat: grid(p.heat, timeline.heat[p.key] ?? []) }; }),
+    shots: s.shots.filter((x) => x.time >= a && x.time < b), passes: s.passes.filter((x) => x.time >= a && x.time < b),
+  };
+}
+
+test('second owners: overlaps counted once, edges never twice', () => {
+  const mk = (a, b) => ({ clockStart: a, clockEnd: b });
+  const [o1, o2] = secondOwners([mk(0, 250), mk(150, 420)]);
+  assert.equal(o1.size, 250);
+  assert.equal(o2.size, 170, 'the second file contributes only 250..419');
+  assert.ok(![...o1].some((k) => o2.has(k)));
+  const [e1, e2] = secondOwners([mk(0, 250.7), mk(250.3, 420)]);
+  assert.ok(!(e1.has(250) && e2.has(250)), 'a second partially covered by both, overlapping, goes to one file only');
+  const [g1, g2] = secondOwners([mk(0, 250.2), mk(250.5, 420)]);
+  assert.ok(g1.has(250) && g2.has(250), 'touching without overlap: both stretches of the second are kept');
+});
+
+const realHalf = toPath(new URL('../supabase/fixtures/replays/KIAZZURAX1.hbr2', import.meta.url));
+test('real recording split in two overlapping files gives exactly the statistics of the whole file', { skip: !fixtureExists(realHalf) && 'fixture not present (kept out of git)' }, async () => {
+  const { analyzeReplay } = await import('../src/lib/replay/analyze.ts');
+  const analysis = await analyzeReplay(new Uint8Array(readFixture(realHalf)));
+  const whole = analysis.segments.find((s) => s.playingTicks > 0);
+  const red = whole.players.filter((p) => p.ticksRed > p.ticksBlue).map((p) => p.name);
+  const blue = whole.players.filter((p) => p.ticksBlue > p.ticksRed).map((p) => p.name);
+  const roster2 = [...red.map((n) => ({ playerId: `r-${n}`, seasonTeamId: HOME, nickname: n, position: 'Pivô' })), ...blue.map((n) => ({ playerId: `b-${n}`, seasonTeamId: AWAY, nickname: n, position: 'Pivô' }))];
+  const file2 = (id, name, segs) => ({ ...file(id, name, segs), analysis: { ...analysis, segments: segs, goalMarkers: Array.from({ length: segs.reduce((n, s) => n + s.goals.length, 0) }, () => ({ frame: 0, kind: 1 })) } });
+  const one = consolidateMatch({ match, roster: roster2, aliases: [], files: [file2('a', 'JOGO1.hbr2', [whole])], decisions: {} });
+  const split = consolidateMatch({ match, roster: roster2, aliases: [], files: [file2('a', 'JOGO1.hbr2', [restrict(whole, 0, 250)]), file2('b', 'JOGO2.hbr2', [restrict(whole, 150, whole.clockEnd)])], decisions: {} });
+  assert.equal(split.games.length, 1);
+  assert.ok(split.issues.some((i) => i.code === 'overlap' && /trecho novo deste arquivo é aproveitado/.test(i.message)));
+  assert.deepEqual(split.score, one.score);
+  assert.deepEqual(split.teams, one.teams, 'team statistics identical');
+  assert.deepEqual(split.thirds, one.thirds);
+  assert.deepEqual(split.ballHeat, one.ballHeat);
+  for (const p of one.players) {
+    const q = split.players.find((x) => x.ref === p.ref);
+    assert.deepEqual(q.stats, p.stats, `${p.ref}: same statistics`);
+    assert.deepEqual(q.heat, p.heat, `${p.ref}: same heat map`);
+  }
+  assert.deepEqual(split.goals.map((g) => [g.minuteSeconds, g.scorerPlayerId]), one.goals.map((g) => [g.minuteSeconds, g.scorerPlayerId]));
+});

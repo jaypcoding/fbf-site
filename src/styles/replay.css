@@ -130,3 +130,9 @@
 .stat-preview-grid.is-four { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 1000px) { .stat-preview-grid.is-four { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .stat-preview-grid.is-four { grid-template-columns: 1fr; } }
+/* contraste das legendas dos indicadores (tema claro) */
+.stat-preview small { color: #756b61; }
+/* menu principal entre o celular e o desktop (com o botão de tema) */
+@media (min-width: 801px) and (max-width: 1080px) { .main-nav { gap: 2px; } .nav-link, .account-link, .login-link { padding-left: 9px; padding-right: 9px; } }
+/* listas do painel no celular: ações quebram linha em vez de sair da tela */
+@media (max-width: 560px) { .admin-list-item { flex-wrap: wrap; gap: 8px; } .admin-list-actions { flex-wrap: wrap; } }

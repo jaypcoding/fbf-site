@@ -18,7 +18,7 @@
 // - RED/BLUE are mapped to home/away per game from the identified players,
 //   never from the home/away order.
 import type { FileAnalysis } from './analyze.ts';
-import type { HeatGrid, Point, Segment, StadiumSketch } from './stats.ts';
+import type { HeatGrid, Point, Segment, StadiumSketch, Timeline } from './stats.ts';
 import { isDuplicateLabel, normalizeNick, resolveNick, type NickResolution, type PlayerAlias, type RosterPlayer } from './matching.ts';
 
 export const SHEET_VERSION = 1;
@@ -233,6 +233,77 @@ function scoreAt(pieces: Piece[], clock: number): [number, number] {
   return out;
 }
 
+// ------------------------------------------------------------------ overlaps, second by second
+const EPS = 1e-6;
+
+/**
+ * Owner of each second of game clock among the pieces of one game (sorted by start):
+ * the first piece covering the whole second; at the edges, where no piece covers the
+ * whole second, every piece if their stretches do not overlap, else only the one that
+ * covers the most of it (at most a fraction of a second is lost, never counted twice).
+ */
+export function secondOwners(pieces: Segment[]): Set<number>[] {
+  const owners = pieces.map(() => new Set<number>());
+  if (pieces.length === 0) return owners;
+  const lo = Math.floor(Math.min(...pieces.map((p) => p.clockStart)));
+  const hi = Math.ceil(Math.max(...pieces.map((p) => p.clockEnd)));
+  for (let k = lo; k < hi; k++) {
+    const full = pieces.findIndex((p) => p.clockStart <= k + EPS && p.clockEnd >= k + 1 - EPS);
+    if (full >= 0) { owners[full].add(k); continue; }
+    const partial = pieces.map((p, i) => ({ i, a: Math.max(p.clockStart, k), b: Math.min(p.clockEnd, k + 1) })).filter((x) => x.b - x.a > EPS);
+    if (partial.length === 0) continue;
+    const overlap = partial.some((x, i) => partial.some((y, j) => j > i && Math.min(x.b, y.b) - Math.max(x.a, y.a) > EPS));
+    if (!overlap) partial.forEach((x) => owners[x.i].add(k));
+    else owners[partial.reduce((m, x) => (x.b - x.a > m.b - m.a ? x : m)).i].add(k);
+  }
+  return owners;
+}
+
+type PieceView = {
+  thirds: [number, number, number];
+  ballHeat: HeatGrid;
+  teams: { red: TeamTotalsLike; blue: TeamTotalsLike };
+  players: (Segment['players'][number])[];
+  shots: Segment['shots'];
+  passes: Segment['passes'];
+};
+type TeamTotalsLike = { kicks: number; passes: number; shots: number; shotsOnTarget: number; possessionTicks: number };
+
+/** Statistics of a piece restricted to the seconds it owns (all of it when own is null). */
+function pieceView(s: Segment, own: Set<number> | null): PieceView {
+  if (!own || !s.timeline) return { thirds: s.ballThirds, ballHeat: s.ballHeat, teams: s.teams, players: s.players, shots: s.shots, passes: s.passes };
+  const t = s.timeline;
+  const sum = (arr: number[] | undefined) => {
+    let n = 0;
+    if (arr) for (let i = 0; i < arr.length; i++) if (arr[i] && own.has(t.from + i)) n += arr[i];
+    return n;
+  };
+  const grid = (base: HeatGrid, rows: number[][] | undefined): HeatGrid => {
+    const g: HeatGrid = { cols: base.cols, rows: base.rows, cells: new Array(base.cells.length).fill(0) };
+    if (rows) rows.forEach((row, i) => { if (own.has(t.from + i)) for (let k = 0; k < row.length; k += 2) g.cells[row[k]] += row[k + 1]; });
+    return g;
+  };
+  const team = (x: Timeline['teams']['red']): TeamTotalsLike => ({ kicks: sum(x.kicks), passes: sum(x.passes), shots: sum(x.shots), shotsOnTarget: sum(x.shotsOnTarget), possessionTicks: sum(x.possession) });
+  const players = s.players.map((p) => {
+    const tp = t.players[p.key];
+    if (!tp) return { ...p, ticksRed: 0, ticksBlue: 0, kicks: 0, passes: 0, shots: 0, shotsOnTarget: 0, possessionTicks: 0, touches: 0, sumX: 0, sumY: 0, heat: grid(p.heat, undefined) };
+    return {
+      ...p, ticksRed: sum(tp.red), ticksBlue: sum(tp.blue), kicks: sum(tp.kicks), passes: sum(tp.passes), shots: sum(tp.shots),
+      shotsOnTarget: sum(tp.shotsOnTarget), possessionTicks: sum(tp.possession), touches: sum(tp.touches), sumX: sum(tp.sumX), sumY: 0,
+      heat: grid(p.heat, t.heat[p.key]),
+    };
+  });
+  const owned = (time: number) => own.has(Math.floor(time));
+  return {
+    thirds: [sum(t.thirds[0]), sum(t.thirds[1]), sum(t.thirds[2])],
+    ballHeat: grid(s.ballHeat, t.ballHeat),
+    teams: { red: team(t.teams.red), blue: team(t.teams.blue) },
+    players,
+    shots: s.shots.filter((x) => owned(x.time)),
+    passes: s.passes.filter((x) => owned(x.time)),
+  };
+}
+
 // ------------------------------------------------------------------ main
 export function consolidateMatch(input: ConsolidationInput): MatchSheet {
   const { match, roster, aliases, files, decisions } = input;
@@ -399,7 +470,7 @@ export function consolidateMatch(input: ConsolidationInput): MatchSheet {
       piece.sheet.role = 'repeat';
       issue('warn', 'overlap', `O trecho ${fmtClock(s.clockStart)}–${fmtClock(s.clockEnd)} de "${piece.file.name}" repete um trecho já coberto por outra gravação; gols e estatísticas dele são contados uma única vez.`, piece.sheet.key);
     } else {
-      if (repeat) issue('warn', 'overlap', `A gravação "${piece.file.name}" se sobrepõe a outra no trecho ${fmtClock(Math.max(target.start, s.clockStart))}–${fmtClock(Math.min(target.end, s.clockEnd))}; os gols repetidos são contados uma única vez (pelo tempo do jogo) e as estatísticas individuais desse arquivo não são somadas, para não contar o trecho repetido em dobro.`, piece.sheet.key);
+      if (repeat) issue('warn', 'overlap', `A gravação "${piece.file.name}" se sobrepõe a outra no trecho ${fmtClock(Math.max(target.start, s.clockStart))}–${fmtClock(Math.min(target.end, s.clockEnd))}; ${s.timeline && target.pieces.every((x) => x.seg.timeline) ? 'o trecho repetido é contado uma única vez (gols pelo tempo do jogo e estatísticas segundo a segundo) e o trecho novo deste arquivo é aproveitado.' : 'os gols repetidos são contados uma única vez (pelo tempo do jogo) e as estatísticas individuais desse arquivo não são somadas, para não contar o trecho repetido em dobro (análise antiga: reprocesse o arquivo para aproveitar o trecho novo).'}`, piece.sheet.key);
       else if (gap > 1) issue('warn', 'recording_gap', `Há ${fmtClock(gap)} sem gravação entre ${fmtClock(target.end)} e ${fmtClock(s.clockStart)} de um mesmo tempo ("${piece.file.name}").`, piece.sheet.key);
       target.pieces.push(piece);
       target.start = Math.min(target.start, s.clockStart);
@@ -546,22 +617,28 @@ export function consolidateMatch(input: ConsolidationInput): MatchSheet {
       issue('warn', 'game_not_finished', `${label}: a gravação termina aos ${fmtClock(last.seg.clockEnd)}, antes do tempo regulamentar de ${last.seg.timeLimit} min do jogo.`, last.sheet.key);
     }
 
-    // statistics of the game
-    for (const p of statPieces) {
+    // statistics of the game: with per-second timelines every second of game clock is taken
+    // from exactly one recording (overlaps counted once, new stretches kept); older analyses
+    // without timeline keep the previous rule (pieces that add new clock time only)
+    const timelineMode = g.pieces.every((p) => p.seg.timeline);
+    const owners = timelineMode ? secondOwners(g.pieces.map((p) => p.seg)) : null;
+    const views = (timelineMode ? g.pieces : statPieces).map((p, i) => pieceView(p.seg, owners ? owners[i] : null));
+    for (const [vi, p] of (timelineMode ? g.pieces : statPieces).entries()) {
       const s = p.seg;
+      const v = views[vi];
       if (!stadium) stadium = s.stadium;
-      thirds[0] += flip ? s.ballThirds[2] : s.ballThirds[0];
-      thirds[1] += s.ballThirds[1];
-      thirds[2] += flip ? s.ballThirds[0] : s.ballThirds[2];
-      ballHeat = addGrid(ballHeat, flip ? rotateGrid(s.ballHeat) : s.ballHeat);
+      thirds[0] += flip ? v.thirds[2] : v.thirds[0];
+      thirds[1] += v.thirds[1];
+      thirds[2] += flip ? v.thirds[0] : v.thirds[2];
+      ballHeat = addGrid(ballHeat, flip ? rotateGrid(v.ballHeat) : v.ballHeat);
       for (const color of [1, 2] as const) {
         const side = sideOfColor(color);
         if (!side) continue;
-        const t = color === 1 ? s.teams.red : s.teams.blue;
+        const t = color === 1 ? v.teams.red : v.teams.blue;
         const T = teams[side];
         T.kicks += t.kicks; T.passes += t.passes; T.shots += t.shots; T.shotsOnTarget += t.shotsOnTarget; T.possessionTicks += t.possessionTicks;
       }
-      for (const sp of s.players) {
+      for (const sp of v.players) {
         const played = sp.ticksRed + sp.ticksBlue;
         if (played === 0 && sp.kicks === 0) continue;
         const res = resolve(sp.key, sp.name);
@@ -590,14 +667,14 @@ export function consolidateMatch(input: ConsolidationInput): MatchSheet {
         e.avgX = ((e.avgX ?? 0) * (st.playedTicks - played) + mx) / Math.max(1, st.playedTicks);
         e.heat = addGrid(e.heat, flip ? rotateGrid(sp.heat) : sp.heat);
       }
-      for (const sh of s.shots) {
+      for (const sh of v.shots) {
         const side = sideOfColor(sh.team);
         const res = s.players.find((x) => x.key === sh.key);
         if (!side || !res) continue;
         const r = resolve(res.key, res.name);
         shots.push({ side, ref: r.status === 'matched' ? r.playerId : `nick:${ident(res.key, res.name)}`, from: rot(sh.from, flip), to: rot(sh.to, flip), onTarget: sh.onTarget });
       }
-      for (const ps of s.passes) {
+      for (const ps of v.passes) {
         const side = sideOfColor(ps.team);
         const res = s.players.find((x) => x.key === ps.key);
         if (!side || !res) continue;

@@ -10,6 +10,9 @@ import { useAuth } from './auth';
 export type Theme = 'light' | 'dark';
 const KEY = 'fbf-theme';
 const listeners = new Set<() => void>();
+// incremented on every choice made by the user: a profile answer that arrives after a
+// newer choice must not undo it
+let choiceVersion = 0;
 
 function stored(): Theme | null {
   try {
@@ -43,8 +46,10 @@ export function useTheme() {
   const theme = useSyncExternalStore(subscribe, currentTheme, () => 'light' as Theme);
   const { session } = useAuth();
   const setTheme = useCallback((next: Theme) => {
+    choiceVersion++;
     applyTheme(next);
-    if (session) void supabase.rpc('set_my_theme_preference', { p_theme: next });
+    // a supabase-js query is only sent when awaited or then()-ed
+    if (session) supabase.rpc('set_my_theme_preference', { p_theme: next }).then(() => {}, () => {});
   }, [session]);
   return { theme, setTheme, toggle: () => setTheme(theme === 'dark' ? 'light' : 'dark') };
 }
@@ -56,13 +61,14 @@ export function ThemeSync() {
   useEffect(() => {
     if (!userId) return;
     let active = true;
+    const version = choiceVersion;
     supabase.from('profiles').select('theme_preference').eq('id', userId).maybeSingle().then(({ data, error }) => {
-      if (!active || error) return;
+      if (!active || error || version !== choiceVersion) return;
       const remote = (data as { theme_preference?: string | null } | null)?.theme_preference;
       if (remote === 'dark' || remote === 'light') {
         if (remote !== currentTheme() || stored() !== remote) applyTheme(remote);
       } else if (stored()) {
-        void supabase.rpc('set_my_theme_preference', { p_theme: stored() });
+        supabase.rpc('set_my_theme_preference', { p_theme: stored() }).then(() => {}, () => {});
       }
     });
     return () => { active = false; };

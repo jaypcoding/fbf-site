@@ -6,8 +6,8 @@ import { decodeReplay, readHeader, DEFAULT_LIMITS, type DecodeLimits } from './f
 import { runReplay } from './engine.ts';
 import { createStatsCollector, STATS_DEFINITION, type Segment } from './stats.ts';
 
-export const ANALYZER_VERSION = 'fbf-replay-1.0.0';
-export const ANALYSIS_SCHEMA = 1;
+export const ANALYZER_VERSION = 'fbf-replay-1.1.0';
+export const ANALYSIS_SCHEMA = 2; // 2: per-second timeline (stats.ts Timeline)
 
 export type FileAnalysis = {
   schema: number;

@@ -40,7 +40,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 .match-team-side.is-winner span { color: #181818; font-weight: 800; }
 .match-team-side:not(.is-winner) span { font-weight: 600; }
 .match-score-display { font-variant-numeric: tabular-nums; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.match-score-display small { font-size: 12px; color: #b8aa9c; font-weight: 600; }
+.match-score-display small { font-size: 12px; color: #8c8072; font-weight: 600; }
 .match-cancelled .match-teams { opacity: .6; }
 .matches-list.compact { margin-top: 0; gap: 8px; }
 .matches-list.compact .match-card { padding: 13px 16px; }

@@ -239,7 +239,7 @@ html[data-theme="dark"] .match-status-tag.tag-live { background: #3a1f1b; color:
 html[data-theme="dark"] .match-status-tag.tag-finished { background: #1d2a20; color: #d8cbbb; }
 html[data-theme="dark"] .match-status-tag.tag-cancelled, html[data-theme="dark"] .match-status-tag.tag-postponed { background: #2e2721; color: #ab9d8c; }
 html[data-theme="dark"] .match-team-side.is-winner span { color: #f3ebe0; }
-html[data-theme="dark"] .match-score-display small { color: #857767; }
+html[data-theme="dark"] .match-score-display small { color: #ab9d8c; }
 html[data-theme="dark"] .round-heading { color: #f2a35e; }
 html[data-theme="dark"] .search-field > svg { color: #857767; }
 html[data-theme="dark"] .search-field input { border: 1px solid #3a3129; color: #f3ebe0; background: #211b17; }
@@ -332,7 +332,7 @@ html[data-theme="dark"] .round-empty { color: #ab9d8c; }
 html[data-theme="dark"] .knockout-preview-round h4 { color: #f2a35e; }
 html[data-theme="dark"] .knockout-preview-series { border: 1px dashed #3a3129; background: #211b17; }
 html[data-theme="dark"] .knockout-preview-series span { color: #d8cbbb; }
-/* styles/replay.css (77 regras) */
+/* styles/replay.css (78 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }
 html[data-theme="dark"] .replay-header p { color: #ab9d8c; }
@@ -410,3 +410,4 @@ html[data-theme="dark"] .match-edit-history span { color: #ab9d8c; }
 html[data-theme="dark"] .match-edit-history em { color: #f2a35e; }
 html[data-theme="dark"] .theme-toggle { border: 1px solid #3a3129; background: #211b17; color: #d8cbbb; }
 html[data-theme="dark"] .theme-toggle:hover, html[data-theme="dark"] .theme-toggle:focus-visible { color: #f2a35e; }
+html[data-theme="dark"] .stat-preview small { color: #ab9d8c; }

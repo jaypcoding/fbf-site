@@ -108,6 +108,26 @@ export type StadiumSketch = {
   ballRadius: number;
 };
 
+/**
+ * Statistics per second of game clock ("bucket" k = clock [k, k+1)). Two
+ * recordings of the same game replay the same state, so the same second has
+ * the same content in both: consolidation takes each second from one file
+ * only (no double counting, new stretches of overlapping files are kept).
+ * Arrays are indexed by bucket - from. Heat: per bucket, flat [cell, count, ...].
+ */
+export type Timeline = {
+  from: number;
+  players: Record<string, Record<PlayerTimelineField, number[]>>;
+  teams: { red: Record<TeamTimelineField, number[]>; blue: Record<TeamTimelineField, number[]> };
+  thirds: [number[], number[], number[]];
+  ballHeat: number[][];
+  heat: Record<string, number[][]>;
+};
+export const PLAYER_TIMELINE_FIELDS = ['played', 'red', 'blue', 'kicks', 'passes', 'shots', 'shotsOnTarget', 'possession', 'touches', 'sumX'] as const;
+export const TEAM_TIMELINE_FIELDS = ['kicks', 'passes', 'shots', 'shotsOnTarget', 'possession'] as const;
+export type PlayerTimelineField = typeof PLAYER_TIMELINE_FIELDS[number];
+export type TeamTimelineField = typeof TEAM_TIMELINE_FIELDS[number];
+
 export type Segment = {
   index: number;
   startFrame: number;
@@ -130,6 +150,7 @@ export type Segment = {
   shots: { key: string; team: 1 | 2; from: Point; to: Point; onTarget: boolean; time: number }[];
   passes: { key: string; team: 1 | 2; from: Point; to: Point; time: number }[];
   teamChanges: { time: number; key: string; team: TeamId }[];
+  timeline?: Timeline;
 };
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -152,6 +173,23 @@ function sketch(st: Stadium): StadiumSketch {
   };
 }
 
+function emptyTeamTimeline(): Record<TeamTimelineField, number[]> {
+  return Object.fromEntries(TEAM_TIMELINE_FIELDS.map((f) => [f, [] as number[]])) as Record<TeamTimelineField, number[]>;
+}
+
+/** Holes of the sparse arrays become 0 (numbers) or [] (heat) so the JSON has no nulls. */
+function finalizeTimeline(seg: Segment): void {
+  const t = seg.timeline;
+  if (!t) return;
+  const fill = (arr: number[]) => { for (let i = 0; i < arr.length; i++) if (arr[i] === undefined) arr[i] = 0; };
+  const fillHeat = (arr: number[][]) => { for (let i = 0; i < arr.length; i++) if (arr[i] === undefined) arr[i] = []; };
+  for (const p of Object.values(t.players)) for (const f of PLAYER_TIMELINE_FIELDS) { fill(p[f]); p[f] = p[f].map((v) => (f === 'sumX' ? Math.round(v) : v)); }
+  for (const team of [t.teams.red, t.teams.blue]) for (const f of TEAM_TIMELINE_FIELDS) fill(team[f]);
+  t.thirds.forEach(fill);
+  fillHeat(t.ballHeat);
+  for (const h of Object.values(t.heat)) fillHeat(h);
+}
+
 function emptyTotals(): TeamTotals {
   return { kicks: 0, passes: 0, shots: 0, shotsOnTarget: 0, possessionTicks: 0, goals: 0 };
 }
@@ -166,14 +204,16 @@ function newGrid(size: { cols: number; rows: number }): HeatGrid {
   return { cols: size.cols, rows: size.rows, cells: new Array(size.cols * size.rows).fill(0) };
 }
 
-function addHeat(grid: HeatGrid, st: Stadium, x: number, y: number): void {
+function addHeat(grid: HeatGrid, st: Stadium, x: number, y: number): number {
   const w = st.width > 0 ? st.width : 1;
   const h = st.height > 0 ? st.height : 1;
   let c = Math.floor(((x + w) / (2 * w)) * grid.cols);
   let r = Math.floor(((y + h) / (2 * h)) * grid.rows);
   if (!(c >= 0)) c = 0; else if (c >= grid.cols) c = grid.cols - 1;
   if (!(r >= 0)) r = 0; else if (r >= grid.rows) r = grid.rows - 1;
-  grid.cells[r * grid.cols + c]++;
+  const cell = r * grid.cols + c;
+  grid.cells[cell]++;
+  return cell;
 }
 
 type Actor = { key: string; team: TeamId };
@@ -256,6 +296,14 @@ export function createStatsCollector() {
       shots: [],
       passes: [],
       teamChanges: [],
+      timeline: {
+        from: Math.floor(game.time),
+        players: {},
+        teams: { red: emptyTeamTimeline(), blue: emptyTeamTimeline() },
+        thirds: [[], [], []],
+        ballHeat: [],
+        heat: {},
+      },
     };
     segments.push(current);
     resetPlay();
@@ -264,6 +312,7 @@ export function createStatsCollector() {
 
   function close(game: Game, reason: Segment['endReason']): void {
     if (!current) return;
+    finalizeTimeline(current);
     current.endFrame = frame;
     current.endReason = reason;
     current.clockEnd = game.time;
@@ -272,6 +321,30 @@ export function createStatsCollector() {
   }
 
   const totals = (team: TeamId) => (team === 1 ? current!.teams.red : current!.teams.blue);
+  // second of game clock of a playing tick (the clock already advanced) and of a kick (before the tick)
+  const tickBucket = (game: Game) => Math.floor((Math.round(game.time * 60) - 1) / 60);
+  const kickBucket = (game: Game) => Math.floor(Math.round(game.time * 60) / 60);
+  const tl = () => current!.timeline!;
+  function bump(arr: number[], bucket: number, v = 1) {
+    const i = bucket - tl().from;
+    if (i >= 0) arr[i] = (arr[i] ?? 0) + v;
+  }
+  function tlPlayer(key: string): Record<PlayerTimelineField, number[]> {
+    let p = tl().players[key];
+    if (!p) {
+      p = Object.fromEntries(PLAYER_TIMELINE_FIELDS.map((f) => [f, [] as number[]])) as Record<PlayerTimelineField, number[]>;
+      tl().players[key] = p;
+    }
+    return p;
+  }
+  const tlTeam = (team: TeamId) => (team === 1 ? tl().teams.red : tl().teams.blue);
+  function bumpHeat(list: number[][], bucket: number, cell: number) {
+    const i = bucket - tl().from;
+    if (i < 0) return;
+    const row = list[i] ?? (list[i] = []);
+    for (let k = 0; k < row.length; k += 2) if (row[k] === cell) { row[k + 1]++; return; }
+    row.push(cell, 1);
+  }
 
   const listener: EngineListener = {
     onGameStart(room, game) {
@@ -285,8 +358,11 @@ export function createStatsCollector() {
       const seg = current;
       const team = player.team;
       const me = playerEntry(room, player);
+      const kb = kickBucket(game);
       me.kicks++;
       totals(team).kicks++;
+      bump(tlPlayer(me.key).kicks, kb);
+      bump(tlTeam(team).kicks, kb);
       const opponentGoals = goalLines.filter((g) => g.team !== team);
       const onTarget = flightTarget({ x: from.x, y: from.y, vx: ball.vx, vy: ball.vy }, ball.damping, ball.gx, ball.gy, opponentGoals);
       let attempt = onTarget;
@@ -300,6 +376,9 @@ export function createStatsCollector() {
       }
       if (attempt) {
         me.shots++;
+        bump(tlPlayer(me.key).shots, kb);
+        bump(tlTeam(team).shots, kb);
+        if (onTarget) { bump(tlPlayer(me.key).shotsOnTarget, kb); bump(tlTeam(team).shotsOnTarget, kb); }
         totals(team).shots++;
         if (onTarget) { me.shotsOnTarget++; totals(team).shotsOnTarget++; }
         seg.shots.push({ key: me.key, team, from: [round1(from.x), round1(from.y)], to: [round1(attempt.x), round1(attempt.y)], onTarget: Boolean(onTarget), time: round1(game.time) });
@@ -310,12 +389,14 @@ export function createStatsCollector() {
           const passer = seg.players.find((e) => e.key === lastKicker!.key);
           if (passer) passer.passes++;
           totals(team).passes++;
+          bump(tlPlayer(lastKicker.key).passes, kb);
+          bump(tlTeam(team).passes, kb);
           if (lastKick) seg.passes.push({ key: lastKicker.key, team, from: [round1(lastKick.x), round1(lastKick.y)], to: [round1(from.x), round1(from.y)], time: round1(game.time) });
         }
       }
       kicker = { key: me.key, team };
       // a kick reaches the ball up to 4 px away without contact: it is also the latest touch
-      if (!lastToucher || lastToucher.key !== me.key) me.touches++;
+      if (!lastToucher || lastToucher.key !== me.key) { me.touches++; bump(tlPlayer(me.key).touches, kb); }
       lastToucher = { key: me.key, team };
       lastKick = { key: me.key, team, x: from.x, y: from.y };
     },
@@ -327,26 +408,34 @@ export function createStatsCollector() {
       const ball = game.discs[0];
       // thirds of the field by the ball position (left third is Red's side)
       const third = (st.bgWidth > 0 ? st.bgWidth : st.width) / 3;
-      if (ball.x < -third) seg.ballThirds[0]++; else if (ball.x < third) seg.ballThirds[1]++; else seg.ballThirds[2]++;
-      addHeat(seg.ballHeat, st, ball.x, ball.y);
+      const tb = tickBucket(game);
+      const zone = ball.x < -third ? 0 : ball.x < third ? 1 : 2;
+      seg.ballThirds[zone]++;
+      bump(tl().thirds[zone], tb);
+      bumpHeat(tl().ballHeat, tb, addHeat(seg.ballHeat, st, ball.x, ball.y));
       for (const p of room.players) {
         if (!p.disc || (p.team !== 1 && p.team !== 2)) continue;
         const e = playerEntry(room, p);
         if (p.team === 1) e.ticksRed++; else e.ticksBlue++;
         e.sumX += p.disc.x;
         e.sumY += p.disc.y;
-        addHeat(e.heat, st, p.disc.x, p.disc.y);
+        const pt = tlPlayer(e.key);
+        bump(pt.played, tb);
+        bump(p.team === 1 ? pt.red : pt.blue, tb);
+        bump(pt.sumX, tb, p.disc.x);
+        bumpHeat(tl().heat[e.key] ?? (tl().heat[e.key] = []), tb, addHeat(e.heat, st, p.disc.x, p.disc.y));
         const dx = p.disc.x - ball.x, dy = p.disc.y - ball.y;
         const reach = p.disc.radius + ball.radius + TOUCH_TOLERANCE;
         if (dx * dx + dy * dy <= reach * reach) {
-          if (!lastToucher || lastToucher.key !== e.key) e.touches++;
+          if (!lastToucher || lastToucher.key !== e.key) { e.touches++; bump(pt.touches, tb); }
           lastToucher = { key: e.key, team: p.team };
         }
       }
       if (kicker) {
         totals(kicker.team).possessionTicks++;
+        bump(tlTeam(kicker.team).possession, tb);
         const holder = seg.players.find((e) => e.key === kicker!.key);
-        if (holder) holder.possessionTicks++;
+        if (holder) { holder.possessionTicks++; bump(tlPlayer(holder.key).possession, tb); }
       }
     },
     onGoal(room, game, scoringTeam, ball) {
@@ -405,6 +494,7 @@ export function createStatsCollector() {
     },
     finish(room: Room) {
       if (current && room.game) close(room.game, 'recording_ended');
+      for (const s of segments) finalizeTimeline(s);
       return segments;
     },
     labelOf(room: Room, p: Player) { return label(room, p); },

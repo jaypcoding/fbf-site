@@ -11,7 +11,7 @@ Painel: **Partidas** ou **Rodadas** → ícone de gravação, ou diretamente `/p
   - O analyzer original foi usado **apenas localmente, como oráculo de comparação nos testes**, e não faz parte do site.
 - **Definições das estatísticas** (chute, passe, assistência, posse, chute no gol) foram portadas do arquivo `packages/replay-core/src/stats/football.js` do [Haxball Replay Analyzer](https://github.com/haxball-replay-analyzer/haxball-replay-analyzer.github.io). Esse arquivo é código do autor do analyzer, sob licença MIT, Copyright (c) 2020 kpias760. A atribuição está no cabeçalho de `src/lib/replay/stats.ts`.
 - **Dependências novas:** nenhuma. A descompressão usa `DecompressionStream`, que existe no navegador, no Deno e no Node.
-- **Versão:** analisador `fbf-replay-1.0.0`, definições `fbf-stats-1`, formato de análise `schema 1`.
+- **Versão:** analisador `fbf-replay-1.1.0`, definições `fbf-stats-1`, formato de análise `schema 2` (linha do tempo por segundo).
 
 ## Compatibilidade verificada
 
@@ -61,7 +61,9 @@ Painel: **Partidas** ou **Rodadas** → ícone de gravação, ou diretamente `/p
 | Posse | Ticks brutos de cada equipe sobre o total, nunca média de percentuais. |
 | Mapas de calor | Soma de ticks por célula, num referencial em que o mandante ataca para a direita. Os tempos em que o mandante jogou de azul são girados 180°. |
 
-**Limitação conhecida:** quando dois arquivos se sobrepõem só em parte, os gols são deduplicados, mas as estatísticas individuais do segundo arquivo não entram. Isso evita contar o trecho repetido em dobro, e a súmula avisa quando acontece.
+**Sobreposição (analisador 1.1.0, análise schema 2):** cada análise guarda as estatísticas por segundo de relógio de jogo. Duas gravações da mesma partida reproduzem o mesmo estado, então o mesmo segundo tem o mesmo conteúdo nas duas. A consolidação pega cada segundo de uma única gravação: a primeira que cobre o segundo inteiro. Nas emendas sem cobertura completa, os trechos entram somados quando não se sobrepõem; quando se sobrepõem, entra só o de maior cobertura. Assim nada é contado duas vezes, e o trecho novo de cada arquivo é aproveitado. A perda máxima é uma fração de segundo na emenda.
+
+Teste: um replay real cortado em dois arquivos sobrepostos (0–250 s e 150–420 s) dá estatísticas e mapas de calor **idênticos** aos do arquivo inteiro. Análises antigas (schema 1, sem linha do tempo) mantêm a regra segura anterior: as estatísticas do arquivo sobreposto não são somadas, e a súmula avisa para reprocessar.
 
 ## Definições das estatísticas
 
@@ -75,7 +77,7 @@ Painel: **Partidas** ou **Rodadas** → ícone de gravação, ou diretamente `/p
 - **Finalização** (definição FBF): a trajetória chega à linha de fundo adversária dentro de uma largura de gol de cada lado das traves.
 - **Posse:** ticks de bola rolando em que a equipe (ou o jogador) foi a última a chutar.
 - **Toques** (definição FBF): contatos do jogador com a bola.
-- **Último toque:** usado para conferir a autoria. Quando o último toque antes do gol é de um companheiro diferente do autor, a súmula pede conferência.
+- **Último toque:** contato com a bola. O próprio chute também conta, porque o chute alcança a bola a até 4 px sem contato. É usado para conferir a autoria. Quando o último toque antes do gol é de um companheiro diferente do autor, a súmula pede conferência.
 
 ## Identificação de jogadores
 
