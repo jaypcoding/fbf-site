@@ -327,6 +327,7 @@ DECLARE
   v_replay_id uuid;
   v_review_id uuid;
   v_other boolean;
+  v_stored boolean;
 BEGIN
   SELECT * INTO v_match FROM public.matches WHERE id = p_match_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Partida não encontrada' USING ERRCODE = 'P0002'; END IF;
@@ -347,10 +348,13 @@ BEGIN
   IF p_storage_path IS DISTINCT FROM p_match_id::text || '/' || p_sha256 || '.hbr2' THEN
     RAISE EXCEPTION 'Caminho de armazenamento inválido' USING ERRCODE = '22023';
   END IF;
-  IF to_regclass('storage.objects') IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM storage.objects WHERE bucket_id = 'match-replays' AND name = p_storage_path
-  ) THEN
-    RAISE EXCEPTION 'O arquivo não foi encontrado no armazenamento; envie novamente' USING ERRCODE = 'P0002';
+  -- dynamic SQL: the local test stack has no storage schema
+  IF to_regclass('storage.objects') IS NOT NULL THEN
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM storage.objects WHERE bucket_id = $1 AND name = $2)'
+      INTO v_stored USING 'match-replays', p_storage_path;
+    IF NOT v_stored THEN
+      RAISE EXCEPTION 'O arquivo não foi encontrado no armazenamento; envie novamente' USING ERRCODE = 'P0002';
+    END IF;
   END IF;
   IF EXISTS (SELECT 1 FROM public.match_replays WHERE match_id = p_match_id AND sha256 = p_sha256 AND status <> 'REMOVED') THEN
     RAISE EXCEPTION 'Este arquivo já foi enviado para esta partida' USING ERRCODE = '23505';
