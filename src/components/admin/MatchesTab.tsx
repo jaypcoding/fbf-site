@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, CalendarClock, ClipboardCheck, Pencil } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, CalendarClock, ClipboardCheck, FileVideo, Pencil } from 'lucide-react';
 import { supabase, type Match, type SeasonTeam } from '@/lib/supabase';
 import { useManagedCompetitions, useSeasons, useStages, useRounds, useMatches, useSeasonTeams } from '@/lib/hooks';
 import { matchStatusLabels } from '@/lib/labels';
@@ -184,6 +185,7 @@ function MatchRow({ match, onEdit, onRecover }: { match: Match; onEdit: () => vo
         <FormSelect value={statusValue} disabled={busy} onChange={(e) => changeStatus(e.target.value as MatchStatus)} aria-label="Status da partida">
           {statusOptions.filter((option) => availableMatchStatuses(statusValue).includes(option.value)).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </FormSelect>
+        <Link className="icon-button" to={`/painel?sumula=${match.id}`} title="Gravação e validação da partida (súmula por replay)"><FileVideo size={15} /></Link>
         {(statusValue === 'SCHEDULED' || statusValue === 'POSTPONED') && (
           <button className="icon-button" onClick={onRecover} title="Registrar resultado de partida já disputada"><ClipboardCheck size={15} /></button>
         )}

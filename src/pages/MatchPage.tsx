@@ -8,6 +8,7 @@ import { formatMatchDate } from '@/lib/format';
 import { usePageTitle } from '@/lib/pageTitle';
 import { LoadingCard, EmptyState, TeamLogo, PlayerPhoto } from '@/components/ui';
 import { supabase, type MatchEvent } from '@/lib/supabase';
+import { MatchReplayReport, useMatchReplayReport } from '@/components/replay/MatchReplayReport';
 
 const eventLabels: Record<MatchEvent['event_type'], string> = {
   GOAL: 'Gol',
@@ -53,6 +54,7 @@ export function MatchPage() {
   const { events, loading: eventsLoading, error: eventsError } = useMatchEvents(id);
   const match = rawMatch as unknown as MatchDetail | null;
   const markers = useRecordMarkers(id);
+  const replayReport = useMatchReplayReport(id);
   usePageTitle(match ? `${match.home_team?.team?.name || 'A definir'} x ${match.away_team?.team?.name || 'A definir'}` : matchLoading ? null : 'Partida');
 
   const scorers = useMemo(() => {
@@ -95,7 +97,9 @@ export function MatchPage() {
           <div className="score-team"><TeamLogo src={match.away_team?.team?.logo_url ?? null} name={awayName} size={64} /><span>{awayName}</span></div>
         </div>
         <p className="score-date">{formatMatchDate(match.scheduled_at)}</p>
-        {markers?.recorded_retroactively && (
+        {replayReport && finished ? (
+          <p className="score-note">Súmula validada a partir das gravações da partida · duração {formatClock(replayReport.report.durationSeconds)}</p>
+        ) : markers?.recorded_retroactively && (
           <p className="score-note">
             Resultado registrado após a partida
             {markers.duration_is_presumed && markers.duration_seconds ? ` · duração presumida (${formatClock(markers.duration_seconds)})` : ''}
@@ -138,6 +142,7 @@ export function MatchPage() {
           )}
         </div>
       </div>
+      {replayReport && finished && <MatchReplayReport row={replayReport} homeName={homeName} awayName={awayName} />}
     </section>
   );
 }

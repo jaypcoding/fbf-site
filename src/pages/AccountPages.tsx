@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Check, Eye, EyeOff, Shield } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
@@ -12,6 +12,8 @@ import { FBF_LOGO } from '@/components/site';
 
 // The admin panel is large and only managers use it: it loads on demand.
 const AdminPanel = lazy(() => import('@/components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
+// "Gravação e validação da partida" (/painel?sumula=<match id>), also on demand.
+const MatchReplayPanel = lazy(() => import('@/components/admin/MatchReplayPanel').then((module) => ({ default: module.MatchReplayPanel })));
 
 export function LoginPage() {
   const { session } = useAuth();
@@ -94,7 +96,9 @@ export function LoginPage() {
 
 export function DashboardPage() {
   const { session, loading, profile, profileLoading, profileError } = useAuth();
-  usePageTitle('Painel');
+  const [params] = useSearchParams();
+  const sheetMatch = params.get('sumula');
+  usePageTitle(sheetMatch ? 'Súmula por gravação' : 'Painel');
   if (loading) return <section className="container auth-section"><LoadingCard /></section>;
   if (!session) {
     return (
@@ -124,6 +128,9 @@ export function DashboardPage() {
         </div>
       </section>
     );
+  }
+  if (sheetMatch && /^[0-9a-f-]{36}$/.test(sheetMatch)) {
+    return <Suspense fallback={<section className="container dashboard-section"><LoadingCard /></section>}><section className="container dashboard-section"><MatchReplayPanel matchId={sheetMatch} /></section></Suspense>;
   }
   return <Suspense fallback={<section className="container dashboard-section"><LoadingCard /></section>}><AdminPanel profile={profile} /></Suspense>;
 }

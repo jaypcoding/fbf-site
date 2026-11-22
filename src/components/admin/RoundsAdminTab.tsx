@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, CalendarClock, Lock, MoveRight, Save } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeftRight, CalendarClock, FileVideo, Lock, MoveRight, Save } from 'lucide-react';
 import { supabase, type Match } from '@/lib/supabase';
 import { useManagedCompetitions, useRounds, useSeasons, useStageMatches, useStages } from '@/lib/hooks';
 import { matchStatusLabels } from '@/lib/labels';
@@ -184,8 +185,9 @@ export function RoundsAdminTab() {
                             <MatchDateInline match={m} />
                             <button type="button" className="icon-button" title="Inverter mando" aria-label="Inverter mando" onClick={() => setSwapping(m)}><ArrowLeftRight size={15} /></button>
                             <button type="button" className="icon-button" title="Mover para outra rodada" aria-label="Mover para outra rodada" onClick={() => setMoving(m)}><MoveRight size={15} /></button>
+                            <Link className="icon-button" to={`/painel?sumula=${m.id}`} title="Gravação e validação da partida" aria-label="Gravação e validação da partida"><FileVideo size={15} /></Link>
                           </span>
-                        ) : <span className="admin-round-actions" />}
+                        ) : <span className="admin-round-actions"><Link className="icon-button" to={`/painel?sumula=${m.id}`} title="Gravação e súmula da partida" aria-label="Gravação e súmula da partida"><FileVideo size={15} /></Link></span>}
                       </div>
                     );
                   })}

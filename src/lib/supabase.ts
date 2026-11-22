@@ -13,6 +13,8 @@ assertSupabaseUrlForMode(import.meta.env.MODE, supabaseUrl);
 export const initialAuthHash = typeof window === 'undefined' ? '' : window.location.hash;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+/** Normalized project URL and public key (for direct Storage requests with upload progress). */
+export const supabaseProject = { url: supabaseUrl, anonKey: supabaseAnonKey };
 
 export type Profile = {
   id: string;
