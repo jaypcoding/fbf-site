@@ -3,7 +3,12 @@
 //   POST { action: "analyze", replay_id }  re-reads the stored .hbr2 file,
 //        checks size and SHA-256, analyses it and rebuilds the match sheet;
 //   POST { action: "build", match_id }     rebuilds the consolidated sheet of
-//        the match from the stored analyses and the saved decisions.
+//        the match from the stored analyses and the saved decisions;
+//   POST { action: "import_thehax", match_id, url }  downloads the original
+//        .hbr2 of a public THEHAX Replay link (validated link, address built
+//        here, no redirects, timeout, size limit, HBR2 header check) and
+//        returns the bytes to the browser, which then sends them through the
+//        same path as a file chosen on the computer. Nothing is stored here.
 //
 // The caller must be signed in and allowed to manage the match (checked with
 // the caller's own token). Files are read and results written with the
@@ -11,11 +16,16 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { analyzeReplay, ANALYZER_VERSION, ReplayError, type FileAnalysis } from '../_shared/replay/analyze.ts';
 import { canonicalJson, consolidateMatch, officialPayload, publicReport, sha256Hex, type ReplayFileInput } from '../_shared/replay/consolidate.ts';
+import { downloadTheHaxReplay, parseTheHaxLink, TheHaxError, THEHAX_ERROR_STATUS } from '../_shared/replay/thehax.ts';
+
+// same limit as a file chosen on the computer (src/lib/replayClient.ts)
+const MAX_REPLAY_BYTES = 20 * 1024 * 1024;
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Expose-Headers': 'x-replay-name, x-replay-last-modified, x-replay-id',
 };
 
 function reply(status: number, body: unknown): Response {
@@ -122,7 +132,7 @@ Deno.serve(async (req) => {
   const { data: who } = await user.auth.getUser();
   if (!who?.user) return reply(401, { error: 'Sessão inválida' });
   const service = createClient(url, serviceKey, { auth: { persistSession: false } });
-  let body: { action?: string; replay_id?: string; match_id?: string };
+  let body: { action?: string; replay_id?: string; match_id?: string; url?: string };
   try { body = await req.json(); } catch { return reply(400, { error: 'Requisição inválida' }); }
 
   try {
@@ -141,6 +151,28 @@ Deno.serve(async (req) => {
       if (!(await canManage(user, body.match_id))) return reply(403, { error: 'Sem permissão para gerenciar esta partida' });
       const built = await buildSheet(service, body.match_id);
       return reply(built.status, built.body);
+    }
+    if (body.action === 'import_thehax') {
+      if (!body.match_id || !UUID.test(body.match_id)) return reply(400, { error: 'Partida inválida' });
+      if (!(await canManage(user, body.match_id))) return reply(403, { error: 'Sem permissão para gerenciar esta partida' });
+      try {
+        const id = parseTheHaxLink(String(body.url ?? ''));
+        const file = await downloadTheHaxReplay(id, { maxBytes: MAX_REPLAY_BYTES });
+        return new Response(file.bytes, {
+          status: 200,
+          headers: {
+            ...cors,
+            'Content-Type': 'application/octet-stream',
+            'Cache-Control': 'no-store',
+            'x-replay-id': id,
+            'x-replay-name': encodeURIComponent(file.name),
+            'x-replay-last-modified': file.lastModified ? String(file.lastModified) : '',
+          },
+        });
+      } catch (e) {
+        if (e instanceof TheHaxError) return reply(THEHAX_ERROR_STATUS[e.code], { error: e.message, code: e.code });
+        throw e;
+      }
     }
     return reply(400, { error: 'Ação desconhecida' });
   } catch (e) {

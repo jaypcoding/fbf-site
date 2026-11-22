@@ -4,13 +4,13 @@
 // confirmation sends only its hash, so what is confirmed is what was shown.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Download, FileVideo, Info, Loader2, RefreshCw, Trash2, UploadCloud, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Download, FileVideo, Info, Link2, Loader2, RefreshCw, Trash2, UploadCloud, XCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatClock } from '@/lib/time';
 import { FormError } from '@/components/ui';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import {
-  cancelReview, confirmReview, reopenReview, formatBytes, inspectReplayFile, processReplay, rebuildSheet, removeReplay, replayDownloadUrl, saveDecisions, uploadReplay, type UploadStep,
+  cancelReview, confirmReview, reopenReview, formatBytes, importTheHaxReplay, inspectReplayFile, processReplay, rebuildSheet, removeReplay, replayDownloadUrl, saveDecisions, uploadReplay, type UploadStep,
 } from '@/lib/replayClient';
 import type { MatchSheet, ReviewDecisions, SheetGoal, SheetPlayer, Side } from '@/lib/replay/consolidate';
 import { PitchMap, type PitchPoint } from '@/components/replay/PitchMap';
@@ -25,10 +25,10 @@ type ReplayRow = { id: string; original_name: string; size_bytes: number; sha256
 type ReviewRow = { id: string; status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED'; decisions: ReviewDecisions; sheet: (MatchSheet & { analyzer?: string }) | null; sheet_hash: string | null; confirmed_at: string | null };
 type RosterRow = { playerId: string; seasonTeamId: string; nickname: string; position: string };
 type AuditRow = { id: number; action: string; created_at: string; details: Record<string, unknown> };
-type LocalUpload = { key: string; name: string; size: number; step: UploadStep; progress: number; message: string | null; summary: string | null };
+type LocalUpload = { key: string; name: string; size: number; step: UploadStep; progress: number; message: string | null; summary: string | null; origin?: string };
 
 const stepLabel: Record<UploadStep, string> = {
-  checking: 'Verificando o arquivo', uploading: 'Enviando', registering: 'Registrando', analyzing: 'Analisando no servidor', done: 'Concluído', error: 'Erro',
+  downloading: 'Baixando do THEHAX', checking: 'Verificando o arquivo', uploading: 'Enviando', registering: 'Registrando', analyzing: 'Analisando no servidor', done: 'Concluído', error: 'Erro',
 };
 const statusLabel: Record<ReplayRow['status'], string> = { PENDING: 'Aguardando análise', ANALYZED: 'Analisado', FAILED: 'Falhou', REMOVED: 'Removido' };
 const auditLabel: Record<string, string> = { UPLOAD: 'Arquivo enviado', REMOVE_FILE: 'Arquivo removido', DECISIONS: 'Correção/decisão registrada', CANCEL: 'Análise cancelada', CONFIRM: 'Súmula confirmada' };
@@ -79,6 +79,8 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [theHaxLink, setTheHaxLink] = useState('');
+  const [importing, setImporting] = useState(false);
   const [removing, setRemoving] = useState<ReplayRow | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
@@ -110,13 +112,13 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
     if (!loading && review?.status === 'DRAFT' && !review.sheet_hash && activeFiles.length > 0 && activeFiles.every((f) => f.status !== 'PENDING')) void build();
   }, [loading, review?.status, review?.sheet_hash, activeFiles, build]);
 
-  async function handleFiles(list: FileList | File[]) {
+  async function handleFiles(list: FileList | File[], origin?: string) {
     setMessage(null);
     const items = [...list];
     for (const file of items) {
       const key = `${file.name}-${file.size}-${file.lastModified}-${Math.random()}`;
       const patch = (p: Partial<LocalUpload>) => setUploads((u) => u.map((x) => (x.key === key ? { ...x, ...p } : x)));
-      setUploads((u) => [...u, { key, name: file.name, size: file.size, step: 'checking', progress: 0, message: null, summary: null }]);
+      setUploads((u) => [...u, { key, name: file.name, size: file.size, step: 'checking', progress: 0, message: null, summary: null, origin }]);
       if (!/\.hbr2$/i.test(file.name)) { patch({ step: 'error', message: 'Envie arquivos .hbr2 (gravações do HaxBall). O formato antigo .hbr ainda não é suportado.' }); continue; }
       const check = await inspectReplayFile(file);
       if (!check.ok) { patch({ step: 'error', message: check.message }); continue; }
@@ -129,6 +131,27 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
         patch({ step: 'error', message: (e as Error).message });
       }
       await reload();
+    }
+  }
+
+  // THEHAX link: the server fetches the original file, which then follows
+  // exactly the same path as a file chosen on the computer (handleFiles)
+  async function importLink() {
+    const link = theHaxLink.trim();
+    if (!link || importing) return;
+    setMessage(null);
+    setImporting(true);
+    const key = `thehax-${Math.random()}`;
+    setUploads((u) => [...u, { key, name: link, size: 0, step: 'downloading', progress: 0, message: null, summary: null, origin: 'link do THEHAX' }]);
+    try {
+      const file = await importTheHaxReplay(matchId, link);
+      setUploads((u) => u.filter((x) => x.key !== key));
+      setTheHaxLink('');
+      await handleFiles([file], 'importado do THEHAX');
+    } catch (e) {
+      setUploads((u) => u.map((x) => (x.key === key ? { ...x, step: 'error', message: (e as Error).message } : x)));
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -221,7 +244,7 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
 
       {editable && (
         <div className="admin-list-card">
-          <h3>Enviar gravações (.hbr2)</h3>
+          <h3>Enviar gravações (.hbr2 ou link do THEHAX)</h3>
           <div
             className={`replay-dropzone${dragging ? ' is-dragging' : ''}`}
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -237,13 +260,22 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
             <span>Um arquivo com a partida inteira, um por tempo ou vários trechos. Você pode enviar mais arquivos depois. Até 20 MB cada.</span>
             <input ref={inputRef} type="file" accept=".hbr2" multiple hidden onChange={(e) => { if (e.target.files) void handleFiles(e.target.files); e.target.value = ''; }} />
           </div>
+          <div className="replay-or" aria-hidden="true"><span>ou</span></div>
+          <form className="replay-link-form" onSubmit={(e) => { e.preventDefault(); void importLink(); }}>
+            <label htmlFor="thehax-link"><Link2 size={15} /> Link do THEHAX Replay</label>
+            <div className="replay-link-row">
+              <input id="thehax-link" type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://replay.thehax.pl/..." value={theHaxLink} onChange={(e) => setTheHaxLink(e.target.value)} disabled={importing} />
+              <button type="submit" className="button button-primary" disabled={importing || !theHaxLink.trim()}>{importing ? <><Loader2 size={15} className="spin" /> Importando...</> : 'Processar replay'}</button>
+            </div>
+            <span className="admin-hint">O servidor da FBF baixa o arquivo original do THEHAX e o trata exatamente como um .hbr2 enviado do computador. A gravação fica no armazenamento privado da FBF.</span>
+          </form>
           {uploads.length > 0 && (
             <div className="admin-list replay-uploads">
               {uploads.map((u) => (
                 <div key={u.key} className={`admin-list-item replay-upload step-${u.step}`}>
                   <div>
                     <strong>{u.name}</strong>
-                    <span>{formatBytes(u.size)} · {stepLabel[u.step]}{u.step === 'uploading' ? ` ${Math.round(u.progress * 100)}%` : ''}</span>
+                    <span>{u.size > 0 ? `${formatBytes(u.size)} · ` : ''}{stepLabel[u.step]}{u.step === 'uploading' ? ` ${Math.round(u.progress * 100)}%` : ''}{u.origin ? ` · ${u.origin}` : ''}</span>
                     {u.summary && <span>{u.summary}</span>}
                     {u.message && <span className={u.step === 'error' ? 'replay-error-text' : 'replay-warn-text'}>{u.message}</span>}
                   </div>

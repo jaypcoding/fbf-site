@@ -139,3 +139,12 @@
 /* modal largo (Editar súmula): a tabela de gols cabe sem rolagem lateral no computador */
 .modal-card.modal-card-wide { width: min(980px, 100%); }
 @media (max-width: 600px) { .modal-backdrop { padding: 10px; } .modal-card { padding: 18px; max-height: calc(100dvh - 20px); } }
+/* THEHAX link: alternative source of the same .hbr2 file */
+.replay-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; color: #8c8072; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.replay-or::before, .replay-or::after { content: ""; flex: 1; height: 1px; background: #eadcc7; }
+.replay-link-form { display: grid; gap: 6px; }
+.replay-link-form label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #3e2d20; }
+.replay-link-row { display: flex; gap: 8px; }
+.replay-link-row input { flex: 1; min-width: 0; }
+.replay-link-row .button { white-space: nowrap; }
+@media (max-width: 600px) { .replay-link-row { flex-direction: column; } .replay-link-row .button { justify-content: center; } }

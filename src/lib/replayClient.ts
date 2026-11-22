@@ -3,6 +3,7 @@
 import { supabase, supabaseProject } from './supabase';
 import type { WorkerRequest, WorkerResponse } from './replay/replay.worker';
 import type { MatchSheet, ReviewDecisions } from './replay/consolidate';
+import { parseTheHaxLink } from './replay/thehax';
 
 export const MAX_REPLAY_BYTES = 20 * 1024 * 1024;
 export const REPLAY_BUCKET = 'match-replays';
@@ -56,7 +57,40 @@ function uploadWithProgress(path: string, file: File, token: string, onProgress:
   });
 }
 
-export type UploadStep = 'checking' | 'uploading' | 'registering' | 'analyzing' | 'done' | 'error';
+export type UploadStep = 'downloading' | 'checking' | 'uploading' | 'registering' | 'analyzing' | 'done' | 'error';
+
+/**
+ * THEHAX Replay link: the server downloads the original .hbr2 (the browser
+ * never fetches the external site) and returns it; the result is an ordinary
+ * File with the original name, handled exactly like a file chosen on the
+ * computer (local check, private upload, registration, analysis).
+ */
+export async function importTheHaxReplay(matchId: string, link: string): Promise<File> {
+  const id = parseTheHaxLink(link); // instant feedback; the server validates again
+  const { data: session } = await supabase.auth.getSession();
+  const token = session.session?.access_token;
+  if (!token) throw new Error('Entre na sua conta para importar gravações');
+  let response: Response;
+  try {
+    response = await fetch(`${supabaseProject.url.replace(/\/+$/, '')}/functions/v1/replay-process`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, apikey: supabaseProject.anonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'import_thehax', match_id: matchId, url: link.trim() }),
+    });
+  } catch {
+    throw new Error('Falha de conexão ao importar o replay do THEHAX');
+  }
+  if (!response.ok) {
+    let message = 'Não foi possível importar o replay do THEHAX';
+    try { const parsed = await response.json(); if (parsed?.error) message = parsed.error; } catch { /* keep default */ }
+    throw new Error(message);
+  }
+  const bytes = await response.arrayBuffer();
+  let name = `thehax-${id}.hbr2`;
+  try { name = decodeURIComponent(response.headers.get('x-replay-name') || name); } catch { /* keep default */ }
+  const lastModified = Number(response.headers.get('x-replay-last-modified')) || Date.now();
+  return new File([bytes], name, { type: 'application/octet-stream', lastModified });
+}
 
 export async function uploadReplay(matchId: string, file: File, sha256: string, onStep: (step: UploadStep, progress?: number) => void): Promise<{ replayId: string; usedInOtherMatch: boolean }> {
   const { data: session } = await supabase.auth.getSession();

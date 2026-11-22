@@ -40,6 +40,31 @@ Painel: **Partidas** ou **Rodadas** → ícone de gravação, ou diretamente `/p
 
    Depois grava gols, assistências, goleiros e duração nas tabelas oficiais (`match_events`, a mesma fonte de verdade de sempre), finaliza a partida, salva apelidos e publica o relatório.
 
+### Links do THEHAX Replay
+
+O organizador também pode colar um link público do THEHAX (`https://replay.thehax.pl/<id>`). O link é apenas **outra fonte do mesmo arquivo .hbr2**:
+
+1. O navegador valida o link (resposta imediata) e chama `replay-process` com `{ action: "import_thehax", match_id, url }`.
+2. A Edge Function confere login e permissão na partida, valida o link de novo (`src/lib/replay/thehax.ts`) e monta ela mesma o endereço `https://replay.thehax.pl/<id>/download`. O texto colado nunca é usado como endereço.
+3. O download segue estas regras:
+   - redirecionamentos são recusados;
+   - timeout de 20 s cobre conexão e corpo;
+   - limite de 20 MB é aplicado durante a leitura (o `Content-Length` não é confiado);
+   - assinatura HBR2 e versão 3 são conferidas (o `Content-Type` é ignorado: IDs inexistentes voltam como página HTML com status 200).
+4. A função devolve os bytes originais, o nome original (`Content-Disposition`, saneado) e a data (`Last-Modified`). Nada é gravado nessa etapa.
+5. O navegador transforma a resposta em um `File` comum e segue **exatamente** o fluxo de um arquivo escolhido no computador (Worker, SHA-256, duplicidade, bucket privado, `register_match_replay`, análise). O nome original guarda o horário da gravação, usado para ordenar os trechos.
+
+Não há credenciais do THEHAX nem mudança no banco. O replay importado fica só no armazenamento privado da FBF. Erros devolvidos:
+
+| Situação | Status |
+|---|---|
+| link inválido | 400 |
+| replay inexistente ou removido | 404 |
+| arquivo grande demais | 413 |
+| não é .hbr2 ou versão incompatível | 422 |
+| redirecionamento ou THEHAX indisponível | 502 |
+| demora | 504 |
+
 **Limites:**
 - 20 MB por arquivo;
 - 4 h de jogo;
