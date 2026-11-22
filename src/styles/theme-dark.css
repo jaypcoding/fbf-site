@@ -36,3 +36,6 @@ html[data-theme="dark"] .theme-toggle:hover { border-color: #e07a2e; color: #ffd
 
 /* campo do mapa de calor: gramado um pouco mais escuro */
 html[data-theme="dark"] .pitch-map svg, html[data-theme="dark"] .pitch-ground { fill: #4f6b40; background: #4f6b40; }
+
+/* recording length guidance: keep the accent bar on the left */
+html[data-theme="dark"] .replay-duration-note { border-left: 3px solid #e07a2c; }

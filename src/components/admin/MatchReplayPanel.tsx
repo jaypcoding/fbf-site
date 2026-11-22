@@ -30,6 +30,17 @@ type LocalUpload = { key: string; name: string; size: number; step: UploadStep; 
 const stepLabel: Record<UploadStep, string> = {
   downloading: 'Baixando do THEHAX', checking: 'Verificando o arquivo', uploading: 'Enviando', registering: 'Registrando', analyzing: 'Analisando no servidor', done: 'Concluído', error: 'Erro',
 };
+// Guidance only: the analysis always follows the real end of the match and
+// never requires the full 14 minutes (nothing here changes the processing).
+function DurationNote() {
+  return (
+    <p className="replay-duration-note">
+      <Info size={15} aria-hidden="true" />
+      <span><strong>Atenção:</strong> não é necessário gravar os 14 minutos completos. Se a partida terminar antes por diferença de 7 gols, por exemplo, envie o replay somente até o encerramento da partida. Não é necessário continuar gravando após o término.</span>
+    </p>
+  );
+}
+
 const statusLabel: Record<ReplayRow['status'], string> = { PENDING: 'Aguardando análise', ANALYZED: 'Analisado', FAILED: 'Falhou', REMOVED: 'Removido' };
 const auditLabel: Record<string, string> = { UPLOAD: 'Arquivo enviado', REMOVE_FILE: 'Arquivo removido', DECISIONS: 'Correção/decisão registrada', CANCEL: 'Análise cancelada', CONFIRM: 'Súmula confirmada' };
 
@@ -260,6 +271,7 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
             <span>Um arquivo com a partida inteira, um por tempo ou vários trechos. Você pode enviar mais arquivos depois. Até 20 MB cada.</span>
             <input ref={inputRef} type="file" accept=".hbr2" multiple hidden onChange={(e) => { if (e.target.files) void handleFiles(e.target.files); e.target.value = ''; }} />
           </div>
+          <DurationNote />
           <div className="replay-or" aria-hidden="true"><span>ou</span></div>
           <form className="replay-link-form" onSubmit={(e) => { e.preventDefault(); void importLink(); }}>
             <label htmlFor="thehax-link"><Link2 size={15} /> Link do THEHAX Replay</label>
@@ -268,6 +280,7 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
               <button type="submit" className="button button-primary" disabled={importing || !theHaxLink.trim()}>{importing ? <><Loader2 size={15} className="spin" /> Importando...</> : 'Processar replay'}</button>
             </div>
             <span className="admin-hint">O servidor da FBF baixa o arquivo original do THEHAX e o trata exatamente como um .hbr2 enviado do computador. A gravação fica no armazenamento privado da FBF.</span>
+            <DurationNote />
           </form>
           {uploads.length > 0 && (
             <div className="admin-list replay-uploads">

@@ -148,3 +148,8 @@
 .replay-link-row input { flex: 1; min-width: 0; }
 .replay-link-row .button { white-space: nowrap; }
 @media (max-width: 600px) { .replay-link-row { flex-direction: column; } .replay-link-row .button { justify-content: center; } }
+/* guidance on recording length (interface only) */
+.replay-duration-note { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 0; padding: 9px 12px; border: 1px solid #f0d9b5; border-left: 3px solid #d46616; border-radius: 8px; background: #fff7ea; color: #5b4532; font-size: 12.5px; line-height: 1.5; }
+.replay-duration-note svg { flex: 0 0 auto; margin-top: 2px; color: #b5560f; }
+.replay-duration-note strong { color: #3e2d20; }
+@media (max-width: 600px) { .replay-duration-note { font-size: 12px; padding: 8px 10px; } }
