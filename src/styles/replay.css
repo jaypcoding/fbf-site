@@ -126,3 +126,7 @@
 .theme-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 36px; height: 36px; padding: 0 10px; border: 1px solid #eadcc7; border-radius: 8px; background: #fff; color: #5c4d40; font-size: 12px; font-weight: 800; cursor: pointer; transition: .2s ease; }
 .theme-toggle:hover, .theme-toggle:focus-visible { border-color: #d46616; color: #d46616; outline: none; }
 .dashboard-heading-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* Estatísticas: quatro indicadores (gols, assistências, gols contra, CS) */
+.stat-preview-grid.is-four { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1000px) { .stat-preview-grid.is-four { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .stat-preview-grid.is-four { grid-template-columns: 1fr; } }

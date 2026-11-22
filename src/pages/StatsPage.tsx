@@ -98,7 +98,7 @@ export function StatsPage() {
       <section className="container stats-section">
         {error ? <EmptyState icon={<BarChart3 />} title="Não foi possível carregar as estatísticas" description="Tente atualizar a página em instantes." /> : loading || !data ? <LoadingCard /> : (
           <>
-            <div className="stat-preview-grid">
+            <div className="stat-preview-grid is-four">
               <div className="stat-preview"><span>Gols</span><strong>{data.goals}</strong><small>Em partidas finalizadas</small></div>
               <div className="stat-preview"><span>Assistências</span><strong>{data.assists}</strong><small>Em partidas finalizadas</small></div>
               <div className="stat-preview"><span>Gols contra</span><strong>{data.ownGoals}</strong><small>Contam para o adversário</small></div>
