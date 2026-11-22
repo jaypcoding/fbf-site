@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, Goal, Handshake } from 'lucide-react';
+import { BarChart3, CircleSlash, Goal, Handshake } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdminDataVersion } from '@/lib/adminRefresh';
 import { formatClock } from '@/lib/time';
@@ -14,12 +14,13 @@ const TOP = 10;
 type StatsData = {
   goals: number;
   assists: number;
+  ownGoals: number;
   cleanSheetTime: number;
   rows: SeasonStatRow[];
   players: Map<string, LeaderPlayer>;
 };
 
-function Leaderboard({ title, icon, rows, kind, players, unit }: { title: string; icon: React.ReactNode; rows: SeasonStatRow[]; kind: 'goals' | 'assists'; players: Map<string, LeaderPlayer>; unit: [string, string] }) {
+function Leaderboard({ title, icon, rows, kind, players, unit }: { title: string; icon: React.ReactNode; rows: SeasonStatRow[]; kind: 'goals' | 'assists' | 'own_goals'; players: Map<string, LeaderPlayer>; unit: [string, string] }) {
   const leaders = buildSeasonLeaders(rows, kind, players, new Map()).slice(0, TOP);
   return (
     <div className="leaderboard">
@@ -55,7 +56,7 @@ export function StatsPage() {
     setError(false);
     async function load(): Promise<StatsData> {
       const [statsResult, keeperResult] = await Promise.all([
-        supabase.from('player_career_statistics').select('player_id, goals, assists'),
+        supabase.from('player_career_statistics').select('player_id, goals, assists, own_goals'),
         supabase.from('goalkeeper_clean_sheet_statistics').select('total_seconds'),
       ]);
       if (statsResult.error || keeperResult.error) throw statsResult.error ?? keeperResult.error;
@@ -63,7 +64,7 @@ export function StatsPage() {
       const keeperRows = (keeperResult.data || []) as { total_seconds: number }[];
       // Every player with at least one goal or assist, so ties at the cut-off are
       // ordered correctly by name.
-      const topIds = new Set(rows.filter((row) => row.goals > 0 || row.assists > 0).map((row) => row.player_id));
+      const topIds = new Set(rows.filter((row) => row.goals > 0 || row.assists > 0 || (row.own_goals ?? 0) > 0).map((row) => row.player_id));
       const players = new Map<string, LeaderPlayer>();
       if (topIds.size > 0) {
         const { data: playerRows, error: playersError } = await supabase.from('players').select('id, nickname, photo_url, position').in('id', [...topIds]);
@@ -73,6 +74,7 @@ export function StatsPage() {
       return {
         goals: rows.reduce((total, row) => total + row.goals, 0),
         assists: rows.reduce((total, row) => total + row.assists, 0),
+        ownGoals: rows.reduce((total, row) => total + (row.own_goals ?? 0), 0),
         cleanSheetTime: keeperRows.reduce((total, row) => total + row.total_seconds, 0),
         rows,
         players,
@@ -99,11 +101,13 @@ export function StatsPage() {
             <div className="stat-preview-grid">
               <div className="stat-preview"><span>Gols</span><strong>{data.goals}</strong><small>Em partidas finalizadas</small></div>
               <div className="stat-preview"><span>Assistências</span><strong>{data.assists}</strong><small>Em partidas finalizadas</small></div>
+              <div className="stat-preview"><span>Gols contra</span><strong>{data.ownGoals}</strong><small>Contam para o adversário</small></div>
               <div className="stat-preview"><span>Goleiros / CS</span><strong>{formatClock(data.cleanSheetTime)}</strong><small>Tempo total sem sofrer gol</small></div>
             </div>
             <div className="leaderboard-grid">
               <Leaderboard title="Artilharia histórica" icon={<Goal size={18} />} rows={data.rows} kind="goals" players={data.players} unit={['gol', 'gols']} />
               <Leaderboard title="Garçons históricos" icon={<Handshake size={18} />} rows={data.rows} kind="assists" players={data.players} unit={['assist.', 'assist.']} />
+              <Leaderboard title="Gols contra" icon={<CircleSlash size={18} />} rows={data.rows} kind="own_goals" players={data.players} unit={['gol contra', 'gols contra']} />
             </div>
           </>
         )}

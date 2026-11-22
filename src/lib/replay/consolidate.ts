@@ -497,6 +497,12 @@ export function consolidateMatch(input: ConsolidationInput): MatchSheet {
           if (ltColor === goal.team) notes.push(`Último toque antes do gol foi de ${goal.lastTouch} (mesma equipe); a gravação credita o último chute a ${goal.scorer}. Confira a autoria.`);
           else if (lt) notes.push(`Desvio de ${goal.lastTouch} antes de entrar.`);
         }
+        // own goal: reliable only when the defender is also the last player to touch the ball
+        if (goal.ownGoal && goal.lastTouch !== goal.scorer) {
+          notes.push(goal.lastTouch
+            ? `Gol contra a conferir: o último chute foi de ${goal.scorer}, mas o último toque foi de ${goal.lastTouch}.`
+            : `Gol contra a conferir: o último chute foi de ${goal.scorer}, sem toque registrado antes de entrar.`);
+        }
         const entry: SheetGoal = {
           key, gameIndex: gi, minuteSeconds: 0, clock: goal.time, side, teamId: side === 'home' ? match.homeTeamId : match.awayTeamId,
           ownGoal: goal.ownGoal, scorerKey: goal.scorer, scorerName: sp?.name ?? null,
@@ -649,6 +655,9 @@ export function consolidateMatch(input: ConsolidationInput): MatchSheet {
       issue('warn', 'goal_assist_dropped', `O gol aos ${fmtClock(g.minuteSeconds)} ficará sem autor; a assistência dele não será registrada.`, g.key);
     }
     if (g.notes.some((n) => n.startsWith('Último toque'))) issue('warn', 'goal_authorship', `Gol aos ${fmtClock(g.minuteSeconds)}: ${g.notes.find((n) => n.startsWith('Último toque'))}`, g.key);
+    if (g.notes.some((n) => n.startsWith('Gol contra a conferir')) && !g.corrected) {
+      issue('block', 'own_goal_review', `Gol aos ${fmtClock(g.minuteSeconds)}: ${g.notes.find((n) => n.startsWith('Gol contra a conferir'))} Confirme se foi gol contra ou indique o autor.`, g.key);
+    }
     if (g.source === 'replay' && g.scorerKey === null && !g.corrected) issue('warn', 'goal_without_author', `O gol aos ${fmtClock(g.minuteSeconds)} não tem autor identificado na gravação; ele entra só para a equipe, a menos que você informe o autor.`, g.key);
   }
   if (!orderConfirmed && sheetGames.length > 1) {

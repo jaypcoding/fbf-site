@@ -1,0 +1,38 @@
+/* Tema escuro: ajustes manuais carregados depois de theme-dark.generated.css.
+   Paleta FBF escura: fundo #16130f, superfícies #211b17 / #2e2721, linhas #3a3129,
+   texto #f3ebe0 / #d8cbbb / #ab9d8c, laranja da marca #e07a2e / #f2a35e. */
+html[data-theme="dark"] { color-scheme: dark; background: #16130f; }
+html[data-theme="dark"] body { background: #16130f; color: #d8cbbb; }
+html[data-theme="dark"] ::selection { background: #6a4826; color: #fff; }
+html[data-theme="dark"] * { scrollbar-color: #4d4136 #16130f; }
+
+/* botões: o principal (preto no claro) vira creme com texto escuro; contorno legível */
+html[data-theme="dark"] .button-primary { background: #f3ebe0; color: #16130f; box-shadow: 0 8px 18px rgba(0, 0, 0, .4); }
+html[data-theme="dark"] .button-primary:hover:not(:disabled) { background: #fff; color: #16130f; }
+html[data-theme="dark"] .button-primary:disabled { opacity: .45; }
+html[data-theme="dark"] .button-outline { background: transparent; color: #f3ebe0; border-color: #4d4136; }
+html[data-theme="dark"] .button-outline:hover { border-color: #e07a2e; color: #f2a35e; }
+html[data-theme="dark"] .login-link { background: #f3ebe0; color: #16130f; }
+html[data-theme="dark"] .icon-button { color: #d8cbbb; border-color: #3a3129; background: transparent; }
+html[data-theme="dark"] .icon-button:hover { color: #f2a35e; border-color: #6a4826; background: #2e2721; }
+
+/* formulários */
+html[data-theme="dark"] input, html[data-theme="dark"] select, html[data-theme="dark"] textarea { color: #f3ebe0; }
+html[data-theme="dark"] .form-input, html[data-theme="dark"] .form-select, html[data-theme="dark"] select, html[data-theme="dark"] textarea,
+html[data-theme="dark"] input[type="text"], html[data-theme="dark"] input[type="email"], html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="number"], html[data-theme="dark"] input[type="datetime-local"], html[data-theme="dark"] input[type="search"] {
+  background: #1b1612; border-color: #4d4136; color: #f3ebe0;
+}
+html[data-theme="dark"] .form-input:focus, html[data-theme="dark"] .form-select:focus { border-color: #e07a2e; box-shadow: 0 0 0 3px #3b2918; }
+html[data-theme="dark"] ::placeholder { color: #857767; }
+html[data-theme="dark"] option { background: #211b17; color: #f3ebe0; }
+
+/* escudos e fotos com fundo transparente continuam visíveis */
+html[data-theme="dark"] .team-logo, html[data-theme="dark"] .player-photo { background-color: #2e2721; }
+
+/* alternância de tema */
+html[data-theme="dark"] .theme-toggle { background: #211b17; border-color: #3a3129; color: #f2a35e; }
+html[data-theme="dark"] .theme-toggle:hover { border-color: #e07a2e; color: #ffd36a; }
+
+/* campo do mapa de calor: gramado um pouco mais escuro */
+html[data-theme="dark"] .pitch-map svg, html[data-theme="dark"] .pitch-ground { fill: #4f6b40; background: #4f6b40; }

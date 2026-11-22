@@ -235,3 +235,19 @@ test('goalkeepers: registered goalkeepers who played are suggested; failed or pe
   assert.ok(blocks(failed).includes('file_failed'));
   assert.ok(blocks(run([])).includes('no_files'));
 });
+
+test('own goals from a recording: automatic only when the defender also touched last; otherwise reviewed', () => {
+  const sure = seg(0, { red: HOME_NICKS, blue: AWAY_NICKS, goals: [[60, 1, 'Caio', null, { ownGoal: true, lastTouch: 'Caio' }]] });
+  const s1 = run([file('a', 'j.hbr2', [sure])]);
+  assert.equal(s1.goals[0].ownGoal, true);
+  assert.equal(s1.goals[0].teamId, AWAY, 'recorded for the team of the player who scored it');
+  assert.equal(s1.players.find((p) => p.playerId === 'p-caio').stats.ownGoals, 1);
+  assert.equal(s1.players.find((p) => p.playerId === 'p-caio').stats.goals, 0, 'not a normal goal of the player');
+  assert.ok(!s1.issues.some((i) => i.code === 'own_goal_review'));
+  const doubtful = seg(0, { red: HOME_NICKS, blue: AWAY_NICKS, goals: [[60, 1, 'Caio', null, { ownGoal: true, lastTouch: 'Ana' }]] });
+  const s2 = run([file('a', 'j.hbr2', [doubtful])]);
+  assert.ok(blocks(s2).includes('own_goal_review'), 'last touch by an attacker: never classified by assumption');
+  assert.equal(run([file('a', 'j.hbr2', [doubtful])], { goals: { 'a:0:0': { ownGoal: true } } }).canConfirm, true, 'confirmed by the organizer');
+  const author = run([file('a', 'j.hbr2', [doubtful])], { goals: { 'a:0:0': { ownGoal: false, scorer: 'p-ana' } } });
+  assert.deepEqual([author.goals[0].ownGoal, author.goals[0].scorerPlayerId, author.canConfirm], [false, 'p-ana', true], 'or credited to the attacker');
+});

@@ -9,6 +9,7 @@ import { FORGOT_PASSWORD_PATH } from '@/lib/passwordRecovery';
 import { usePageTitle } from '@/lib/pageTitle';
 import { EmptyState, LoadingCard } from '@/components/ui';
 import { FBF_LOGO } from '@/components/site';
+import { ThemeToggle } from '@/lib/theme';
 
 // The admin panel is large and only managers use it: it loads on demand.
 const AdminPanel = lazy(() => import('@/components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
@@ -120,7 +121,7 @@ export function DashboardPage() {
       <section className="container dashboard-section">
         <div className="dashboard-heading">
           <div><span className="section-kicker">Sua conta</span><h1>{profile.display_name || 'Sua conta'}</h1><p>Acompanhe seu acesso e as novidades da FBF.</p></div>
-          <span className="role-badge">Visitante</span>
+          <div className="dashboard-heading-actions"><ThemeToggle withLabel /><span className="role-badge">Visitante</span></div>
         </div>
         <div className="admin-empty">
           <div className="admin-empty-icon"><Shield /></div>

@@ -92,8 +92,10 @@ async function buildSheet(service: SupabaseClient, matchId: string) {
     files,
     decisions: review.decisions ?? {},
   });
-  if (match.status !== 'SCHEDULED' && match.status !== 'POSTPONED') {
-    sheet.issues.push({ level: 'block', code: 'match_has_result', message: 'Esta partida já tem resultado registrado; a súmula por gravação vale para partidas agendadas ou adiadas.' });
+  if (match.status === 'FINISHED') {
+    sheet.issues.push({ level: 'warn', code: 'match_has_result', message: 'Esta partida já tem resultado registrado. Ao confirmar, os gols, assistências e goleiros atuais serão substituídos pelos desta súmula; o estado anterior fica no histórico de alterações da partida.' });
+  } else if (match.status !== 'SCHEDULED' && match.status !== 'POSTPONED') {
+    sheet.issues.push({ level: 'block', code: 'match_not_editable', message: 'A súmula por gravação vale para partidas agendadas, adiadas ou finalizadas (não ao vivo ou canceladas).' });
     sheet.canConfirm = false;
   }
   const official = officialPayload(sheet);

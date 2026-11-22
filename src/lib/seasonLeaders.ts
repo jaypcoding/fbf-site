@@ -1,4 +1,4 @@
-export type SeasonStatRow = { player_id: string; goals: number; assists: number };
+export type SeasonStatRow = { player_id: string; goals: number; assists: number; own_goals?: number };
 
 export type LeaderPlayer = {
   id: string;
@@ -17,13 +17,13 @@ export type SeasonLeader = { player: LeaderPlayer; team_name: string | null; cou
  */
 export function buildSeasonLeaders(
   rows: SeasonStatRow[],
-  metric: 'goals' | 'assists',
+  metric: 'goals' | 'assists' | 'own_goals',
   players: Map<string, LeaderPlayer>,
   teamByPlayer: Map<string, string>,
 ): SeasonLeader[] {
   const leaders: SeasonLeader[] = [];
   for (const row of rows) {
-    const count = row[metric];
+    const count = row[metric] ?? 0;
     const player = players.get(row.player_id);
     if (!player || !count || count <= 0) continue;
     leaders.push({ player, team_name: teamByPlayer.get(row.player_id) ?? null, count });

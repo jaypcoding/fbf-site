@@ -131,7 +131,7 @@ RESET ROLE;
 SELECT pg_temp.server_sheet(pg_temp.official(pg_temp.files(), pg_temp.goals_ok(), 2, 1), false, 'hash-1');
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '1b000000-0000-0000-0000-000000000001', true);
-SELECT throws_ok($$SELECT public.confirm_match_replay_review('9b000000-0000-0000-0000-000000000001', 'other')$$, '40001', NULL, 'a stale sheet (different hash) is refused');
+SELECT throws_ok($$SELECT public.confirm_match_replay_review('9b000000-0000-0000-0000-000000000001', 'other')$$, '55000', NULL, 'a stale sheet (different hash) is refused');
 SELECT throws_ok($$SELECT public.confirm_match_replay_review('9b000000-0000-0000-0000-000000000001', 'hash-1')$$, '23514', 'Resolva as pendências da súmula antes de confirmar', 'blocking issues prevent the confirmation');
 
 SELECT lives_ok($$SELECT public.save_match_replay_decisions('9b000000-0000-0000-0000-000000000001', '{"players":{"homea tmv":"7b000000-0000-0000-0000-000000000002"}}')$$, 'decisions are saved');
@@ -150,7 +150,7 @@ RESET ROLE;
 SELECT pg_temp.server_sheet(pg_temp.official('[]'::jsonb || (pg_temp.files() -> 0), pg_temp.goals_ok(), 2, 1), true, 'hash-3');
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '1b000000-0000-0000-0000-000000000001', true);
-SELECT throws_ok($$SELECT public.confirm_match_replay_review('9b000000-0000-0000-0000-000000000001', 'hash-3')$$, '40001', NULL, 'a sheet that ignores one of the files is refused');
+SELECT throws_ok($$SELECT public.confirm_match_replay_review('9b000000-0000-0000-0000-000000000001', 'hash-3')$$, '55000', NULL, 'a sheet that ignores one of the files is refused');
 
 -- confirmation ------------------------------------------------------------------
 RESET ROLE;

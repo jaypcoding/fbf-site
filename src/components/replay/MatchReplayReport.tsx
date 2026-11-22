@@ -4,7 +4,7 @@
 // labelled as such; the recordings themselves stay private.
 import { useEffect, useMemo, useState } from 'react';
 import { FileVideo } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, type MatchEvent } from '@/lib/supabase';
 import type { PublicReport } from '@/lib/replay/consolidate';
 import { formatClock } from '@/lib/time';
 import { PitchMap, type PitchPoint } from './PitchMap';
@@ -26,8 +26,22 @@ export function useMatchReplayReport(matchId?: string) {
 
 const pct = (part: number, total: number) => (total > 0 ? `${Math.round((part / total) * 100)}%` : '—');
 
-export function MatchReplayReport({ row, homeName, awayName }: { row: ReportRow; homeName: string; awayName: string }) {
+export function MatchReplayReport({ row, homeName, awayName, events = [] }: { row: ReportRow; homeName: string; awayName: string; events?: MatchEvent[] }) {
   const report = row.report;
+  // goals, assists and own goals always come from the official events (they follow any later correction)
+  const official = useMemo(() => {
+    const m = new Map<string, { goals: number; assists: number; ownGoals: number }>();
+    const add = (id: string | null, k: 'goals' | 'assists' | 'ownGoals') => { if (!id) return; const v = m.get(id) ?? { goals: 0, assists: 0, ownGoals: 0 }; v[k]++; m.set(id, v); };
+    for (const e of events) {
+      if (e.period === 'PENALTY_SHOOTOUT') continue;
+      if (e.event_type === 'GOAL') add(e.player_id, e.is_own_goal ? 'ownGoals' : 'goals');
+      if (e.event_type === 'ASSIST') add(e.player_id, 'assists');
+    }
+    return m;
+  }, [events]);
+  const og = (p: { playerId: string | null; stats: { ownGoals: number } }) => (p.playerId ? official.get(p.playerId)?.ownGoals ?? 0 : p.stats.ownGoals);
+  const gl = (p: { playerId: string | null; stats: { goals: number } }) => (p.playerId ? official.get(p.playerId)?.goals ?? 0 : p.stats.goals);
+  const as = (p: { playerId: string | null; stats: { assists: number } }) => (p.playerId ? official.get(p.playerId)?.assists ?? 0 : p.stats.assists);
   const [view, setView] = useState('ball');
   const teamName = (side: 'home' | 'away' | null) => (side === 'home' ? homeName : side === 'away' ? awayName : '—');
   const players = useMemo(() => [...report.players].sort((a, b) => (a.side ?? '').localeCompare(b.side ?? '') || b.stats.playedTicks - a.stats.playedTicks), [report.players]);
@@ -81,14 +95,14 @@ export function MatchReplayReport({ row, homeName, awayName }: { row: ReportRow;
       <div className="table-scroll">
         <table className="replay-table">
           <thead>
-            <tr><th>Jogador</th><th>Time</th><th title="Gols">G</th><th title="Assistências">A</th><th title="Finalizações">Fin.</th><th title="Chutes no gol">No gol</th><th title="Passes certos">Passes</th><th title="Chutes">Chutes</th><th title="Participação na posse de bola">Posse</th><th title="Tempo em campo">Tempo</th></tr>
+            <tr><th>Jogador</th><th>Time</th><th title="Gols">G</th><th title="Assistências">A</th><th title="Gols contra">GC</th><th title="Finalizações">Fin.</th><th title="Chutes no gol">No gol</th><th title="Passes certos">Passes</th><th title="Chutes">Chutes</th><th title="Participação na posse de bola">Posse</th><th title="Tempo em campo">Tempo</th></tr>
           </thead>
           <tbody>
             {players.map((p, i) => (
               <tr key={`${p.playerId ?? p.name}-${i}`}>
                 <td>{p.name}{!p.identified && <em className="replay-unidentified"> (não identificado)</em>}</td>
                 <td>{teamName(p.side)}</td>
-                <td>{p.stats.goals}</td><td>{p.stats.assists}</td><td>{p.stats.shots}</td><td>{p.stats.shotsOnTarget}</td>
+                <td>{gl(p)}</td><td>{as(p)}</td><td>{og(p)}</td><td>{p.stats.shots}</td><td>{p.stats.shotsOnTarget}</td>
                 <td>{p.stats.passes}</td><td>{p.stats.kicks}</td><td>{pct(p.stats.possessionTicks, totalPossession)}</td><td>{formatClock(Math.round(p.stats.playedTicks / 60))}</td>
               </tr>
             ))}

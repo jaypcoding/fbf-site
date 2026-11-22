@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CalendarClock, ClipboardCheck, FileVideo, Pencil } from 'lucide-react';
+import { ArrowRight, CalendarClock, ClipboardCheck, ClipboardPen, FileVideo, Pencil } from 'lucide-react';
+import { MatchEditDialog } from './MatchEditDialog';
 import { supabase, type Match, type SeasonTeam } from '@/lib/supabase';
 import { useManagedCompetitions, useSeasons, useStages, useRounds, useMatches, useSeasonTeams } from '@/lib/hooks';
 import { matchStatusLabels } from '@/lib/labels';
@@ -41,6 +42,7 @@ export function MatchesTab() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Match | null>(null);
   const [recovering, setRecovering] = useState<Match | null>(null);
+  const [editingSheet, setEditingSheet] = useState<Match | null>(null);
   const [schedulingRound, setSchedulingRound] = useState(false);
 
   useEffect(() => {
@@ -129,11 +131,16 @@ export function MatchesTab() {
         {matchesError || seasonTeamsError ? <FormError message="Não foi possível carregar as partidas ou as equipes inscritas. Verifique suas permissões e tente novamente." /> : loading ? <LoadingCard /> : !selectedRound ? <p className="admin-empty-text">Selecione uma rodada para ver as partidas.</p> : matches.length === 0 ? <p className="admin-empty-text">Nenhuma partida nesta rodada.</p> : (
           <div className="admin-list">
             {matches.map((m) => (
-              <MatchRow key={m.id} match={m} onEdit={() => setEditing(m)} onRecover={() => setRecovering(m)} />
+              <MatchRow key={m.id} match={m} onEdit={() => setEditing(m)} onRecover={() => setRecovering(m)} onEditSheet={() => setEditingSheet(m)} />
             ))}
           </div>
         )}
       </div>
+      {editingSheet && (
+        <Modal title={`Editar súmula: ${teamName(editingSheet.home_team)} × ${teamName(editingSheet.away_team)}`} onClose={() => setEditingSheet(null)}>
+          <MatchEditDialog match={editingSheet} onDone={() => setEditingSheet(null)} />
+        </Modal>
+      )}
       {recovering && (
         <Modal title={`Resultado já disputado: ${teamName(recovering.home_team)} × ${teamName(recovering.away_team)}`} onClose={() => setRecovering(null)}>
           <RetroactiveResultForm match={recovering} onDone={() => setRecovering(null)} />
@@ -153,7 +160,7 @@ export function MatchesTab() {
   );
 }
 
-function MatchRow({ match, onEdit, onRecover }: { match: Match; onEdit: () => void; onRecover: () => void }) {
+function MatchRow({ match, onEdit, onRecover, onEditSheet }: { match: Match; onEdit: () => void; onRecover: () => void; onEditSheet: () => void }) {
   const [statusValue, setStatusValue] = useState<MatchStatus>(match.status);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,6 +192,7 @@ function MatchRow({ match, onEdit, onRecover }: { match: Match; onEdit: () => vo
         <FormSelect value={statusValue} disabled={busy} onChange={(e) => changeStatus(e.target.value as MatchStatus)} aria-label="Status da partida">
           {statusOptions.filter((option) => availableMatchStatuses(statusValue).includes(option.value)).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </FormSelect>
+        {statusValue === 'FINISHED' && <button className="icon-button" onClick={onEditSheet} title="Editar súmula da partida (placar, gols, assistências, gols contra, goleiros, estatísticas)"><ClipboardPen size={15} /></button>}
         <Link className="icon-button" to={`/painel?sumula=${match.id}`} title="Gravação e validação da partida (súmula por replay)"><FileVideo size={15} /></Link>
         {(statusValue === 'SCHEDULED' || statusValue === 'POSTPONED') && (
           <button className="icon-button" onClick={onRecover} title="Registrar resultado de partida já disputada"><ClipboardCheck size={15} /></button>

@@ -121,7 +121,7 @@ export function MatchPage() {
                     <strong>{ev.is_own_goal ? `${ev.player?.nickname || 'Autor não informado'} (gol contra)` : ev.player?.nickname || 'Autor não informado'}{ev.related_player ? ` ↔ ${ev.related_player.nickname}` : ''}</strong>
                     <span>{ev.team?.team?.name || '—'}</span>
                   </div>
-                  <span className="timeline-type">{eventLabels[ev.event_type]}{ev.period === 'EXTRA_TIME' ? ' · Gol de ouro' : ''}</span>
+                  <span className="timeline-type">{ev.event_type === 'GOAL' && ev.is_own_goal ? 'Gol contra' : eventLabels[ev.event_type]}{ev.period === 'EXTRA_TIME' ? ' · Gol de ouro' : ''}</span>
                 </div>
               ))}
             </div>
@@ -142,7 +142,7 @@ export function MatchPage() {
           )}
         </div>
       </div>
-      {replayReport && finished && <MatchReplayReport row={replayReport} homeName={homeName} awayName={awayName} />}
+      {replayReport && finished && <MatchReplayReport row={replayReport} homeName={homeName} awayName={awayName} events={events} />}
     </section>
   );
 }

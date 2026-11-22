@@ -314,6 +314,9 @@ export function createStatsCollector() {
         }
       }
       kicker = { key: me.key, team };
+      // a kick reaches the ball up to 4 px away without contact: it is also the latest touch
+      if (!lastToucher || lastToucher.key !== me.key) me.touches++;
+      lastToucher = { key: me.key, team };
       lastKick = { key: me.key, team, x: from.x, y: from.y };
     },
     onPlayingTick(room, game) {

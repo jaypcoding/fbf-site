@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BadgeCheck, CalendarDays, CircleUserRound, ClipboardList, Flag, Goal, Hand, LayoutDashboard, ListOrdered, Mic, Shirt, Swords, Trophy, UserCog, Users } from 'lucide-react';
 import type { Profile } from '@/lib/supabase';
+import { ThemeToggle } from '@/lib/theme';
 import { OverviewTab } from '@/components/admin/OverviewTab';
 import { CompetitionsTab } from '@/components/admin/CompetitionsTab';
 import { SeasonsTab } from '@/components/admin/SeasonsTab';
@@ -49,7 +50,7 @@ export function AdminPanel({ profile }: { profile: Profile | null }) {
           <h1>{profile?.display_name || 'Sua conta'}</h1>
           <p>{isAdmin ? 'Gerencie toda a plataforma, incluindo competições, cadastros, partidas e permissões.' : 'Gerencie as competições que foram atribuídas à sua conta.'}</p>
         </div>
-        <span className="role-badge">{profile?.role || 'USER'}</span>
+        <div className="dashboard-heading-actions"><ThemeToggle withLabel /><span className="role-badge">{profile?.role || 'USER'}</span></div>
       </div>
       <div className="admin-tabs">
         {visibleTabs.map((item) => (

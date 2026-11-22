@@ -7,6 +7,7 @@ import { FORGOT_PASSWORD_PATH, RESET_PASSWORD_PATH, parseRecoveryHash } from '@/
 import { LiveMiniPlayer } from '@/components/LiveMiniPlayer';
 import { ConfirmProvider, ErrorBoundary, FBF_LOGO, PageFallback, ScrollToTop } from '@/components/site';
 import { HomePage, NotFoundPage } from '@/pages/HomePage';
+import { ThemeSync, ThemeToggle } from '@/lib/theme';
 
 // Every page except the home page is split into its own chunk, so the first
 // visit downloads only what it shows.
@@ -78,6 +79,7 @@ function AppShell() {
     <div className="app-shell">
       <a href="#conteudo" className="skip-link">Pular para o conteúdo</a>
       <ScrollToTop />
+      <ThemeSync />
       <header className="site-header">
         <div className="container header-inner">
           <Link to="/" className="brand" aria-label="FBF, início">
@@ -94,6 +96,7 @@ function AppShell() {
               </NavLink>
             ))}
             {isManager && <NavLink to="/painel" className={({ isActive }) => `nav-link panel-link ${isActive ? 'active' : ''}`}><LayoutDashboard size={16} /> Painel</NavLink>}
+            <ThemeToggle />
             {session
               ? <button type="button" className="account-link" onClick={signOut}><LogOut size={16} /> Sair</button>
               : <Link to="/login" className="login-link"><LogIn size={16} /> Entrar</Link>}

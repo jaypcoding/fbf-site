@@ -10,7 +10,7 @@ import { formatClock } from '@/lib/time';
 import { FormError } from '@/components/ui';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import {
-  cancelReview, confirmReview, formatBytes, inspectReplayFile, processReplay, rebuildSheet, removeReplay, replayDownloadUrl, saveDecisions, uploadReplay, type UploadStep,
+  cancelReview, confirmReview, reopenReview, formatBytes, inspectReplayFile, processReplay, rebuildSheet, removeReplay, replayDownloadUrl, saveDecisions, uploadReplay, type UploadStep,
 } from '@/lib/replayClient';
 import type { MatchSheet, ReviewDecisions, SheetGoal, SheetPlayer, Side } from '@/lib/replay/consolidate';
 import { PitchMap, type PitchPoint } from '@/components/replay/PitchMap';
@@ -90,7 +90,10 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
   const sheet = review?.sheet ?? null;
   const decisions: ReviewDecisions = review?.decisions ?? {};
   const activeFiles = files.filter((f) => f.status !== 'REMOVED');
-  const editable = !confirmed && (match?.status === 'SCHEDULED' || match?.status === 'POSTPONED');
+  const finished = match?.status === 'FINISHED';
+  const editable = !confirmed && (match?.status === 'SCHEDULED' || match?.status === 'POSTPONED' || finished);
+  const [reopening, setReopening] = useState(false);
+  const [replaceAck, setReplaceAck] = useState(false);
 
   // rebuild when the server sheet is missing or outdated
   const building = useRef(false);
@@ -163,7 +166,7 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
     setBusy('Registrando a súmula oficial...');
     setMessage(null);
     try {
-      const r = await confirmReview(matchId, review.sheet_hash);
+      const r = await confirmReview(matchId, review.sheet_hash, finished);
       setMessage({ kind: 'ok', text: `Súmula validada: ${homeName} ${r.home_score} × ${r.away_score} ${awayName}, ${r.goals} gol(s) registrados.` });
       refreshAdminData();
     } catch (e) {
@@ -193,7 +196,24 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
           <span>{activeFiles.length} arquivo(s)</span>
           {confirmed && <Link to={`/partidas/${match.id}`} className="button button-outline">Ver página pública</Link>}
         </div>
-        {!editable && !confirmed && <p className="admin-hint">Esta partida já tem resultado registrado ({match.home_score ?? '—'} × {match.away_score ?? '—'}). A súmula por gravação vale para partidas agendadas ou adiadas.</p>}
+        {!editable && !confirmed && <p className="admin-hint">A súmula por gravação vale para partidas agendadas, adiadas ou finalizadas.</p>}
+        {finished && !confirmed && <p className="admin-hint">Esta partida já tem resultado registrado ({match.home_score ?? '—'} × {match.away_score ?? '—'}). Uma súmula por gravação confirmada aqui substitui os gols, assistências e goleiros atuais; o estado anterior fica no histórico de alterações.</p>}
+        {confirmed && (
+          reopening ? (
+            <div className="replay-confirm-box">
+              <p>Reabrir a súmula por gravação? A súmula validada continua no histórico e uma nova revisão é aberta com as mesmas gravações (você pode enviar outras). O resultado oficial só muda quando a nova súmula for confirmada.</p>
+              <input className="form-input" placeholder="Motivo (obrigatório)" value={reason} onChange={(e) => setReason(e.target.value)} />
+              <div className="admin-list-actions">
+                <button type="button" className="button button-primary" disabled={reason.trim().length < 3} onClick={async () => {
+                  setReopening(false);
+                  try { await reopenReview(matchId, reason); setMessage({ kind: 'ok', text: 'Súmula reaberta para revisão.' }); } catch (e) { setMessage({ kind: 'error', text: (e as Error).message }); }
+                  await reload();
+                }}>Reabrir</button>
+                <button type="button" className="button button-outline" onClick={() => setReopening(false)}>Voltar</button>
+              </div>
+            </div>
+          ) : <button type="button" className="button button-outline replay-reopen" onClick={() => { setReason(''); setReopening(true); }}>Reabrir súmula por gravação</button>
+        )}
       </div>
 
       {message && <div className={`replay-message msg-${message.kind}`}>{message.kind === 'ok' ? <CheckCircle2 size={16} /> : <XCircle size={16} />} {message.text}</div>}
@@ -313,7 +333,8 @@ export function MatchReplayPanel({ matchId }: { matchId: string }) {
           <h3>Confirmar e validar partida</h3>
           <p>Ao confirmar, o placar, os gols, as assistências, os goleiros e a duração são registrados oficialmente, a partida passa a <strong>Finalizada</strong> e as estatísticas ficam públicas. As gravações continuam privadas como comprovante.</p>
           {!sheet.canConfirm && <p className="replay-error-text">Resolva as pendências marcadas em vermelho para liberar a confirmação.</p>}
-          <button type="button" className="button button-primary" disabled={!sheet.canConfirm || !review?.sheet_hash || Boolean(busy)} onClick={() => void doConfirm()}>
+          {finished && <label className="replay-replace-ack"><input type="checkbox" checked={replaceAck} onChange={(e) => setReplaceAck(e.target.checked)} /> Entendo que o placar, os gols, as assistências e os goleiros atuais desta partida serão substituídos (o estado anterior fica no histórico).</label>}
+          <button type="button" className="button button-primary" disabled={!sheet.canConfirm || !review?.sheet_hash || Boolean(busy) || (finished && !replaceAck)} onClick={() => void doConfirm()}>
             <CheckCircle2 size={16} /> Confirmar e validar partida
           </button>
         </div>
@@ -567,7 +588,12 @@ function GoalRow({ g, decisions, homeName, awayName, scoringRoster, concedingRos
         )}
       </td>
       <td><input type="checkbox" checked={g.ownGoal} disabled={!editable} onChange={(e) => onFix({ ...fix, ownGoal: e.target.checked })} /></td>
-      <td className="replay-notes">{g.notes.join(' ')}</td>
+      <td className="replay-notes">
+        {g.notes.join(' ')}
+        {editable && !g.corrected && g.notes.some((n) => n.startsWith('Gol contra a conferir')) && (
+          <button type="button" className="button button-outline issue-action" onClick={() => onFix({ ...fix, ownGoal: true })}>Confirmar gol contra</button>
+        )}
+      </td>
     </tr>
   );
 }

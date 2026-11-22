@@ -120,13 +120,18 @@ export async function removeReplay(replayId: string, reason: string): Promise<vo
   if (error) throw new Error(error.message || 'Não foi possível remover a gravação');
 }
 
+export async function reopenReview(matchId: string, reason: string): Promise<void> {
+  const { error } = await supabase.rpc('reopen_match_replay_review', { p_match_id: matchId, p_reason: reason });
+  if (error) throw new Error(error.message || 'Não foi possível reabrir a súmula');
+}
+
 export async function cancelReview(matchId: string, reason: string): Promise<void> {
   const { error } = await supabase.rpc('cancel_match_replay_review', { p_match_id: matchId, p_reason: reason });
   if (error) throw new Error(error.message || 'Não foi possível cancelar a análise');
 }
 
-export async function confirmReview(matchId: string, hash: string): Promise<{ home_score: number; away_score: number; goals: number }> {
-  const { data, error } = await supabase.rpc('confirm_match_replay_review', { p_match_id: matchId, p_sheet_hash: hash });
+export async function confirmReview(matchId: string, hash: string, replaceExisting = false): Promise<{ home_score: number; away_score: number; goals: number }> {
+  const { data, error } = await supabase.rpc('confirm_match_replay_review', { p_match_id: matchId, p_sheet_hash: hash, p_replace_existing: replaceExisting });
   if (error) throw new Error(error.message || 'Não foi possível confirmar a súmula');
   return data as { home_score: number; away_score: number; goals: number };
 }

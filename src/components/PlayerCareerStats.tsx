@@ -4,7 +4,7 @@ import { LoadingCard } from '@/components/ui';
 import { useAdminDataVersion } from '@/lib/adminRefresh';
 
 export function PlayerCareerStats({ playerId }: { playerId: string }) {
-  const [totals, setTotals] = useState<{ goals: number; assists: number } | null>(null);
+  const [totals, setTotals] = useState<{ goals: number; assists: number; ownGoals: number } | null>(null);
   const [error, setError] = useState(false);
   const refreshVersion = useAdminDataVersion();
 
@@ -12,12 +12,13 @@ export function PlayerCareerStats({ playerId }: { playerId: string }) {
     let active = true;
     setTotals(null);
     setError(false);
-    supabase.from('player_career_statistics').select('goals, assists').eq('player_id', playerId).maybeSingle().then(({ data, error: err }) => {
+    supabase.from('player_career_statistics').select('goals, assists, own_goals').eq('player_id', playerId).maybeSingle().then(({ data, error: err }) => {
     if (!active) return;
     if (err) { setError(true); return; }
     setTotals({
       goals: data?.goals ?? 0,
       assists: data?.assists ?? 0,
+      ownGoals: (data as { own_goals?: number } | null)?.own_goals ?? 0,
     });
     });
     return () => { active = false; };
@@ -29,6 +30,7 @@ export function PlayerCareerStats({ playerId }: { playerId: string }) {
     <div className="stat-grid">
       <div><span>Gols na carreira</span><strong>{totals.goals}</strong></div>
       <div><span>Assistências na carreira</span><strong>{totals.assists}</strong></div>
+      <div><span>Gols contra na carreira</span><strong>{totals.ownGoals}</strong></div>
     </div>
   );
 }

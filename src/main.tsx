@@ -4,6 +4,8 @@ import App from './App.tsx';
 import './index.css';
 import './styles/site.css';
 import './styles/replay.css';
+import './styles/theme-dark.generated.css';
+import './styles/theme-dark.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
