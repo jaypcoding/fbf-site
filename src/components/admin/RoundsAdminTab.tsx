@@ -205,7 +205,7 @@ export function RoundsAdminTab() {
         </Modal>
       )}
       {editingSheet && (
-        <Modal title={`Editar súmula: ${teamName(editingSheet, 'home')} × ${teamName(editingSheet, 'away')}`} onClose={() => setEditingSheet(null)}>
+        <Modal wide title={`Editar súmula: ${teamName(editingSheet, 'home')} × ${teamName(editingSheet, 'away')}`} onClose={() => setEditingSheet(null)}>
           <MatchEditDialog match={editingSheet} onDone={() => setEditingSheet(null)} />
         </Modal>
       )}

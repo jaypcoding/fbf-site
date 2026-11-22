@@ -130,7 +130,10 @@ h1, h2, h3, p { margin: 0; }
 .admin-tabs button.active { color: #d46616; background: #fff0d5; font-weight: 800; }
 .admin-content { min-height: 300px; }
 .admin-grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
-.admin-form-card { background: #fff; border: 1px solid #eadcc7; border-radius: 8px; padding: 24px; position: sticky; top: 100px; }
+.admin-form-card { background: #fff; border: 1px solid #eadcc7; border-radius: 8px; padding: 24px; }
+/* side form of the two-column screens: follows the scroll beside the list (never over it),
+   only on wide and tall screens (the tallest form, 757px, fits) and never taller than the window */
+@media (min-width: 801px) and (min-height: 900px) { .admin-grid > .admin-form-card { position: sticky; top: 100px; max-height: calc(100vh - 116px); overflow-y: auto; overscroll-behavior: contain; } }
 .admin-form-card h3 { font-size: 15px; color: #181818; margin-bottom: 18px; letter-spacing: -.02em; }
 .admin-list-card { background: #fff; border: 1px solid #eadcc7; border-radius: 8px; padding: 24px; min-height: 200px; }
 .admin-list-card h3 { font-size: 15px; color: #181818; margin-bottom: 18px; letter-spacing: -.02em; }
@@ -156,7 +159,7 @@ h1, h2, h3, p { margin: 0; }
 .icon-button:hover { color: #181818; background: #fff0d5; }
 .admin-list-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .modal-backdrop { position: fixed; inset: 0; background: #18181866; display: grid; place-items: center; padding: 24px; z-index: 100; animation: fade-in .2s ease; }
-.modal-card { width: min(520px, 100%); max-height: calc(100vh - 48px); overflow: auto; background: #fff; border: 1px solid #eadcc7; border-radius: 10px; padding: 26px; box-shadow: 0 24px 60px #18181833; animation: modal-in .25s ease; }
+.modal-card { width: min(520px, 100%); max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px); overflow: auto; background: #fff; border: 1px solid #eadcc7; border-radius: 10px; padding: 26px; box-shadow: 0 24px 60px #18181833; animation: modal-in .25s ease; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .modal-header h3 { font-size: 16px; color: #181818; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

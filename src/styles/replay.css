@@ -136,3 +136,6 @@
 @media (min-width: 801px) and (max-width: 1080px) { .main-nav { gap: 2px; } .nav-link, .account-link, .login-link { padding-left: 9px; padding-right: 9px; } }
 /* listas do painel no celular: ações quebram linha em vez de sair da tela */
 @media (max-width: 560px) { .admin-list-item { flex-wrap: wrap; gap: 8px; } .admin-list-actions { flex-wrap: wrap; } }
+/* modal largo (Editar súmula): a tabela de gols cabe sem rolagem lateral no computador */
+.modal-card.modal-card-wide { width: min(980px, 100%); }
+@media (max-width: 600px) { .modal-backdrop { padding: 10px; } .modal-card { padding: 18px; max-height: calc(100dvh - 20px); } }

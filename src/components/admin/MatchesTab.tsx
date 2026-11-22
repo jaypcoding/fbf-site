@@ -137,7 +137,7 @@ export function MatchesTab() {
         )}
       </div>
       {editingSheet && (
-        <Modal title={`Editar súmula: ${teamName(editingSheet.home_team)} × ${teamName(editingSheet.away_team)}`} onClose={() => setEditingSheet(null)}>
+        <Modal wide title={`Editar súmula: ${teamName(editingSheet.home_team)} × ${teamName(editingSheet.away_team)}`} onClose={() => setEditingSheet(null)}>
           <MatchEditDialog match={editingSheet} onDone={() => setEditingSheet(null)} />
         </Modal>
       )}
