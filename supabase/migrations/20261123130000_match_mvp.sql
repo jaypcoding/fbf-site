@@ -18,6 +18,9 @@ Rules:
     when nobody has a positive total;
   - only matches whose result comes from the events (as in the official
     player statistics); a W.O. registered without authors has no candidates;
+  - a match with a goal registered without its author (W.O., or a scorer
+    nobody knows) has no MVP even after its lineup is filled: the data is not
+    enough to award it (column mvp_blocked);
   - a goal conceded with unknown minute makes it impossible to split the
     goalkeeper's period: no goalkeeper points for that team in that match
     (shown as keeper_time_unknown).
@@ -81,7 +84,9 @@ WITH keeper AS (
     s.in_lineup, s.has_events, s.was_goalkeeper, s.goals, s.assists, s.own_goals,
     COALESCE(k.keeper_seconds, 0) AS keeper_seconds, COALESCE(k.keeper_blocks, 0) AS keeper_blocks,
     COALESCE(k.keeper_goals_conceded, 0) AS keeper_goals_conceded, COALESCE(k.keeper_time_unknown, false) AS keeper_time_unknown,
-    (s.result = 'W') AS won
+    (s.result = 'W') AS won,
+    EXISTS (SELECT 1 FROM public.match_events e WHERE e.match_id = s.match_id AND e.event_type = 'GOAL'
+      AND e.player_id IS NULL AND e.period <> 'PENALTY_SHOOTOUT') AS mvp_blocked
   FROM public.player_match_stats s
   JOIN public.matches m ON m.id = s.match_id
   LEFT JOIN keeper k ON k.match_id = s.match_id AND k.player_id = s.player_id
@@ -99,10 +104,10 @@ WITH keeper AS (
   SELECT sc.*, max(sc.total) OVER (PARTITION BY sc.match_id) AS top_total FROM scored sc
 )
 SELECT r.*,
-  (r.top_total > 0 AND r.total = r.top_total) AS is_mvp,
-  count(*) FILTER (WHERE r.top_total > 0 AND r.total = r.top_total) OVER (PARTITION BY r.match_id)::integer AS mvp_count
+  (NOT r.mvp_blocked AND r.top_total > 0 AND r.total = r.top_total) AS is_mvp,
+  count(*) FILTER (WHERE NOT r.mvp_blocked AND r.top_total > 0 AND r.total = r.top_total) OVER (PARTITION BY r.match_id)::integer AS mvp_count
 FROM ranked r;
 
-COMMENT ON VIEW public.match_mvp_scores IS 'MVP formula approved on 2026-11-23: breakdown per candidate (proven participant) of each match, total and MVP flag (shared on ties, none when the best total is not positive).';
+COMMENT ON VIEW public.match_mvp_scores IS 'MVP formula approved on 2026-11-23: breakdown per candidate (proven participant) of each match, total and MVP flag (shared on ties, none when the best total is not positive or a goal has no author).';
 
 GRANT SELECT ON public.match_keeper_spells, public.match_mvp_scores TO anon, authenticated;

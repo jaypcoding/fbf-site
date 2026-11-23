@@ -102,7 +102,7 @@ CREATE FUNCTION pg_temp.line(m text, p text) RETURNS text LANGUAGE sql AS $$
 $$;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA pg_temp TO anon, authenticated;
 
-SELECT plan(24);
+SELECT plan(26);
 
 -- M1
 SELECT is((SELECT home_score || 'x' || away_score FROM public.matches WHERE id = '9e000000-0000-0000-0000-000000000001'), '4x1', 'M1 finished 4 x 1');
@@ -124,6 +124,14 @@ SELECT is((SELECT DISTINCT mvp_count FROM public.match_mvp_scores WHERE match_id
 SELECT is((SELECT count(*) FILTER (WHERE is_mvp) || '/' || count(*) FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000004'), '0/2', 'M4: nobody with a positive total -> no MVP');
 -- M5
 SELECT is((SELECT count(*)::integer FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000005'), 0, 'M5: W.O. without authors has no candidates and no MVP');
+-- M5 with its lineup filled afterwards: the winners are candidates with the win bonus, but a goal without author blocks the MVP
+INSERT INTO public.match_participations (match_id, player_id, season_team_id, source) VALUES
+  ('9e000000-0000-0000-0000-000000000005', '7e000000-0000-0000-0000-00000000000a', '5e000000-0000-0000-0000-000000000001', 'SHEET'),
+  ('9e000000-0000-0000-0000-000000000005', '7e000000-0000-0000-0000-00000000000c', '5e000000-0000-0000-0000-000000000001', 'SHEET');
+SELECT is((SELECT count(*) || ' ' || bool_and(won) || ' ' || bool_and(mvp_blocked) FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000005'), '2 true true',
+  'M5 + lineup: candidates with the win, flagged as blocked');
+SELECT is((SELECT count(*) FILTER (WHERE is_mvp) || '/' || max(mvp_count) FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000005'), '0/0',
+  'M5 + lineup: a goal without author -> no MVP (not enough data)');
 -- M6
 SELECT is(pg_temp.line('9e000000-0000-0000-0000-000000000006', '7e000000-0000-0000-0000-000000000001'), '0/0/3/0/0=3', 'M6: first keeper, 420 s clean -> 3 blocks');
 SELECT is(pg_temp.line('9e000000-0000-0000-0000-000000000006', '7e000000-0000-0000-0000-000000000002'), '0/0/2/0/0=2', 'M6: second keeper from 421 s, conceded at 500 s: 79 s (0) + 340 s (2)');

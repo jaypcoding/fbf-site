@@ -84,3 +84,10 @@ test('deterministic: a corrected sheet gives the new result; same data gives the
   assert.equal(byId(computeMvp(corrected)).H.total, -3);
   assert.equal(PROPOSED_WEIGHTS.goal, 3);
 });
+
+test('a goal without author (W.O.) blocks the MVP even when the lineup is known', () => {
+  const r = computeMvp(base({ score: { home: 1, away: 0 }, participants: [{ playerId: 'A', side: 'home' }, { playerId: 'B', side: 'home' }], goals: [goal(0, 'home', null)] }));
+  assert.equal(r.blocked, true);
+  assert.equal(byId(r).A.won, true, 'the win is still shown in the breakdown');
+  assert.deepEqual(r.mvps, []);
+});

@@ -35,6 +35,8 @@ export function MatchMvp({ matchId, homeName, awayName, homeTeamId }: { matchId:
       <h2 id="mvp-title" className="match-page-heading">MVP da partida</h2>
       {rows.length === 0 ? (
         <p className="mvp-empty">Sem MVP: a partida não tem jogadores com participação registrada (por exemplo, resultado registrado sem autores, como W.O.).</p>
+      ) : rows.some((r) => r.mvp_blocked) ? (
+        <p className="mvp-empty">Sem MVP: há gol registrado sem autor (por exemplo, W.O.), então os dados não são suficientes para premiar.</p>
       ) : mvps.length === 0 ? (
         <p className="mvp-empty">Sem MVP: nenhum jogador terminou com pontuação positiva.</p>
       ) : (

@@ -8,7 +8,7 @@ export type MvpRow = {
   keeper_seconds: number; keeper_blocks: number; keeper_goals_conceded: number; keeper_time_unknown: boolean;
   won: boolean; in_lineup: boolean; was_goalkeeper: boolean;
   points_goals: number; points_assists: number; points_keeper: number; points_win: number; points_own_goals: number;
-  total: number; top_total: number; is_mvp: boolean; mvp_count: number;
+  total: number; top_total: number; is_mvp: boolean; mvp_count: number; mvp_blocked: boolean;
 };
 type PlayerInfo = { id: string; nickname: string; slug: string | null; photo_url: string | null };
 

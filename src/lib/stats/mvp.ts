@@ -53,7 +53,8 @@ export type MvpLine = {
   total: number;
 };
 
-export type MvpResult = { lines: MvpLine[]; mvps: string[]; top: number | null };
+/** blocked: a goal has no author (W.O. or unknown scorer), so there is not enough data to award the MVP */
+export type MvpResult = { lines: MvpLine[]; mvps: string[]; top: number | null; blocked: boolean };
 
 /** Side that benefits from a goal: own goals count for the opponent. */
 export const benefitingSide = (g: Pick<MvpGoal, 'scorerSide' | 'ownGoal'>): Side =>
@@ -122,7 +123,8 @@ export function computeMvp(input: MvpInput, weights: MvpWeights = PROPOSED_WEIGH
   }
   const sorted = [...lines.values()].sort((a, b) => b.total - a.total || a.playerId.localeCompare(b.playerId));
   const top = sorted.length ? sorted[0].total : null;
-  // shared MVP on a tie; no MVP when nobody scored a positive total
-  const mvps = top !== null && top > 0 ? sorted.filter((l) => l.total === top).map((l) => l.playerId) : [];
-  return { lines: sorted, mvps, top };
+  // shared MVP on a tie; no MVP when nobody scored a positive total or a goal has no author
+  const blocked = input.goals.some((g) => !g.scorerId);
+  const mvps = !blocked && top !== null && top > 0 ? sorted.filter((l) => l.total === top).map((l) => l.playerId) : [];
+  return { lines: sorted, mvps, top, blocked };
 }
