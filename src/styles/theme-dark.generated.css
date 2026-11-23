@@ -223,7 +223,7 @@ html[data-theme="dark"] .admin-attention.attention-undated { background: #2e2721
 html[data-theme="dark"] .admin-list-item .admin-round-teams { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-score { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-date { color: #d8cbbb; }
-/* styles/site.css (108 regras) */
+/* styles/site.css (126 regras) */
 html[data-theme="dark"] .skip-link { background: #0d0b09; }
 html[data-theme="dark"] .numbers-band { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .numbers-band a { border-right: 1px solid #3a3129; }
@@ -332,6 +332,24 @@ html[data-theme="dark"] .round-empty { color: #ab9d8c; }
 html[data-theme="dark"] .knockout-preview-round h4 { color: #f2a35e; }
 html[data-theme="dark"] .knockout-preview-series { border: 1px dashed #3a3129; background: #211b17; }
 html[data-theme="dark"] .knockout-preview-series span { color: #d8cbbb; }
+html[data-theme="dark"] .mvp-card { border: 1px solid #3a3129; background: linear-gradient(135deg, #16130f, #2e2721); }
+html[data-theme="dark"] .mvp-badge { color: #f2a35e; background: #6a4826; }
+html[data-theme="dark"] .mvp-name { color: #f3ebe0; }
+html[data-theme="dark"] .mvp-who span { color: #ab9d8c; }
+html[data-theme="dark"] .mvp-total { color: #f2a35e; }
+html[data-theme="dark"] .mvp-total small { color: #ab9d8c; }
+html[data-theme="dark"] .mvp-breakdown li { color: #f2a35e; background: rgba(33, 27, 23, 0.702); border: 1px solid #3a3129; }
+html[data-theme="dark"] .mvp-breakdown strong { color: #93c79e; }
+html[data-theme="dark"] .mvp-breakdown strong.is-negative { color: #f29d92; }
+html[data-theme="dark"] .mvp-empty { border: 1px dashed #3a3129; color: #ab9d8c; }
+html[data-theme="dark"] .mvp-toggle { color: #f2a35e; }
+html[data-theme="dark"] .mvp-table-wrap { border: 1px solid #3a3129; }
+html[data-theme="dark"] .mvp-table th, html[data-theme="dark"] .mvp-table td { border-bottom: 1px solid #3a3129; }
+html[data-theme="dark"] .mvp-table th { color: #ab9d8c; background: #16130f; }
+html[data-theme="dark"] .mvp-table td small { color: #ab9d8c; }
+html[data-theme="dark"] .mvp-table td:first-child a { color: #f3ebe0; }
+html[data-theme="dark"] .mvp-table tr.is-mvp td { background: #2e2721; }
+html[data-theme="dark"] .mvp-rules { color: #ab9d8c; }
 /* styles/replay.css (94 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }

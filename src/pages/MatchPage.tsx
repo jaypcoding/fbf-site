@@ -9,6 +9,8 @@ import { usePageTitle } from '@/lib/pageTitle';
 import { LoadingCard, EmptyState, TeamLogo, PlayerPhoto } from '@/components/ui';
 import { supabase, type MatchEvent } from '@/lib/supabase';
 import { MatchReplayReport, useMatchReplayReport } from '@/components/replay/MatchReplayReport';
+import { MatchMvp } from '@/components/MatchMvp';
+import { FEATURE_MVP } from '@/lib/features';
 
 const eventLabels: Record<MatchEvent['event_type'], string> = {
   GOAL: 'Gol',
@@ -25,6 +27,7 @@ type MatchDetail = {
   home_score: number | null;
   away_score: number | null;
   home_penalty_score: number | null;
+  home_team_id?: string | null;
   away_penalty_score: number | null;
   home_team: { team: { name: string; logo_url: string | null } | null } | null;
   away_team: { team: { name: string; logo_url: string | null } | null } | null;
@@ -106,6 +109,8 @@ export function MatchPage() {
           </p>
         )}
       </div>
+
+      {FEATURE_MVP && finished && id && <MatchMvp matchId={id} homeName={homeName} awayName={awayName} homeTeamId={match.home_team_id ?? null} />}
 
       <div className="match-page-grid">
         <div>
