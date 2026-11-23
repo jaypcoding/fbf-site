@@ -102,7 +102,7 @@ CREATE FUNCTION pg_temp.line(m text, p text) RETURNS text LANGUAGE sql AS $$
 $$;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA pg_temp TO anon, authenticated;
 
-SELECT plan(51);
+SELECT plan(55);
 
 -- M1
 SELECT is((SELECT home_score || 'x' || away_score FROM public.matches WHERE id = '9e000000-0000-0000-0000-000000000001'), '4x1', 'M1 finished 4 x 1');
@@ -205,6 +205,24 @@ SELECT is((SELECT count(*)::integer FROM public.feature_flag_changes WHERE key =
 SET LOCAL ROLE authenticated;
 DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '1e000000-0000-0000-0000-000000000099', true); END $$;
 SELECT throws_ok($$SELECT public.review_match_mvp('00000000-0000-0000-0000-000000000000', 'VALID', 'sonda')$$, '42501', NULL, 'without permission nobody learns whether a match exists');
+RESET ROLE;
+
+-- preview only for the organizers of THIS competition (and admins)
+RESET ROLE;
+INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at) VALUES
+  ('1e000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'mvp-org-own@example.invalid', '', now()),
+  ('1e000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'mvp-org-other@example.invalid', '', now())
+ON CONFLICT (id) DO NOTHING;
+UPDATE public.profiles SET role = 'ORGANIZER' WHERE id IN ('1e000000-0000-0000-0000-000000000002', '1e000000-0000-0000-0000-000000000003');
+INSERT INTO public.competition_organizers (competition_id, user_id) VALUES ('2e000000-0000-0000-0000-000000000001', '1e000000-0000-0000-0000-000000000002');
+UPDATE public.feature_flags SET enabled = false WHERE key = 'mvp_public';
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '1e000000-0000-0000-0000-000000000003', true); END $$;
+SELECT is(public.match_mvp('9e000000-0000-0000-0000-000000000001'), '{"enabled": false}'::jsonb, 'switch off: an organizer of another competition sees nothing');
+SELECT is((SELECT count(*)::integer FROM public.match_mvp_reviews), 0, '... nor the W.O. reviews of a competition he does not organize');
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '1e000000-0000-0000-0000-000000000002', true); END $$;
+SELECT is((SELECT (j->>'preview') || ' ' || jsonb_array_length(j->'rows') FROM (SELECT public.match_mvp('9e000000-0000-0000-0000-000000000001') j) x), 'true 5', 'switch off: the organizer of this competition previews it');
+SELECT ok((SELECT count(*) FROM public.match_mvp_reviews) > 0, '... and reads its W.O. reviews');
 RESET ROLE;
 
 SELECT * FROM finish();
