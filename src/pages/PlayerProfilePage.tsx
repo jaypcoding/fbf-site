@@ -63,6 +63,7 @@ export function PlayerDetailPage() {
           <span className="status-pill"><span /> {player.position}</span>
           <h1>{player.nickname}</h1>
           <p>{[player.full_name, player.nationality].filter(Boolean).join(' · ') || 'Jogador registrado na FBF.'}</p>
+          <Link to={`/comparar?jogadores=${player.slug ?? player.id}`} className="button button-outline button-small compare-open">Comparar com outro jogador</Link>
         </div>
         <div className="detail-emblem"><PlayerPhoto src={player.photo_url} name={player.nickname} size={74} /></div>
       </div>

@@ -465,3 +465,31 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .live-keepers, .live-streams { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; color: #5c4a3a; }
 .live-streams a { display: inline-flex; align-items: center; gap: 4px; color: #c2560f; font-weight: 600; }
 @media (max-width: 520px) { .live-grid { grid-template-columns: 1fr; } .live-score { font-size: 28px; } }
+.compare-page { display: grid; gap: 16px; }
+.compare-controls { display: grid; gap: 12px; border: 1px solid #ead7b8; border-radius: 14px; padding: 14px 16px; background: #fffaf2; }
+.compare-players { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.compare-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 4px; border-radius: 999px; background: #fff; border: 1px solid #ead7b8; font-weight: 600; color: #3e2d20; }
+.compare-chip button { display: inline-flex; border: 0; background: transparent; color: #8c8072; cursor: pointer; padding: 2px; border-radius: 50%; }
+.compare-chip button:hover { color: #b42318; }
+.compare-add { display: inline-flex; align-items: center; gap: 6px; color: #8c8072; }
+.compare-add select { min-width: 220px; }
+.compare-scope { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: end; }
+.compare-common { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #3e2d20; padding-bottom: 10px; }
+.compare-warning { margin: 0; display: flex; align-items: flex-start; gap: 6px; font-size: 13px; color: #8a4b08; background: #fff4e0; border-radius: 8px; padding: 8px 10px; }
+.compare-table-wrap { overflow-x: auto; border: 1px solid #ead7b8; border-radius: 14px; background: #fff; }
+.compare-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.compare-table th, .compare-table td { padding: 10px 12px; border-bottom: 1px solid #f1e5d2; text-align: center; }
+.compare-table tbody th { text-align: left; font-weight: 600; color: #5c4a3a; font-size: 14px; }
+.compare-table td { font-size: 16px; color: #3e2d20; }
+.compare-table td.is-best { font-weight: 800; color: #c2560f; background: #fff1dc; }
+.compare-table tbody tr:last-child th, .compare-table tbody tr:last-child td { border-bottom: 0; }
+.compare-head { display: grid; justify-items: center; gap: 4px; color: #3e2d20; text-decoration: none; font-weight: 700; }
+.compare-head small { font-size: 11px; color: #8c8072; font-weight: 600; }
+.compare-sample { display: block; font-size: 11px; font-weight: 500; color: #a99a88; }
+.compare-h2h { border: 1px solid #ead7b8; border-radius: 14px; padding: 14px 16px; background: #fff; }
+.compare-h2h h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 18px; color: #3e2d20; }
+.compare-h2h p { margin: 4px 0; font-size: 14px; color: #5c4a3a; }
+.compare-link { display: inline-block; margin-top: 6px; font-size: 14px; }
+.compare-open { margin-top: 10px; display: inline-flex; }
+.rankings-compare { margin: 0 0 8px; font-size: 14px; }
+@media (max-width: 520px) { .compare-add select { min-width: 0; width: 100%; } .compare-add { width: 100%; } .compare-table th, .compare-table td { padding: 8px 6px; } .compare-table td { font-size: 14px; } }

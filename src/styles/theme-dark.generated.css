@@ -223,7 +223,7 @@ html[data-theme="dark"] .admin-attention.attention-undated { background: #2e2721
 html[data-theme="dark"] .admin-list-item .admin-round-teams { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-score { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-date { color: #d8cbbb; }
-/* styles/site.css (216 regras) */
+/* styles/site.css (234 regras) */
 html[data-theme="dark"] .skip-link { background: #0d0b09; }
 html[data-theme="dark"] .numbers-band { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .numbers-band a { border-right: 1px solid #3a3129; }
@@ -440,6 +440,24 @@ html[data-theme="dark"] .live-goals small { color: #ab9d8c; }
 html[data-theme="dark"] .live-empty { color: #ab9d8c; }
 html[data-theme="dark"] .live-keepers, html[data-theme="dark"] .live-streams { color: #d8cbbb; }
 html[data-theme="dark"] .live-streams a { color: #f2a35e; }
+html[data-theme="dark"] .compare-controls { border: 1px solid #3a3129; background: #16130f; }
+html[data-theme="dark"] .compare-chip { background: #211b17; border: 1px solid #3a3129; color: #f3ebe0; }
+html[data-theme="dark"] .compare-chip button { color: #ab9d8c; }
+html[data-theme="dark"] .compare-chip button:hover { color: #f29d92; }
+html[data-theme="dark"] .compare-add { color: #ab9d8c; }
+html[data-theme="dark"] .compare-common { color: #f3ebe0; }
+html[data-theme="dark"] .compare-warning { color: #f2a35e; background: #2e2721; }
+html[data-theme="dark"] .compare-table-wrap { border: 1px solid #3a3129; background: #211b17; }
+html[data-theme="dark"] .compare-table th, html[data-theme="dark"] .compare-table td { border-bottom: 1px solid #3a3129; }
+html[data-theme="dark"] .compare-table tbody th { color: #d8cbbb; }
+html[data-theme="dark"] .compare-table td { color: #f3ebe0; }
+html[data-theme="dark"] .compare-table td.is-best { color: #f2a35e; background: #2e2721; }
+html[data-theme="dark"] .compare-head { color: #f3ebe0; }
+html[data-theme="dark"] .compare-head small { color: #ab9d8c; }
+html[data-theme="dark"] .compare-sample { color: #ab9d8c; }
+html[data-theme="dark"] .compare-h2h { border: 1px solid #3a3129; background: #211b17; }
+html[data-theme="dark"] .compare-h2h h2 { color: #f3ebe0; }
+html[data-theme="dark"] .compare-h2h p { color: #d8cbbb; }
 /* styles/replay.css (115 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }

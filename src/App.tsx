@@ -18,6 +18,7 @@ const TeamDetailPage = lazy(() => import('@/pages/TeamsPages').then((m) => ({ de
 const PlayersPage = lazy(() => import('@/pages/PlayersPages').then((m) => ({ default: m.PlayersPage })));
 const PlayerDetailPage = lazy(() => import('@/pages/PlayersPages').then((m) => ({ default: m.PlayerDetailPage })));
 const HallOfFamePage = lazy(() => import('@/pages/HallOfFamePage').then((m) => ({ default: m.HallOfFamePage })));
+const ComparePage = lazy(() => import('@/pages/ComparePage').then((m) => ({ default: m.ComparePage })));
 const LiveCenterPage = lazy(() => import('@/pages/LiveCenterPage').then((m) => ({ default: m.LiveCenterPage })));
 const StatsPage = lazy(() => import('@/pages/StatsPage').then((m) => ({ default: m.StatsPage })));
 const MatchPage = lazy(() => import('@/pages/MatchPage').then((m) => ({ default: m.MatchPage })));
@@ -122,6 +123,7 @@ function AppShell() {
               <Route path="/estatisticas" element={<StatsPage />} />
               <Route path="/hall-da-fama" element={<HallOfFamePage />} />
               <Route path="/ao-vivo" element={<LiveCenterPage />} />
+              <Route path="/comparar" element={<ComparePage />} />
               <Route path="/partidas/:id" element={<MatchPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/painel" element={<DashboardPage />} />

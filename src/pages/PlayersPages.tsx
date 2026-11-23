@@ -29,7 +29,7 @@ export function PlayersPage() {
     <PageIntro eyebrow="Universo FBF" title="Jogadores" description="Talentos, capitães e goleiros do futsal brasileiro." />
     <section className="container directory-section">
       <div className="directory-toolbar">
-        <div><span className="section-kicker">Base pública</span><h2>Todos os jogadores</h2>{!loading && !error && <p className="directory-count">{plural(filtered.length, 'jogador', 'jogadores')}{query || position ? ' encontrados' : ''}</p>}</div>
+        <div><span className="section-kicker">Base pública</span><h2>Todos os jogadores</h2>{!loading && !error && <p className="directory-count">{plural(filtered.length, 'jogador', 'jogadores')}{query || position ? ' encontrados' : ''}</p>}<Link to="/comparar" className="inline-link compare-link">Comparar jogadores</Link></div>
         <div className="filter-controls">
           <SearchField value={query} onChange={(value) => setParam('busca', value)} placeholder="Buscar por apelido ou nome" label="Buscar jogador" />
           <select value={position} onChange={(event) => setParam('posicao', event.target.value)} aria-label="Filtrar por posição">

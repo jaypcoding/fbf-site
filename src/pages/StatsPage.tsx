@@ -63,6 +63,7 @@ export function StatsPage() {
       <section className="container stats-section rankings-page">
         {error ? <EmptyState icon={<BarChart3 />} title="Não foi possível carregar os rankings" description="Tente atualizar a página em instantes." /> : loading || !data || !view ? <LoadingCard /> : (
           <>
+            <p className="rankings-compare"><Link to={`/comparar${competition ? `?competicao=${competition}` : ''}`} className="inline-link">Comparar jogadores lado a lado</Link></p>
             <div className="rankings-filters" role="group" aria-label="Filtros dos rankings">
               <label><span>Competição</span>
                 <select value={competition} onChange={(e) => set({ competicao: e.target.value, temporada: '', equipe: '', categoria: '' })}>
