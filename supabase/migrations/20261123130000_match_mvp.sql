@@ -201,11 +201,12 @@ DECLARE
   v_after jsonb;
   v_history_id bigint;
 BEGIN
-  SELECT * INTO v_match FROM public.matches WHERE id = p_match_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Partida não encontrada' USING ERRCODE = 'P0002'; END IF;
-  IF NOT public.can_manage_match(p_match_id) THEN
+  -- permission first: without it, nobody learns whether the match exists nor locks it
+  IF NOT COALESCE(public.can_manage_match(p_match_id), false) THEN
     RAISE EXCEPTION 'Sem permissão para editar esta partida' USING ERRCODE = '42501';
   END IF;
+  SELECT * INTO v_match FROM public.matches WHERE id = p_match_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Partida não encontrada' USING ERRCODE = 'P0002'; END IF;
   IF v_match.status <> 'FINISHED' THEN
     RAISE EXCEPTION 'A revisão do MVP só é feita em partidas finalizadas' USING ERRCODE = '23514';
   END IF;
