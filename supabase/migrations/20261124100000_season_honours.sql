@@ -163,7 +163,8 @@ CREATE TABLE IF NOT EXISTS public.hall_of_fame_changes (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   entity text NOT NULL CHECK (entity IN ('HONOUR', 'EDITION', 'CATEGORY')),
   entity_id uuid NOT NULL,
-  season_id uuid REFERENCES public.seasons(id) ON DELETE RESTRICT,
+  -- no foreign keys: the history outlives what it describes (e.g. an audited restart)
+  season_id uuid,
   historical_edition_id uuid,
   action text NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'PUBLISH', 'UNPUBLISH', 'DELETE')),
   reason text NOT NULL,
