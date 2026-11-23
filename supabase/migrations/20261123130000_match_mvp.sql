@@ -33,8 +33,9 @@ Access (decided by the FBF on 2026-11-23): the MVP result is NOT public while
 the feature is off. The MVP views are closed to visitors; the only doors are
 the functions match_mvp and mvp_results, which answer visitors only when the
 switch feature_flags.mvp_public is on (admins turn it on with
-set_feature_flag, with history). Managers (admins and organizers) can preview
-a match while it is off, to review it. General goalkeeper statistics
+set_feature_flag, with history). While it is off, admins can preview any match
+and organizers only the matches of the competitions they organize
+(can_manage_match), to review them; other organizers see nothing. General goalkeeper statistics
 (match_keeper_spells, player_match_keeping) stay public and do not depend on
 the switch.
 
@@ -184,7 +185,7 @@ CREATE TABLE IF NOT EXISTS public.match_mvp_reviews (
 );
 ALTER TABLE public.match_mvp_reviews ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS match_mvp_reviews_manager_select ON public.match_mvp_reviews;
-CREATE POLICY match_mvp_reviews_manager_select ON public.match_mvp_reviews FOR SELECT TO authenticated USING (public.is_fbf_manager());
+CREATE POLICY match_mvp_reviews_manager_select ON public.match_mvp_reviews FOR SELECT TO authenticated USING (public.can_manage_match(match_id));
 REVOKE ALL ON public.match_mvp_reviews FROM anon, authenticated;
 GRANT SELECT ON public.match_mvp_reviews TO authenticated;
 
@@ -326,7 +327,7 @@ AS $$
     SELECT 1 FROM public.matches m
     JOIN public.rounds r ON r.id = m.round_id JOIN public.stages stg ON stg.id = r.stage_id
     JOIN public.seasons s ON s.id = stg.season_id JOIN public.competitions c ON c.id = s.competition_id
-    WHERE m.id = p_match_id AND (c.status <> 'DRAFT' OR COALESCE(public.is_fbf_manager(), false))
+    WHERE m.id = p_match_id AND (c.status <> 'DRAFT' OR COALESCE(public.can_manage_match(p_match_id), false))
   );
 $$;
 REVOKE EXECUTE ON FUNCTION public._mvp_match_visible(uuid) FROM PUBLIC, anon, authenticated;
@@ -334,7 +335,8 @@ REVOKE EXECUTE ON FUNCTION public._mvp_match_visible(uuid) FROM PUBLIC, anon, au
 /* MVP of one match, as jsonb {enabled, preview, status, goals_without_author, review, rows}.
    - visitors: only {"enabled": false} while the switch is off; with it on,
      the breakdown only when the status is NORMAL;
-   - managers: always the full breakdown (a preview while it is off). */
+   - admins, and organizers of THIS match's competition: always the full
+     breakdown (a preview while it is off); any other organizer is a visitor here. */
 CREATE OR REPLACE FUNCTION public.match_mvp(p_match_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -344,7 +346,7 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_enabled boolean := public.mvp_enabled();
-  v_manager boolean := COALESCE(public.is_fbf_manager(), false);
+  v_manager boolean := COALESCE(public.can_manage_match(p_match_id), false);
   v_state record;
   v_rows jsonb;
 BEGIN
