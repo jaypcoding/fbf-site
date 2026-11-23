@@ -13,14 +13,15 @@ Branches empilhadas: `feature/expansao-mvp`, depois `feature/expansao-perfis`, d
   - sem MVP quando ninguém pontua positivo;
   - pênaltis contam como empate;
   - bônus de vitória só para participação comprovada (escalação, gol, assistência ou goleiro);
-  - só partidas com placar vindo dos eventos, como nas estatísticas oficiais.
+  - só partidas com placar vindo dos eventos, como nas estatísticas oficiais;
+  - situação de cada partida (decisão de 23/11): **W.O. confirmado** pela organização fica sem MVP, mesmo com escalação; **gol sem autor sem revisão** deixa o MVP pendente; revisada como **partida normal**, calcula normalmente (o gol sem autor não dá pontos). A revisão fica em `match_mvp_reviews`, feita pela seção "Situação para o MVP" do diálogo de Escalação, com motivo e histórico.
 - **Caso extremo decidido de forma conservadora:** gol sofrido **com minuto desconhecido** impede dividir o período, então o goleiro dessa equipe não recebe pontos de tempo naquela partida. É sinalizado na página.
 - **Página da partida:**
   - cartão do MVP (ou MVPs compartilhados) com o detalhamento;
   - "Como a pontuação foi calculada", com a tabela de todos os candidatos, a fórmula e avisos (escalação não registrada, minuto desconhecido).
-- **Publicação controlada:** visível no staging; em produção só com `VITE_FEATURE_MVP=true` no build. A publicação dos MVPs históricos depende da FBF.
+- **Publicação controlada pelo banco:** a chave `feature_flags.mvp_public` (só administradores, pelo quadro "Publicação do MVP" no painel, com motivo e histórico) protege a exibição e o acesso. As views do MVP ficam fechadas a visitantes; só as funções `match_mvp` e `mvp_results` entregam o resultado, e apenas com a chave ligada. Organizadores veem uma prévia na página da partida. As estatísticas de goleiro usam a view pública `player_match_keeping`, que não depende da chave. Começa desligada; a publicação dos MVPs históricos depende da FBF.
 - **Testes:**
-  - pgTAP `match_mvp` com 24 verificações: exemplo da proposta, gol contra, empate no topo, sem MVP, W.O., troca de goleiro, minuto desconhecido, jogador da escalação sem eventos, correção de súmula e leitura pública;
+  - pgTAP `match_mvp` com 50 verificações: exemplo da proposta, gol contra, empate no topo, sem MVP, W.O. confirmado, gol sem autor pendente e revisado, troca de goleiro, minuto desconhecido, jogador da escalação sem eventos, correção de súmula e acesso (fechado com a chave desligada, prévia para organizadores, aberto com a chave ligada, views sempre fechadas);
   - **partidas reais:** a lógica do banco aplicada aos 12 jogos oficiais de produção (consulta somente leitura) deu exatamente os mesmos MVPs e pontos da simulação aprovada, incluindo o MVP compartilhado e os 3 W.O. sem MVP;
   - E2E no staging: MVP triplo (3×1) e duplo (4×4), em desktop e celular, nos temas claro e escuro.
 
