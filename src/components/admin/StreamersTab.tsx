@@ -4,6 +4,7 @@ import { supabase, type Streamer } from '@/lib/supabase';
 import { LoadingCard, Modal, FormField, FormInput, FormSelect, FormError } from '@/components/ui';
 import { refreshAdminData, useAdminDataVersion } from '@/lib/adminRefresh';
 import { useConfirm } from '@/components/site';
+import { STREAM_PLATFORMS, normalizeChannel, platformLabel } from '@/lib/streaming';
 
 type Platform = Streamer['platform'];
 
@@ -23,6 +24,7 @@ export function StreamersTab() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Streamer | null>(null);
   const [linking, setLinking] = useState<Streamer | null>(null);
+  const [newPlatform, setNewPlatform] = useState<Platform>('TWITCH');
 
   useEffect(() => {
     let active = true;
@@ -43,9 +45,13 @@ export function StreamersTab() {
     const channel = String(form.get('channel') ?? '').trim();
     const platform = String(form.get('platform') ?? 'TWITCH') as Platform;
     if (!displayName || !channel) { setError('Preencha o nome e o canal.'); return; }
-    const { error: err } = await supabase.from('streamers').insert({ display_name: displayName, channel, platform });
+    const normalized = normalizeChannel(platform, channel);
+    if (!normalized.ok) { setError(normalized.message); return; }
+    setError(null);
+    const { error: err } = await supabase.from('streamers').insert({ display_name: displayName, channel: normalized.channel, platform });
     if (err) { setError('Não foi possível cadastrar o streamer.'); return; }
     formElement.reset();
+    setNewPlatform('TWITCH');
     refreshAdminData();
   }
 
@@ -65,13 +71,12 @@ export function StreamersTab() {
             <FormInput name="display_name" placeholder="Ex: Narrador Fulano" />
           </FormField>
           <FormField label="Plataforma">
-            <FormSelect name="platform" defaultValue="TWITCH">
-              <option value="TWITCH">Twitch</option>
-              <option value="YOUTUBE">YouTube</option>
+            <FormSelect name="platform" value={newPlatform} onChange={(e) => setNewPlatform(e.target.value as Platform)}>
+              {STREAM_PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </FormSelect>
           </FormField>
           <FormField label="Canal">
-            <FormInput name="channel" placeholder="Nome do canal na plataforma" />
+            <FormInput name="channel" placeholder={STREAM_PLATFORMS.find((p) => p.value === newPlatform)?.hint} />
           </FormField>
           <FormError message={error} />
           <button className="button button-primary">Cadastrar streamer <ArrowRight size={16} /></button>
@@ -85,7 +90,7 @@ export function StreamersTab() {
               <div key={s.id} className="admin-list-item">
                 <div>
                   <strong>{s.display_name}</strong>
-                  <span>{s.platform === 'TWITCH' ? 'Twitch' : 'YouTube'} · {s.channel}</span>
+                  <span>{platformLabel(s.platform)} · {s.channel}</span>
                 </div>
                 <div className="admin-list-actions">
                   <button className="button" onClick={() => setLinking(s)}>Partidas</button>
@@ -121,8 +126,12 @@ function StreamerEditForm({ streamer, onSaved }: { streamer: Streamer; onSaved: 
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (!displayName.trim() || !channel.trim()) { setError('Preencha o nome e o canal.'); return; }
+    // an unchanged channel of an existing streamer is kept as it is
+    const unchanged = channel.trim() === streamer.channel && platform === streamer.platform;
+    const normalized = unchanged ? { ok: true as const, channel: streamer.channel } : normalizeChannel(platform, channel);
+    if (!normalized.ok) { setError(normalized.message); return; }
     setBusy(true); setError(null);
-    const { error: err } = await supabase.from('streamers').update({ display_name: displayName.trim(), channel: channel.trim(), platform }).eq('id', streamer.id);
+    const { error: err } = await supabase.from('streamers').update({ display_name: displayName.trim(), channel: normalized.channel, platform }).eq('id', streamer.id);
     setBusy(false);
     if (err) { setError('Não foi possível salvar as alterações.'); return; }
     refreshAdminData();
@@ -136,12 +145,11 @@ function StreamerEditForm({ streamer, onSaved }: { streamer: Streamer; onSaved: 
       </FormField>
       <FormField label="Plataforma">
         <FormSelect value={platform} onChange={(e) => setPlatform(e.target.value as Platform)}>
-          <option value="TWITCH">Twitch</option>
-          <option value="YOUTUBE">YouTube</option>
+          {STREAM_PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
         </FormSelect>
       </FormField>
       <FormField label="Canal">
-        <FormInput value={channel} onChange={(e) => setChannel(e.target.value)} />
+        <FormInput value={channel} placeholder={STREAM_PLATFORMS.find((p) => p.value === platform)?.hint} onChange={(e) => setChannel(e.target.value)} />
       </FormField>
       <FormError message={error} />
       <button className="button button-primary" disabled={busy}>{busy ? 'Aguarde...' : 'Salvar alterações'} <ArrowRight size={16} /></button>

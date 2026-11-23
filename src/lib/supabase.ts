@@ -177,6 +177,6 @@ export type GoalkeeperParticipation = {
 export type Streamer = {
   id: string;
   display_name: string;
-  platform: 'TWITCH' | 'YOUTUBE';
+  platform: 'TWITCH' | 'YOUTUBE' | 'KICK';
   channel: string;
 };

@@ -2,12 +2,10 @@ import { useState } from 'react';
 import { Minus, Plus, Radio, X } from 'lucide-react';
 import { useLiveStreams, type LiveStream } from '@/lib/hooks';
 import type { Streamer } from '@/lib/supabase';
+import { embedUrl as platformEmbedUrl } from '@/lib/streaming';
 
 function embedUrl(streamer: Streamer) {
-  if (streamer.platform === 'TWITCH') {
-    return `https://player.twitch.tv/?channel=${encodeURIComponent(streamer.channel)}&parent=${window.location.hostname}`;
-  }
-  return `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(streamer.channel)}`;
+  return platformEmbedUrl(streamer.platform, streamer.channel, window.location.hostname);
 }
 
 export function LiveMiniPlayer() {
