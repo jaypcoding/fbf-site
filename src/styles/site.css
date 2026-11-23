@@ -412,6 +412,14 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .hof-facts dd b { color: #c2560f; }
 .hof-player { display: inline-flex; align-items: center; gap: 6px; color: #3e2d20; font-weight: 600; text-decoration: none; }
 .hof-player:hover, .hof-team:hover { text-decoration: underline; }
+.hof-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.hof-year { font-size: 11px; font-weight: 700; color: #5c4a3a; background: #f3ead9; border-radius: 999px; padding: 3px 9px; }
+.hof-season.is-historical { background: #fdfaf4; border-style: dashed; }
+.hof-historical { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #7a5a2e; }
+.hof-source { margin: 0; font-size: 12px; color: #8c8072; border-top: 1px solid #f1e5d2; padding-top: 8px; }
+.hof-titles-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.hof-titles-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hof-facts dd small { color: #8c8072; font-size: 12px; }
 @media (max-width: 520px) { .hof-seasons { grid-template-columns: 1fr; } }
 .profile-achievements { list-style: none; margin: 0 0 8px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
 .profile-achievements li { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid #ead7b8; border-radius: 12px; background: #fffaf2; }
@@ -421,3 +429,4 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .profile-achievements li strong { color: #3e2d20; }
 .profile-achievements li span { font-size: 13px; color: #8c8072; }
 .profile-achievements li a { color: inherit; }
+.profile-achievement-historical { font-size: 11px; font-weight: 700; color: #7a5a2e; letter-spacing: .03em; }

@@ -223,7 +223,7 @@ html[data-theme="dark"] .admin-attention.attention-undated { background: #2e2721
 html[data-theme="dark"] .admin-list-item .admin-round-teams { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-score { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-date { color: #d8cbbb; }
-/* styles/site.css (190 regras) */
+/* styles/site.css (196 regras) */
 html[data-theme="dark"] .skip-link { background: #0d0b09; }
 html[data-theme="dark"] .numbers-band { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .numbers-band a { border-right: 1px solid #3a3129; }
@@ -409,12 +409,18 @@ html[data-theme="dark"] .hof-pending { color: #ab9d8c; border: 1px dashed #3a312
 html[data-theme="dark"] .hof-facts dt { color: #ab9d8c; }
 html[data-theme="dark"] .hof-facts dd b { color: #f2a35e; }
 html[data-theme="dark"] .hof-player { color: #f3ebe0; }
+html[data-theme="dark"] .hof-year { color: #d8cbbb; background: #2e2721; }
+html[data-theme="dark"] .hof-season.is-historical { background: #16130f; }
+html[data-theme="dark"] .hof-historical { color: #f2a35e; }
+html[data-theme="dark"] .hof-source { color: #ab9d8c; border-top: 1px solid #3a3129; }
+html[data-theme="dark"] .hof-facts dd small { color: #ab9d8c; }
 html[data-theme="dark"] .profile-achievements li { border: 1px solid #3a3129; background: #16130f; }
 html[data-theme="dark"] .profile-achievements li svg { color: #f2a35e; }
 html[data-theme="dark"] .profile-achievements li.is-champion { background: linear-gradient(135deg, #3b2918, #6a4826); border-color: #6a4826; }
 html[data-theme="dark"] .profile-achievements li strong { color: #f3ebe0; }
 html[data-theme="dark"] .profile-achievements li span { color: #ab9d8c; }
-/* styles/replay.css (112 regras) */
+html[data-theme="dark"] .profile-achievement-historical { color: #f2a35e; }
+/* styles/replay.css (115 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }
 html[data-theme="dark"] .replay-header p { color: #ab9d8c; }
@@ -527,3 +533,6 @@ html[data-theme="dark"] .hof-admin-list li > strong { color: #f3ebe0; }
 html[data-theme="dark"] .hof-status { color: #ab9d8c; }
 html[data-theme="dark"] .hof-status.is-published { color: #93c79e; }
 html[data-theme="dark"] .hof-status.is-draft { color: #f2a35e; }
+html[data-theme="dark"] .hof-admin-or { color: #ab9d8c; }
+html[data-theme="dark"] .hof-admin-badge { color: #f2a35e; background: #2e2721; }
+html[data-theme="dark"] .hof-admin-list li.is-inactive > strong { color: #ab9d8c; }

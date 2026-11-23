@@ -12,7 +12,7 @@
 import { resolveAggregateWinner, resolveMatchWinner } from './competitionFormats.ts';
 import { sortStandings, type StandingsRow } from './standings.ts';
 
-export type HonourKind = 'CHAMPION' | 'RUNNER_UP' | 'THIRD_PLACE' | 'AWARD';
+export type HonourKind = 'CHAMPION' | 'RUNNER_UP' | 'THIRD_PLACE' | 'AWARD' | 'TOP_SCORER';
 export type PodiumStage = { id: string; stage_order: number; tie_breakers: string[] };
 export type PodiumRound = { id: string; stage_id: string; phase_type: string; bracket_round: number | null; name: string };
 export type PodiumMatch = {
@@ -126,19 +126,25 @@ export function seasonTopScorers(rows: ScorerRow[], seasonIds: Set<string>): Sea
   return out;
 }
 
-export type PublishedHonour = { season_id: string; kind: HonourKind; team_id: string | null };
-export type TitleLine = { teamId: string; titles: number; runnerUps: number; thirds: number };
+/** team_id: a registered team; team_name: a team of an edition before the system that is no longer registered */
+export type PublishedHonour = { season_id: string; kind: HonourKind; team_id: string | null; team_name?: string | null };
+export type TitleLine = { key: string; teamId: string | null; teamName: string | null; titles: number; runnerUps: number; thirds: number };
 
-/** Titles per team from the published honours, most titles first (then runner-ups, thirds). */
+// Titles per team. A registered team adds up its titles in the system and
+// before it; a team known only by name (before the system) is counted by
+// that name (case and spaces ignored).
 export function titleTable(honours: PublishedHonour[]): TitleLine[] {
   const m = new Map<string, TitleLine>();
   for (const h of honours) {
-    if (!h.team_id || h.kind === 'AWARD') continue;
-    const line = m.get(h.team_id) ?? { teamId: h.team_id, titles: 0, runnerUps: 0, thirds: 0 };
+    if (h.kind !== 'CHAMPION' && h.kind !== 'RUNNER_UP' && h.kind !== 'THIRD_PLACE') continue;
+    const name = h.team_name?.trim() || null;
+    const key = h.team_id ?? (name ? `name:${name.toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ')}` : null);
+    if (!key) continue;
+    const line = m.get(key) ?? { key, teamId: h.team_id, teamName: h.team_id ? null : name, titles: 0, runnerUps: 0, thirds: 0 };
     if (h.kind === 'CHAMPION') line.titles += 1;
     if (h.kind === 'RUNNER_UP') line.runnerUps += 1;
     if (h.kind === 'THIRD_PLACE') line.thirds += 1;
-    m.set(h.team_id, line);
+    m.set(key, line);
   }
   return [...m.values()].sort((a, b) => b.titles - a.titles || b.runnerUps - a.runnerUps || b.thirds - a.thirds);
 }

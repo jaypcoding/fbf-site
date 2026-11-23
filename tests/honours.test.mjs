@@ -76,3 +76,14 @@ test('title table: champions first, then runner-ups and thirds; awards ignored',
   ]);
   assert.deepEqual(t.map((l) => `${l.teamId}:${l.titles}/${l.runnerUps}`), ['Y:2/0', 'X:1/1', 'Z:0/1']);
 });
+
+test('title table: editions before the system add to registered teams; unregistered teams count by name', () => {
+  const t = titleTable([
+    { season_id: 's1', kind: 'CHAMPION', team_id: 'X' },
+    { season_id: 'h1', kind: 'CHAMPION', team_id: 'X' },
+    { season_id: 'h2', kind: 'CHAMPION', team_id: null, team_name: 'Equipe  Extinta' },
+    { season_id: 'h3', kind: 'RUNNER_UP', team_id: null, team_name: 'equipe extinta' },
+    { season_id: 'h3', kind: 'TOP_SCORER', team_id: null, team_name: 'Outra' },
+  ]);
+  assert.deepEqual(t.map((l) => `${l.teamId ?? l.teamName}:${l.titles}/${l.runnerUps}`), ['X:2/0', 'Equipe  Extinta:1/1']);
+});

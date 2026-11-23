@@ -102,7 +102,7 @@ export function PlayerDetailPage() {
               return (
                 <li key={a.key} className={`is-${a.kind.toLowerCase()}`}>
                   <Icon size={18} aria-hidden="true" />
-                  <div><strong>{a.title}</strong><span>{a.competitionId ? <Link to={`/competicoes/${a.competitionId}`}>{a.competition}</Link> : a.competition}{a.season && a.season !== a.competition ? ` · ${a.season}` : ''}{a.team ? ` · ${a.team}` : ''}</span></div>
+                  <div><strong>{a.title}</strong><span>{a.competitionId ? <Link to={`/competicoes/${a.competitionId}`}>{a.competition}</Link> : a.competition}{a.season && a.season !== a.competition ? ` · ${a.season}` : ''}{a.team ? ` · ${a.team}` : ''}</span>{a.historical && <small className="profile-achievement-historical">Registro anterior ao sistema</small>}</div>
                 </li>
               );
             })}
