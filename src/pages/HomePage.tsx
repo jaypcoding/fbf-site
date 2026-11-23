@@ -1,31 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BarChart3, CalendarDays, ChevronRight, Goal, Radio, Shield, Sparkles } from 'lucide-react';
-import { supabase, type Match } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useCompetitions } from '@/lib/hooks';
 import { useAdminDataVersion } from '@/lib/adminRefresh';
 import { buildMatchFeed } from '@/lib/matchFeed';
 import { usePageTitle } from '@/lib/pageTitle';
-import { one } from '@/lib/relations';
+import { FEED_SELECT, competitionOf, isPublicFeedRow, type FeedRow } from '@/lib/feedSelect';
 import { EmptyState, LoadingCard } from '@/components/ui';
 import { CompetitionGrid, FBF_LOGO, MatchCard } from '@/components/site';
-
-type FeedRow = Match & {
-  round?: Match['round'] & {
-    stage?: { season?: { competition?: { id: string; name: string; status: string } | null } | null } | null;
-  };
-};
-
-// Matches from archived (old CANCELLED) or draft competitions never appear in
-// the public agenda. The competition embed is !inner, so rows the visitor is not
-// allowed to see are dropped by the database itself.
-const HIDDEN_COMPETITION_STATUSES = new Set(['DRAFT', 'CANCELLED']);
-
-const FEED_SELECT = 'id, round_id, home_team_id, away_team_id, scheduled_at, home_score, away_score, status, series_id, series_leg, home_source_match_id, home_source_outcome, away_source_match_id, away_source_outcome, home_team:home_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), away_team:away_team_id ( id, season_id, team_id, team:team_id ( id, name, logo_url ) ), round:round_id!inner ( id, stage_id, name, round_order, phase_type, stage_group_id, leg_number, bracket_round, stage_group:stage_group_id ( id, name, group_order ), stage:stage_id!inner ( id, season:season_id!inner ( id, competition:competition_id!inner ( id, name, status ) ) ) )';
-
-function competitionOf(match: FeedRow) {
-  return one(one(one(match.round?.stage)?.season)?.competition);
-}
 
 function useMatchFeed() {
   const [feed, setFeed] = useState<ReturnType<typeof buildMatchFeed<FeedRow>> | null>(null);
@@ -46,10 +29,7 @@ function useMatchFeed() {
         return;
       }
       const rows = [...(upcomingResult.data || []), ...(recentResult.data || [])] as unknown as FeedRow[];
-      const visible = rows.filter((row) => {
-        const competition = competitionOf(row);
-        return competition && !HIDDEN_COMPETITION_STATUSES.has(competition.status);
-      });
+      const visible = rows.filter(isPublicFeedRow);
       setFeed(buildMatchFeed(visible, now, 6));
     });
     return () => { active = false; };
