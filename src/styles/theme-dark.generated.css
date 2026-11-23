@@ -392,7 +392,7 @@ html[data-theme="dark"] .ranking-sample { color: #ab9d8c; }
 html[data-theme="dark"] .ranking-value { color: #f2a35e; }
 html[data-theme="dark"] .ranking-value small { color: #ab9d8c; }
 html[data-theme="dark"] .ranking-row.podium-1 .stats-pos { color: #f2a35e; }
-/* styles/replay.css (96 regras) */
+/* styles/replay.css (102 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }
 html[data-theme="dark"] .replay-header p { color: #ab9d8c; }
@@ -489,3 +489,9 @@ html[data-theme="dark"] .lineup-reason { color: #f3ebe0; }
 html[data-theme="dark"] .mvp-review { border: 1px solid #3a3129; }
 html[data-theme="dark"] .mvp-review legend { color: #f3ebe0; }
 html[data-theme="dark"] .lineup-saved { color: #93c79e; }
+html[data-theme="dark"] .feature-flags { border: 1px solid #3a3129; background: #16130f; }
+html[data-theme="dark"] .feature-flags h2 { color: #f3ebe0; }
+html[data-theme="dark"] .feature-flags p { color: #d8cbbb; }
+html[data-theme="dark"] .feature-flags .is-on { color: #93c79e; }
+html[data-theme="dark"] .feature-flags .is-off { color: #f2a35e; }
+html[data-theme="dark"] .feature-flags-history { color: #ab9d8c; }

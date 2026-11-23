@@ -29,3 +29,8 @@ export function useMvpEnabled(): boolean | null {
   }, []);
   return enabled;
 }
+
+/** After an admin changes a switch, the next read asks the database again. */
+export function resetFeatureCache() {
+  mvpEnabledRequest = null;
+}

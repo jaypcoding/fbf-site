@@ -177,3 +177,11 @@
 .mvp-review-options label { display: flex; align-items: center; gap: 8px; }
 .lineup-saved { display: flex; align-items: center; gap: 6px; margin: 0; color: #2f6b3a; font-size: 13px; }
 @media (max-width: 640px) { .lineup-columns { grid-template-columns: 1fr; } }
+.feature-flags { margin: 18px 0; padding: 16px 18px; border: 1px solid #ead7b8; border-radius: 12px; background: #fffaf2; display: grid; gap: 10px; }
+.feature-flags h2 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 17px; color: #3e2d20; }
+.feature-flags p { margin: 0; font-size: 14px; color: #5c4a3a; }
+.feature-flags .is-on { color: #1f7a3a; }
+.feature-flags .is-off { color: #9a5b12; }
+.feature-flags-confirm { display: grid; gap: 10px; }
+.feature-flags-history { margin: 0; padding-left: 18px; font-size: 12px; color: #8c8072; display: grid; gap: 2px; }
+.feature-flags > .button { justify-self: start; }

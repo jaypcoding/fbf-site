@@ -1,6 +1,7 @@
 import { CalendarDays, CircleUserRound, Users, Trophy, ClipboardList } from 'lucide-react';
 import { useCompetitions, usePlayers, useSeasons, useTeams } from '@/lib/hooks';
 import { FormError } from '@/components/ui';
+import { FeatureFlagsPanel } from '@/components/admin/FeatureFlagsPanel';
 
 export function OverviewTab() {
   const { competitions, error: competitionsError } = useCompetitions();
@@ -25,6 +26,7 @@ export function OverviewTab() {
           </div>
         ))}
       </div>
+      <FeatureFlagsPanel />
       <div className="admin-empty">
         <div className="admin-empty-icon"><Trophy /></div>
         <div>
