@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, type Player } from '@/lib/supabase';
 import { one } from '@/lib/relations';
-import { FEATURE_MVP } from '@/lib/features';
+import { fetchMvpEnabled } from '@/lib/features';
 import { bySeason, summarize, type ProfileMatchRow, type SeasonLine, type Totals } from '@/lib/stats/profile';
 
 export type { ProfileMatchRow, SeasonLine, Totals };
@@ -53,17 +53,19 @@ export function usePlayerProfile(idOrSlug?: string, refreshVersion = 0) {
       if (error) { setState({ loading: false, error: true, profile: null }); return; }
       if (!player) { setState({ loading: false, error: false, profile: null }); return; }
       const pid = (player as { id: string }).id;
+      const mvpEnabled = await fetchMvpEnabled();
       const [statsRes, mvpRes, rosterRes, keeperRes] = await Promise.all([
         supabase.from('player_match_stats').select('match_id, competition_id, season_id, team_id, season_team_id, side, result, goals, assists, own_goals, was_goalkeeper, in_lineup, scheduled_at').eq('player_id', pid),
-        FEATURE_MVP ? supabase.from('match_mvp_scores').select('match_id, total, is_mvp').eq('player_id', pid) : Promise.resolve({ data: [], error: null }),
+        mvpEnabled ? supabase.rpc('mvp_results', { p_player_id: pid }) : Promise.resolve({ data: [], error: null }),
         supabase.from('rosters').select('shirt_number, season_team:season_team_id ( id, season_id, created_at, team:team_id ( id, name, logo_url ) )').eq('player_id', pid),
         supabase.from('goalkeeper_clean_sheet_statistics').select('games, clean_sheets, total_seconds').eq('player_id', pid),
       ]);
       if (!active) return;
       if (statsRes.error) { setState({ loading: false, error: true, profile: null }); return; }
       const rows = (statsRes.data ?? []) as ProfileMatchRow[];
-      const mvpRows = ((mvpRes.data ?? []) as { match_id: string; total: number; is_mvp: boolean }[]);
-      const mvpMatches = new Set(mvpRows.filter((m) => m.is_mvp).map((m) => m.match_id));
+      // only awards (mvp_results returns the winners, and nothing while unpublished)
+      const mvpRows = ((mvpRes.data ?? []) as { match_id: string; total: number }[]);
+      const mvpMatches = new Set(mvpRows.map((m) => m.match_id));
       const mvpPoints = new Map(mvpRows.map((m) => [m.match_id, m.total]));
       const rosters = ((rosterRes.data ?? []) as unknown as RosterRow[]).map((r) => ({ shirt: r.shirt_number, st: one(r.season_team) })).filter((r) => r.st && one(r.st.team));
 

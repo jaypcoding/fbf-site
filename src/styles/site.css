@@ -282,6 +282,7 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .mvp-breakdown strong { color: #2f6b3a; }
 .mvp-breakdown strong.is-negative { color: #b42318; }
 .mvp-empty { margin: 0; padding: 12px 14px; border: 1px dashed #e0c9a6; border-radius: 10px; color: #8c8072; font-size: 14px; }
+.mvp-preview { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: #fff4e0; border: 1px solid #f0c27a; color: #7a4a0c; font-size: 13px; font-weight: 600; }
 .mvp-explain { margin-top: 10px; }
 .mvp-toggle { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 6px 0; font: inherit; font-size: 13px; font-weight: 700; color: #8c4f16; cursor: pointer; }
 .mvp-toggle svg { transition: transform .2s ease; }

@@ -8,6 +8,7 @@ import { supabase, type Match } from '@/lib/supabase';
 import { useRosters } from '@/lib/hooks';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { FormError } from '@/components/ui';
+import { MatchMvpReview } from '@/components/admin/MatchMvpReview';
 
 type Side = 'home' | 'away';
 type Participation = { player_id: string; season_team_id: string; source: 'REPLAY' | 'SHEET'; seconds_played: number | null; player: { nickname: string } | null };
@@ -176,6 +177,7 @@ export function MatchLineupDialog({ match, teamNames, onDone }: { match: Match; 
         <button type="button" className="button button-outline" onClick={onDone}>Fechar</button>
         <button type="button" className="button button-primary" disabled={busy || !changed || selectedEntries.length === 0} onClick={() => void save()}>{busy ? 'Salvando...' : 'Salvar escalação'}</button>
       </div>
+      <MatchMvpReview matchId={match.id} />
     </div>
   );
 }

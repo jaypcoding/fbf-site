@@ -7,7 +7,7 @@ import { useAdminDataVersion } from '@/lib/adminRefresh';
 import { usePageTitle } from '@/lib/pageTitle';
 import { formatMatchDate, plural } from '@/lib/format';
 import { usePlayerProfile, type SeasonLine } from '@/lib/playerProfile';
-import { FEATURE_MVP } from '@/lib/features';
+import { useMvpEnabled } from '@/lib/features';
 import { EmptyState, LoadingCard, PlayerPhoto, TeamLogo } from '@/components/ui';
 
 const RESULT_LABEL: Record<'W' | 'D' | 'L', string> = { W: 'V', D: 'E', L: 'D' };
@@ -40,6 +40,7 @@ export function PlayerDetailPage() {
   const { id } = useParams();
   const refreshVersion = useAdminDataVersion();
   const { loading, error, profile } = usePlayerProfile(id, refreshVersion);
+  const mvpOn = useMvpEnabled() === true;
   const [showAll, setShowAll] = useState(false);
   usePageTitle(profile?.player.nickname ?? (loading ? null : 'Jogador'));
 
@@ -78,7 +79,7 @@ export function PlayerDetailPage() {
         <div><span>Assistências</span><strong>{totals.assists}</strong></div>
         <div title="Participações em gol: gols + assistências"><span>Gols + assist.</span><strong>{totals.contributions}</strong></div>
         <div><span>Gols contra</span><strong>{totals.ownGoals}</strong></div>
-        {FEATURE_MVP && <div className="is-mvp"><span>MVPs</span><strong>{totals.mvps}</strong></div>}
+        {mvpOn && <div className="is-mvp"><span>MVPs</span><strong>{totals.mvps}</strong></div>}
         {keeper && keeper.games > 0 && <div><span>Goleiro · clean sheets</span><strong>{keeper.clean_sheets}<small> em {keeper.games}</small></strong></div>}
       </div>
 
@@ -97,13 +98,13 @@ export function PlayerDetailPage() {
         <>
           <div className="profile-table-wrap">
             <table className="profile-table">
-              <thead><tr><th>Competição</th><th>Equipe</th><th title="Partidas">J</th><th title="Vitórias">V</th><th title="Empates">E</th><th title="Derrotas">D</th><th title="Gols">G</th><th title="Assistências">A</th><th title="Gols contra">GC</th>{FEATURE_MVP && <th title="MVPs">MVP</th>}</tr></thead>
+              <thead><tr><th>Competição</th><th>Equipe</th><th title="Partidas">J</th><th title="Vitórias">V</th><th title="Empates">E</th><th title="Derrotas">D</th><th title="Gols">G</th><th title="Assistências">A</th><th title="Gols contra">GC</th>{mvpOn && <th title="MVPs">MVP</th>}</tr></thead>
               <tbody>
                 {seasons.map((l) => (
                   <tr key={l.key}>
                     <td>{seasonLabel(l) || '—'}</td>
                     <td><Link to={`/times/${l.teamId}`} className="profile-team"><TeamLogo src={names.teams[l.teamId]?.logo ?? null} name={names.teams[l.teamId]?.name ?? ''} size={22} />{names.teams[l.teamId]?.name ?? '—'}</Link></td>
-                    <td>{l.matches}</td><td>{l.wins}</td><td>{l.draws}</td><td>{l.losses}</td><td><strong>{l.goals}</strong></td><td>{l.assists}</td><td>{l.ownGoals}</td>{FEATURE_MVP && <td>{l.mvps}</td>}
+                    <td>{l.matches}</td><td>{l.wins}</td><td>{l.draws}</td><td>{l.losses}</td><td><strong>{l.goals}</strong></td><td>{l.assists}</td><td>{l.ownGoals}</td>{mvpOn && <td>{l.mvps}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -130,7 +131,7 @@ export function PlayerDetailPage() {
                     {m.assists > 0 && <span className="profile-tag">{m.assists} assist.</span>}
                     {m.own_goals > 0 && <span className="profile-tag is-negative">{m.own_goals} contra</span>}
                     {m.was_goalkeeper && <span className="profile-tag">goleiro</span>}
-                    {FEATURE_MVP && m.mvp && <span className="profile-tag is-mvp">MVP · {m.mvpPoints} pts</span>}
+                    {mvpOn && m.mvp && <span className="profile-tag is-mvp">MVP · {m.mvpPoints} pts</span>}
                   </span>
                 </Link>
               </li>

@@ -5,7 +5,8 @@ import { aggregate, rank, CATEGORIES, MIN_MATCHES_EFFICIENCY } from '../src/lib/
 
 const cat = (k) => CATEGORIES.find((c) => c.key === k);
 const S = (player, over = {}) => ({ player_id: player, competition_id: 'c1', season_id: 's1', team_id: 't1', matches: 1, wins: 0, draws: 0, losses: 0, goals: 0, assists: 0, own_goals: 0, goalkeeper_matches: 0, ...over });
-const K = (player, match, over = {}) => ({ player_id: player, competition_id: 'c1', season_id: 's1', team_id: 't1', match_id: match, was_goalkeeper: false, keeper_goals_conceded: 0, keeper_time_unknown: false, is_mvp: false, ...over });
+const K = (player, match, over = {}) => ({ player_id: player, competition_id: 'c1', season_id: 's1', team_id: 't1', match_id: match, goals_conceded: 0, ...over });
+const M = (player, match, over = {}) => ({ player_id: player, competition_id: 'c1', season_id: 's1', team_id: 't1', match_id: match, ...over });
 const names = { a: 'Ana', b: 'Bia', c: 'Caio', d: 'Duda', g: 'Gui' };
 const nameOf = (id) => names[id] ?? id;
 
@@ -34,23 +35,26 @@ test(`efficiency rankings require ${MIN_MATCHES_EFFICIENCY} matches and report w
   assert.equal(Math.round(p.entries[1].value * 1000) / 10, 38.9, 'Caio: 7 of 18 points');
 });
 
-test('MVPs and goalkeeper averages come from the per-match rows, without counting a match twice', () => {
-  const keeper = [
-    K('g', 'm1', { was_goalkeeper: true, keeper_goals_conceded: 1, is_mvp: true }), K('g', 'm1', { was_goalkeeper: true, keeper_goals_conceded: 1, is_mvp: true }),
-    ...['m2', 'm3', 'm4', 'm5'].map((m) => K('g', m, { was_goalkeeper: true, keeper_goals_conceded: 2 })),
-    K('a', 'm1', { is_mvp: true }),
-  ];
-  const totals = aggregate([S('g', { matches: 5 }), S('a', { matches: 1 })], keeper, {});
+test('MVPs come only from the published awards; goalkeeper averages from the goalkeeper statistics, never counting a match twice', () => {
+  const keeper = [K('g', 'm1', { goals_conceded: 1 }), K('g', 'm1', { goals_conceded: 1 }), ...['m2', 'm3', 'm4', 'm5'].map((m) => K('g', m, { goals_conceded: 2 }))];
+  const mvps = [M('g', 'm1'), M('g', 'm1'), M('a', 'm1')];
+  const totals = aggregate([S('g', { matches: 5 }), S('a', { matches: 1 })], keeper, {}, mvps);
   assert.equal(totals.get('g').mvps, 1, 'duplicated line ignored');
   assert.equal(totals.get('g').keeperMatches, 5);
-  const mvps = rank(totals, cat('mvps'), nameOf);
-  assert.deepEqual(mvps.entries.map((e) => `${e.position}${e.tied ? '=' : ''}`), ['1=', '1='], 'shared');
-  const gk = rank(totals, cat('keeperConcededPerMatch'), nameOf);
-  assert.equal(gk.entries[0].value, 9 / 5, 'lower is better, 9 conceded in 5 matches');
+  assert.deepEqual(rank(totals, cat('mvps'), nameOf).entries.map((e) => `${e.position}${e.tied ? '=' : ''}`), ['1=', '1='], 'shared');
+  assert.equal(rank(totals, cat('keeperConcededPerMatch'), nameOf).entries[0].value, 9 / 5, 'lower is better, 9 conceded in 5 matches');
+});
+
+test('MVP not published: no MVP counted, goalkeeper ranking unchanged', () => {
+  const keeper = ['1', '2', '3', '4', '5'].map((m) => K('g', m, { goals_conceded: 1 }));
+  const totals = aggregate([S('g', { matches: 5 })], keeper, {});
+  assert.equal(totals.get('g').mvps, 0);
+  assert.equal(rank(totals, cat('mvps'), nameOf).entries.length, 0);
+  assert.equal(rank(totals, cat('keeperConcededPerMatch'), nameOf).entries[0].value, 1);
 });
 
 test('a goalkeeper with zero goals conceded ranks first (lower is better)', () => {
-  const keeper = [...['1', '2', '3', '4', '5'].map((m) => K('g', m, { was_goalkeeper: true })), ...['1', '2', '3', '4', '5'].map((m) => K('a', 'x' + m, { was_goalkeeper: true, keeper_goals_conceded: 1 }))];
+  const keeper = [...['1', '2', '3', '4', '5'].map((m) => K('g', m)), ...['1', '2', '3', '4', '5'].map((m) => K('a', 'x' + m, { goals_conceded: 1 }))];
   const r = rank(aggregate([], keeper, {}), cat('keeperConcededPerMatch'), nameOf);
   assert.deepEqual(r.entries.map((e) => [nameOf(e.totals.playerId), e.value]), [['Gui', 0], ['Ana', 1]]);
 });

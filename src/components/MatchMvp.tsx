@@ -20,10 +20,11 @@ function Breakdown({ r }: { r: MvpRow }) {
   return <ul className="mvp-breakdown">{items.map(([label, value]) => <li key={label}><span>{label}</span><strong className={value.startsWith('−') ? 'is-negative' : ''}>{value}</strong></li>)}</ul>;
 }
 
-export function MatchMvp({ matchId, homeName, awayName, homeTeamId }: { matchId: string; homeName: string; awayName: string; homeTeamId?: string | null }) {
-  const { rows, players, lineups } = useMatchMvp(matchId);
+export function MatchMvp({ matchId, homeName, awayName, homeTeamId, refreshKey = 0 }: { matchId: string; homeName: string; awayName: string; homeTeamId?: string | null; refreshKey?: number }) {
+  const { data, players, lineups } = useMatchMvp(matchId, refreshKey);
   const [open, setOpen] = useState(false);
-  if (rows === null) return null;
+  if (data === null) return null; // MVP not published (and not a manager preview)
+  const { rows, status, preview } = data;
   const teamName = (side: 'home' | 'away') => (side === 'home' ? homeName : awayName);
   const mvps = rows.filter((r) => r.is_mvp);
   const name = (id: string) => players[id]?.nickname ?? 'Jogador';
@@ -33,10 +34,17 @@ export function MatchMvp({ matchId, homeName, awayName, homeTeamId }: { matchId:
   return (
     <section className="mvp-section" aria-labelledby="mvp-title">
       <h2 id="mvp-title" className="match-page-heading">MVP da partida</h2>
-      {rows.length === 0 ? (
-        <p className="mvp-empty">Sem MVP: a partida não tem jogadores com participação registrada (por exemplo, resultado registrado sem autores, como W.O.).</p>
-      ) : rows.some((r) => r.mvp_blocked) ? (
-        <p className="mvp-empty">Sem MVP: há gol registrado sem autor (por exemplo, W.O.), então os dados não são suficientes para premiar.</p>
+      {preview && <p className="mvp-preview">Prévia para a organização: o MVP ainda não está publicado e visitantes não veem esta seção.</p>}
+      {status === 'WALKOVER' ? (
+        <p className="mvp-empty">Sem MVP: partida identificada pela organização como W.O.</p>
+      ) : status === 'PENDING_REVIEW' && !preview && rows.length === 0 ? (
+        <p className="mvp-empty">MVP pendente de revisão: há gol registrado sem autor e a organização ainda vai conferir a partida.</p>
+      ) : status === 'PENDING_REVIEW' ? (
+        <p className="mvp-empty">MVP pendente de revisão: há gol registrado sem autor. Confirme no painel se foi W.O. ou uma partida normal (botão Escalação).</p>
+      ) : status === 'UNAVAILABLE' ? (
+        <p className="mvp-empty">Sem MVP: o resultado foi registrado sem os eventos da partida.</p>
+      ) : rows.length === 0 ? (
+        <p className="mvp-empty">Sem MVP: a partida não tem jogadores com participação registrada.</p>
       ) : mvps.length === 0 ? (
         <p className="mvp-empty">Sem MVP: nenhum jogador terminou com pontuação positiva.</p>
       ) : (
@@ -84,6 +92,7 @@ export function MatchMvp({ matchId, homeName, awayName, homeTeamId }: { matchId:
                 Disputa de pênaltis conta como empate. Empate na maior pontuação divide o MVP; sem pontuação positiva, não há MVP.
                 Concorrem os jogadores com participação registrada: escalação, gol, assistência ou registro de goleiro.
                 {missingLineup.length > 0 && <> <strong>Escalação não registrada ({missingLineup.join(' e ')}):</strong> nessa equipe só aparecem os jogadores com gol, assistência ou registro de goleiro.</>}
+                {data.review === 'VALID' && data.goalsWithoutAuthor > 0 && <> A organização confirmou que a partida foi disputada normalmente; {data.goalsWithoutAuthor === 1 ? 'o gol sem autor registrado não dá pontos' : 'os gols sem autor registrado não dão pontos'} a ninguém.</>}
                 {rows.some((r) => r.keeper_time_unknown) && <> Um gol sofrido sem minuto informado impede dividir o tempo do goleiro; por isso o goleiro dessa equipe não recebeu pontos de tempo sem sofrer gol.</>}
               </p>
             </>

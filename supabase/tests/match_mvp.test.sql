@@ -102,7 +102,7 @@ CREATE FUNCTION pg_temp.line(m text, p text) RETURNS text LANGUAGE sql AS $$
 $$;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA pg_temp TO anon, authenticated;
 
-SELECT plan(26);
+SELECT plan(50);
 
 -- M1
 SELECT is((SELECT home_score || 'x' || away_score FROM public.matches WHERE id = '9e000000-0000-0000-0000-000000000001'), '4x1', 'M1 finished 4 x 1');
@@ -124,14 +124,17 @@ SELECT is((SELECT DISTINCT mvp_count FROM public.match_mvp_scores WHERE match_id
 SELECT is((SELECT count(*) FILTER (WHERE is_mvp) || '/' || count(*) FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000004'), '0/2', 'M4: nobody with a positive total -> no MVP');
 -- M5
 SELECT is((SELECT count(*)::integer FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000005'), 0, 'M5: W.O. without authors has no candidates and no MVP');
--- M5 with its lineup filled afterwards: the winners are candidates with the win bonus, but a goal without author blocks the MVP
+-- M5 with its lineup filled afterwards: the winners are candidates with the win bonus,
+-- but a goal without author and no review yet keeps the MVP pending
 INSERT INTO public.match_participations (match_id, player_id, season_team_id, source) VALUES
   ('9e000000-0000-0000-0000-000000000005', '7e000000-0000-0000-0000-00000000000a', '5e000000-0000-0000-0000-000000000001', 'SHEET'),
   ('9e000000-0000-0000-0000-000000000005', '7e000000-0000-0000-0000-00000000000c', '5e000000-0000-0000-0000-000000000001', 'SHEET');
-SELECT is((SELECT count(*) || ' ' || bool_and(won) || ' ' || bool_and(mvp_blocked) FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000005'), '2 true true',
-  'M5 + lineup: candidates with the win, flagged as blocked');
-SELECT is((SELECT count(*) FILTER (WHERE is_mvp) || '/' || max(mvp_count) FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000005'), '0/0',
-  'M5 + lineup: a goal without author -> no MVP (not enough data)');
+SELECT is((SELECT mvp_status || ' ' || goals_without_author FROM public.match_mvp_state WHERE match_id = '9e000000-0000-0000-0000-000000000005'), 'PENDING_REVIEW 1',
+  'M5: goal without author, not reviewed -> MVP pending review');
+SELECT is((SELECT count(*) || ' ' || bool_and(won) || ' ' || count(*) FILTER (WHERE is_mvp) FROM public.match_mvp_scores WHERE match_id = '9e000000-0000-0000-0000-000000000005'), '2 true 0',
+  'M5 + lineup, pending: candidates with the win, but no MVP yet');
+SELECT is((SELECT string_agg(DISTINCT mvp_status, ',') FROM public.match_mvp_state WHERE match_id IN ('9e000000-0000-0000-0000-000000000001', '9e000000-0000-0000-0000-000000000003', '9e000000-0000-0000-0000-000000000006')), 'NORMAL',
+  'matches with complete events are NORMAL (calculated as usual)');
 -- M6
 SELECT is(pg_temp.line('9e000000-0000-0000-0000-000000000006', '7e000000-0000-0000-0000-000000000001'), '0/0/3/0/0=3', 'M6: first keeper, 420 s clean -> 3 blocks');
 SELECT is(pg_temp.line('9e000000-0000-0000-0000-000000000006', '7e000000-0000-0000-0000-000000000002'), '0/0/2/0/0=2', 'M6: second keeper from 421 s, conceded at 500 s: 79 s (0) + 340 s (2)');
@@ -152,13 +155,52 @@ SELECT lives_ok(format($$SELECT public.edit_match_sheet('9e000000-0000-0000-0000
     jsonb_build_object('team_id', '5e000000-0000-0000-0000-000000000001', 'player_id', '7e000000-0000-0000-0000-00000000000a', 'is_own_goal', false, 'minute_seconds', 100),
     jsonb_build_object('team_id', '5e000000-0000-0000-0000-000000000001', 'player_id', '7e000000-0000-0000-0000-00000000000a', 'is_own_goal', false, 'minute_seconds', 200)))),
   'M3 corrected');
+RESET ROLE;
 SELECT is(pg_temp.line('9e000000-0000-0000-0000-000000000003', '7e000000-0000-0000-0000-00000000000a'), '6/0/0/2/0=8 MVP', 'M3 after the correction: A alone, 2 goals + win');
 
--- public, read only
-SET LOCAL ROLE anon;
-SELECT ok((SELECT count(*) FROM public.match_mvp_scores WHERE competition_id = '2e000000-0000-0000-0000-000000000001') > 0, 'visitors read the MVP breakdown');
-SELECT ok((SELECT count(*) FROM public.match_keeper_spells WHERE match_id = '9e000000-0000-0000-0000-000000000006') = 2, 'visitors read the goalkeeper spells');
+
+-- reviews of a goal without author (admin)
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '1e000000-0000-0000-0000-000000000001', true); END $$;
+SELECT throws_ok($$SELECT public.review_match_mvp('9e000000-0000-0000-0000-000000000005', 'VALID', '')$$, '22023', NULL, 'a review needs a reason');
+SELECT throws_ok($$SELECT public.review_match_mvp('9e000000-0000-0000-0000-000000000001', 'VALID', 'conferido')$$, '23514', NULL, 'VALID is refused where no goal lacks its author');
+SELECT lives_ok($$SELECT public.review_match_mvp('9e000000-0000-0000-0000-000000000005', 'VALID', 'jogo aconteceu, autor do gol desconhecido')$$, 'M5 reviewed as a legitimate match');
+SELECT is(public.match_mvp('9e000000-0000-0000-0000-000000000005')->>'status', 'NORMAL', 'M5 legitimate: status NORMAL');
+SELECT is((SELECT string_agg(r->>'player_id', ',' ORDER BY r->>'player_id') FROM jsonb_array_elements(public.match_mvp('9e000000-0000-0000-0000-000000000005')->'rows') r WHERE (r->>'is_mvp')::boolean),
+  '7e000000-0000-0000-0000-00000000000a,7e000000-0000-0000-0000-00000000000c', 'M5 legitimate: calculated normally (the goal without author gives nobody points; win bonus shared)');
+SELECT lives_ok($$SELECT public.review_match_mvp('9e000000-0000-0000-0000-000000000005', 'WALKOVER', 'W.O. confirmado pela organização')$$, 'M5 identified as an official W.O.');
+SELECT is((SELECT (j->>'status') || ' ' || (SELECT count(*) FROM jsonb_array_elements(j->'rows') r WHERE (r->>'is_mvp')::boolean)
+  FROM (SELECT public.match_mvp('9e000000-0000-0000-0000-000000000005') j) x), 'WALKOVER 0', 'official W.O.: no MVP even with a lineup');
+SELECT is((SELECT count(*)::integer FROM public.match_edit_history WHERE match_id = '9e000000-0000-0000-0000-000000000005' AND changes->>'kind' = 'mvp_review'), 2, 'every review is in the edit history');
 RESET ROLE;
+-- access: the MVP result is closed while the switch is off; goalkeeper statistics are not
+SELECT is((SELECT enabled FROM public.feature_flags WHERE key = 'mvp_public'), false, 'the MVP switch starts off');
+SET LOCAL ROLE anon;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '', true); END $$;
+SELECT throws_ok($$SELECT count(*) FROM public.match_mvp_scores$$, '42501', NULL, 'visitors cannot read the MVP breakdown view');
+SELECT throws_ok($$SELECT count(*) FROM public.match_mvp_state$$, '42501', NULL, 'visitors cannot read the MVP status view');
+SELECT is(public.match_mvp('9e000000-0000-0000-0000-000000000001'), '{"enabled": false}'::jsonb, 'switch off: visitors get no MVP of a match');
+SELECT is((SELECT count(*)::integer FROM public.mvp_results()), 0, 'switch off: visitors get no MVP awards');
+SELECT ok((SELECT count(*) FROM public.player_match_keeping WHERE competition_id = '2e000000-0000-0000-0000-000000000001') > 0, 'goalkeeper statistics stay public with the switch off');
+SELECT ok((SELECT count(*) FROM public.match_keeper_spells WHERE match_id = '9e000000-0000-0000-0000-000000000006') = 2, 'visitors read the goalkeeper spells');
+SELECT throws_ok($$SELECT public.set_feature_flag('mvp_public', true, 'tentativa')$$, '42501', NULL, 'visitors cannot turn the MVP on');
+RESET ROLE;
+-- a manager previews while it is off
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '1e000000-0000-0000-0000-000000000001', true); END $$;
+SELECT is((SELECT (j->>'preview') || ' ' || jsonb_array_length(j->'rows') FROM (SELECT public.match_mvp('9e000000-0000-0000-0000-000000000001') j) x), 'true 5', 'switch off: an admin previews the full breakdown');
+SELECT is((SELECT count(*)::integer FROM public.mvp_results()), 0, 'profiles and rankings never preview');
+SELECT throws_ok($$SELECT public.set_feature_flag('mvp_public', true, '')$$, '22023', NULL, 'turning the MVP on needs a reason');
+SELECT lives_ok($$SELECT public.set_feature_flag('mvp_public', true, 'escalações revisadas')$$, 'an admin turns the MVP on');
+RESET ROLE;
+SET LOCAL ROLE anon;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '', true); END $$;
+SELECT is((SELECT (j->>'enabled') || ' ' || (j->>'status') || ' ' || jsonb_array_length(j->'rows') FROM (SELECT public.match_mvp('9e000000-0000-0000-0000-000000000001') j) x), 'true NORMAL 5', 'switch on: visitors read the breakdown');
+SELECT is((SELECT (j->>'status') || ' ' || jsonb_array_length(j->'rows') FROM (SELECT public.match_mvp('9e000000-0000-0000-0000-000000000005') j) x), 'WALKOVER 0', 'switch on: a W.O. shows its status and no breakdown');
+SELECT ok((SELECT count(*) FROM public.mvp_results() WHERE competition_id = '2e000000-0000-0000-0000-000000000001') > 0, 'switch on: visitors read the MVP awards');
+SELECT throws_ok($$SELECT count(*) FROM public.match_mvp_scores$$, '42501', NULL, 'switch on: the views themselves stay closed');
+RESET ROLE;
+SELECT is((SELECT count(*)::integer FROM public.feature_flag_changes WHERE key = 'mvp_public'), 1, 'the activation is recorded with its reason');
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -7,7 +7,6 @@ import { useAdminDataVersion } from '@/lib/adminRefresh';
 import { usePageTitle } from '@/lib/pageTitle';
 import { useRankingsData } from '@/lib/rankingsData';
 import { aggregate, rank, CATEGORIES, MIN_MATCHES_EFFICIENCY, type CategoryKey } from '@/lib/stats/rankings';
-import { FEATURE_MVP } from '@/lib/features';
 import { EmptyState, LoadingCard, PageIntro, PlayerPhoto } from '@/components/ui';
 import { GoalkeeperRanking } from '@/components/GoalkeeperRanking';
 
@@ -24,7 +23,7 @@ export function StatsPage() {
   const season = params.get('temporada') ?? '';
   const team = params.get('equipe') ?? '';
   const category = params.get('categoria') ?? '';
-  const categories = CATEGORIES.filter((c) => !c.needsMvp || FEATURE_MVP);
+  const categories = CATEGORIES.filter((c) => !c.needsMvp || data?.mvpEnabled === true);
   const current = categories.find((c) => c.key === params.get('ranking')) ?? categories[0];
 
   const set = (changes: Record<string, string>) => {
@@ -39,7 +38,7 @@ export function StatsPage() {
     const visibleComps = data.competitions.filter((c) => c.status !== 'CANCELLED');
     const compIds = competition ? new Set([competition]) : category ? new Set(visibleComps.filter((c) => c.category === category).map((c) => c.id)) : new Set(visibleComps.map((c) => c.id));
     const filter = { competitionIds: compIds, seasonId: season || null, teamId: team || null };
-    const totals = aggregate(data.summary, data.keeper, filter);
+    const totals = aggregate(data.summary, data.keeper, filter, data.mvps);
     const nameOf = (id: string) => data.players.get(id)?.nickname ?? '';
     const ranking = rank(totals, current, nameOf);
     // options of the filters inside the current scope

@@ -13,7 +13,7 @@ import { FormError } from '@/components/ui';
 type Side = 'home' | 'away';
 type GoalRow = { key: number; side: Side; playerId: string; ownGoal: boolean; minute: string; assistId: string; period: string; metadata: Record<string, unknown> | null };
 type EventRow = { id: string; event_type: string; minute_seconds: number; period: string; team_id: string; player_id: string | null; is_own_goal: boolean; goal_event_id: string | null; metadata: Record<string, unknown> | null };
-type HistoryRow = { id: number; created_at: string; actor: string | null; source: string; reason: string; changes: { score_before?: (number | null)[]; score_after?: (number | null)[]; goals_before?: number; goals_after?: number; statistics_changed?: boolean; kind?: string; players_before?: number; players_after?: number; goalkeepers_changed?: boolean } };
+type HistoryRow = { id: number; created_at: string; actor: string | null; source: string; reason: string; changes: { score_before?: (number | null)[]; score_after?: (number | null)[]; goals_before?: number; goals_after?: number; statistics_changed?: boolean; kind?: string; players_before?: number; players_after?: number; goalkeepers_changed?: boolean; decision_after?: string | null } };
 type ReportPlayer = { name: string; identified: boolean; side: Side | null; stats: Record<string, number> };
 type Report = { players: ReportPlayer[]; teams: { home: Record<string, number>; away: Record<string, number> } };
 
@@ -313,6 +313,7 @@ export function MatchEditDialog({ match, onDone }: { match: Match; onDone: () =>
                 {h.changes.goalkeepers_changed ? ' · goleiros' : ''}
                 {h.changes.statistics_changed ? ' · estatísticas' : ''}
                 {h.changes.kind === 'lineup' ? ` · escalação (${h.changes.players_before ?? 0} → ${h.changes.players_after ?? 0} jogadores)` : ''}
+                {h.changes.kind === 'mvp_review' ? ` · situação do MVP: ${({ WALKOVER: 'W.O. confirmado', VALID: 'partida normal' } as Record<string, string>)[String(h.changes.decision_after)] ?? 'sem revisão'}` : ''}
                 <em> — {h.reason}</em>
               </li>
             ))}

@@ -53,7 +53,7 @@ export type MvpLine = {
   total: number;
 };
 
-/** blocked: a goal has no author (W.O. or unknown scorer), so there is not enough data to award the MVP */
+/** blocked: a goal has no author, so the MVP waits for the review of the match (official W.O.: none; legitimate match: calculated). The database applies that review (view match_mvp_state). */
 export type MvpResult = { lines: MvpLine[]; mvps: string[]; top: number | null; blocked: boolean };
 
 /** Side that benefits from a goal: own goals count for the opponent. */

@@ -1,5 +1,5 @@
-// Rankings of players from the official totals (player_season_summary and
-// match_mvp_scores). Pure functions: no database access. Ties share the same
+// Rankings of players from the official totals (player_season_summary,
+// player_match_keeping and, only when the MVP is published, mvp_results). Pure functions: no database access. Ties share the same
 // position (1, 1, 3); the display order inside a tie is alphabetical and has
 // no meaning. Efficiency rankings need a minimum number of matches.
 
@@ -9,7 +9,10 @@ export type SummaryRow = {
   player_id: string; competition_id: string; season_id: string; team_id: string;
   matches: number; wins: number; draws: number; losses: number; goals: number; assists: number; own_goals: number; goalkeeper_matches: number;
 };
-export type KeeperMatchRow = { player_id: string; competition_id: string; season_id: string; team_id: string; match_id: string; was_goalkeeper: boolean; keeper_goals_conceded: number; keeper_time_unknown: boolean; is_mvp: boolean };
+/** one line per goalkeeper per official match (view player_match_keeping) */
+export type KeeperMatchRow = { player_id: string; competition_id: string; season_id: string; team_id: string; match_id: string; goals_conceded: number };
+/** one line per MVP award (function mvp_results; empty while the MVP is not published) */
+export type MvpAwardRow = { player_id: string; competition_id: string; season_id: string; team_id: string; match_id: string };
 export type RankingFilter = { competitionIds?: Set<string> | null; seasonId?: string | null; teamId?: string | null };
 
 export type PlayerTotals = {
@@ -58,7 +61,7 @@ const inFilter = (r: { competition_id: string; season_id: string; team_id: strin
   (!f.competitionIds || f.competitionIds.has(r.competition_id)) && (!f.seasonId || r.season_id === f.seasonId) && (!f.teamId || r.team_id === f.teamId);
 
 /** Totals per player inside the filter. Each summary row is one player × competition × season × club, so nothing is counted twice. */
-export function aggregate(rows: SummaryRow[], keeperRows: KeeperMatchRow[], f: RankingFilter): Map<string, PlayerTotals> {
+export function aggregate(rows: SummaryRow[], keeperRows: KeeperMatchRow[], f: RankingFilter, mvpRows: MvpAwardRow[] = []): Map<string, PlayerTotals> {
   const out = new Map<string, PlayerTotals>();
   const get = (id: string) => {
     let t = out.get(id);
@@ -72,16 +75,23 @@ export function aggregate(rows: SummaryRow[], keeperRows: KeeperMatchRow[], f: R
     t.goals += r.goals; t.assists += r.assists; t.ownGoals += r.own_goals;
     if (!t.teamIds.includes(r.team_id)) t.teamIds.push(r.team_id);
   }
-  const seen = new Set<string>();
+  const seenKeeper = new Set<string>();
   for (const k of keeperRows) {
     if (!inFilter(k, f)) continue;
     const key = `${k.match_id}|${k.player_id}`;
-    if (seen.has(key)) continue; // one line per player per match
-    seen.add(key);
+    if (seenKeeper.has(key)) continue; // one line per player per match
+    seenKeeper.add(key);
     const t = get(k.player_id);
-    if (k.is_mvp) t.mvps += 1;
     // a goal conceded with unknown minute still counts as conceded; the match counts in goal
-    if (k.was_goalkeeper) { t.keeperMatches += 1; t.goalsConceded += k.keeper_goals_conceded; }
+    t.keeperMatches += 1; t.goalsConceded += k.goals_conceded;
+  }
+  const seenMvp = new Set<string>();
+  for (const m of mvpRows) {
+    if (!inFilter(m, f)) continue;
+    const key = `${m.match_id}|${m.player_id}`;
+    if (seenMvp.has(key)) continue;
+    seenMvp.add(key);
+    get(m.player_id).mvps += 1;
   }
   return out;
 }

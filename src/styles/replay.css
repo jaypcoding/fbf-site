@@ -171,5 +171,9 @@
 .lineup-proof { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #8c4f16; background: #fff4e3; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
 .lineup-reason { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: #3e2d20; }
 .lineup-reason input { font-weight: 400; }
+.mvp-review { margin: 16px 0 0; padding: 12px 14px; border: 1px solid #ead7b8; border-radius: 10px; display: grid; gap: 10px; }
+.mvp-review legend { padding: 0 6px; font-weight: 700; color: #3e2d20; }
+.mvp-review-options { display: grid; gap: 6px; font-size: 14px; }
+.mvp-review-options label { display: flex; align-items: center; gap: 8px; }
 .lineup-saved { display: flex; align-items: center; gap: 6px; margin: 0; color: #2f6b3a; font-size: 13px; }
 @media (max-width: 640px) { .lineup-columns { grid-template-columns: 1fr; } }
