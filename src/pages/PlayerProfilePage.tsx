@@ -2,12 +2,13 @@
 // numbers come from the official views through usePlayerProfile.
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CircleUserRound, Users } from 'lucide-react';
+import { Award, CircleUserRound, Crown, Goal, Medal, Users } from 'lucide-react';
 import { useAdminDataVersion } from '@/lib/adminRefresh';
 import { usePageTitle } from '@/lib/pageTitle';
 import { formatMatchDate, plural } from '@/lib/format';
 import { usePlayerProfile, type SeasonLine } from '@/lib/playerProfile';
 import { useMvpEnabled } from '@/lib/features';
+import { usePlayerHonours } from '@/lib/playerHonours';
 import { EmptyState, LoadingCard, PlayerPhoto, TeamLogo } from '@/components/ui';
 
 const RESULT_LABEL: Record<'W' | 'D' | 'L', string> = { W: 'V', D: 'E', L: 'D' };
@@ -41,6 +42,7 @@ export function PlayerDetailPage() {
   const refreshVersion = useAdminDataVersion();
   const { loading, error, profile } = usePlayerProfile(id, refreshVersion);
   const mvpOn = useMvpEnabled() === true;
+  const achievements = usePlayerHonours(profile?.player.id, profile?.teams.map((t) => t.seasonTeamId) ?? []);
   const [showAll, setShowAll] = useState(false);
   usePageTitle(profile?.player.nickname ?? (loading ? null : 'Jogador'));
 
@@ -89,6 +91,23 @@ export function PlayerDetailPage() {
           {incomplete.map((i) => `${i.matches} ${i.matches === 1 ? 'partida' : 'partidas'} de ${i.teamName}`).join(', ')} sem escalação registrada.
           Nelas só contam os jogadores com gol, assistência ou registro de goleiro; as partidas e vitórias deste perfil podem estar abaixo do real até a organização registrar a escalação.
         </p>
+      )}
+
+      {achievements.length > 0 && (
+        <>
+          <h2 className="match-page-heading">Conquistas</h2>
+          <ul className="profile-achievements">
+            {achievements.map((a) => {
+              const Icon = a.kind === 'CHAMPION' ? Crown : a.kind === 'TOP_SCORER' ? Goal : a.kind === 'AWARD' ? Award : Medal;
+              return (
+                <li key={a.key} className={`is-${a.kind.toLowerCase()}`}>
+                  <Icon size={18} aria-hidden="true" />
+                  <div><strong>{a.title}</strong><span>{a.competitionId ? <Link to={`/competicoes/${a.competitionId}`}>{a.competition}</Link> : a.competition}{a.season && a.season !== a.competition ? ` · ${a.season}` : ''}{a.team ? ` · ${a.team}` : ''}</span></div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
 
       <h2 className="match-page-heading">Desempenho por competição</h2>

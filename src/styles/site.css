@@ -379,3 +379,45 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
   .ranking-row { grid-template-columns: 32px 28px 1fr auto; gap: 8px; }
   .ranking-sample { display: none; }
 }
+
+/* Hall da Fama */
+.hof-page { display: grid; gap: 24px; }
+.hof-block h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 20px; color: #3e2d20; }
+.hof-titles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.hof-titles li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; padding: 12px 14px; border: 1px solid #ead7b8; border-radius: 12px; background: #fffaf2; }
+.hof-titles li a { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; min-width: 0; }
+.hof-titles li a strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hof-titles li span { font-size: 14px; color: #5c4a3a; }
+.hof-titles li span b { font-size: 20px; color: #c2560f; }
+.hof-titles li small { grid-column: 1 / -1; font-size: 12px; color: #8c8072; min-height: 0; }
+.hof-titles li small:empty { display: none; }
+.hof-seasons { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.hof-season { border: 1px solid #ead7b8; border-radius: 14px; background: #fff; padding: 16px 18px; display: grid; gap: 14px; align-content: start; }
+.hof-season header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.hof-season header a { color: inherit; text-decoration: none; }
+.hof-season h3 { margin: 0; font-size: 17px; color: #3e2d20; }
+.hof-category { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9a5b12; background: #fff1dc; border-radius: 999px; padding: 3px 9px; }
+.hof-podium { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hof-podium li { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: #fbf6ee; }
+.hof-podium li.is-champion { background: linear-gradient(135deg, #fff1d6, #ffe2b3); border: 1px solid #f0c27a; }
+.hof-place { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9a5b12; }
+.hof-team { display: flex; align-items: center; gap: 10px; font-weight: 700; color: #3e2d20; text-decoration: none; }
+.hof-podium li.is-champion .hof-team { font-size: 18px; }
+.hof-podium small { font-size: 12px; color: #8c8072; }
+.hof-pending { margin: 0; font-size: 14px; color: #8c8072; padding: 10px 12px; border: 1px dashed #e0c9a6; border-radius: 10px; }
+.hof-facts { margin: 0; display: grid; gap: 10px; }
+.hof-facts > div { display: grid; gap: 4px; }
+.hof-facts dt { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #8c8072; text-transform: uppercase; letter-spacing: .05em; }
+.hof-facts dd { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: 14px; }
+.hof-facts dd b { color: #c2560f; }
+.hof-player { display: inline-flex; align-items: center; gap: 6px; color: #3e2d20; font-weight: 600; text-decoration: none; }
+.hof-player:hover, .hof-team:hover { text-decoration: underline; }
+@media (max-width: 520px) { .hof-seasons { grid-template-columns: 1fr; } }
+.profile-achievements { list-style: none; margin: 0 0 8px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.profile-achievements li { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid #ead7b8; border-radius: 12px; background: #fffaf2; }
+.profile-achievements li svg { color: #c2560f; flex: none; margin-top: 2px; }
+.profile-achievements li.is-champion { background: linear-gradient(135deg, #fff1d6, #ffe2b3); border-color: #f0c27a; }
+.profile-achievements li div { display: grid; gap: 2px; min-width: 0; }
+.profile-achievements li strong { color: #3e2d20; }
+.profile-achievements li span { font-size: 13px; color: #8c8072; }
+.profile-achievements li a { color: inherit; }
