@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, CircleUserRound, ClipboardList, Crown, LayoutDashboard, LogIn, LogOut, Menu, Radio, Trophy, Users, X } from 'lucide-react';
+import { BarChart3, CircleUserRound, ClipboardList, Crown, LayoutDashboard, LogIn, LogOut, Menu, Newspaper, Radio, Trophy, Users, X } from 'lucide-react';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { initialAuthHash, supabase } from '@/lib/supabase';
 import { FORGOT_PASSWORD_PATH, RESET_PASSWORD_PATH, parseRecoveryHash } from '@/lib/passwordRecovery';
@@ -18,6 +18,8 @@ const TeamDetailPage = lazy(() => import('@/pages/TeamsPages').then((m) => ({ de
 const PlayersPage = lazy(() => import('@/pages/PlayersPages').then((m) => ({ default: m.PlayersPage })));
 const PlayerDetailPage = lazy(() => import('@/pages/PlayersPages').then((m) => ({ default: m.PlayerDetailPage })));
 const HallOfFamePage = lazy(() => import('@/pages/HallOfFamePage').then((m) => ({ default: m.HallOfFamePage })));
+const NewsListPage = lazy(() => import('@/pages/NewsPages').then((m) => ({ default: m.NewsListPage })));
+const NewsArticlePage = lazy(() => import('@/pages/NewsPages').then((m) => ({ default: m.NewsArticlePage })));
 const ComparePage = lazy(() => import('@/pages/ComparePage').then((m) => ({ default: m.ComparePage })));
 const LiveCenterPage = lazy(() => import('@/pages/LiveCenterPage').then((m) => ({ default: m.LiveCenterPage })));
 const StatsPage = lazy(() => import('@/pages/StatsPage').then((m) => ({ default: m.StatsPage })));
@@ -35,6 +37,7 @@ const navItems = [
   { label: 'Jogadores', to: '/jogadores', icon: CircleUserRound, end: false },
   { label: 'Rankings', to: '/estatisticas', icon: BarChart3, end: false },
   { label: 'Hall da Fama', to: '/hall-da-fama', icon: Crown, end: false },
+  { label: 'Notícias', to: '/noticias', icon: Newspaper, end: false },
 ];
 
 function App() {
@@ -124,6 +127,8 @@ function AppShell() {
               <Route path="/hall-da-fama" element={<HallOfFamePage />} />
               <Route path="/ao-vivo" element={<LiveCenterPage />} />
               <Route path="/comparar" element={<ComparePage />} />
+              <Route path="/noticias" element={<NewsListPage />} />
+              <Route path="/noticias/:slug" element={<NewsArticlePage />} />
               <Route path="/partidas/:id" element={<MatchPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/painel" element={<DashboardPage />} />

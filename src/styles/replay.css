@@ -203,8 +203,34 @@
 .hof-status.is-draft { color: #9a5b12; }
 .hof-admin-award { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end; }
 .hof-admin-modes { display: flex; flex-wrap: wrap; gap: 8px; }
-.hof-admin-modes button[aria-pressed="true"] { background: #c2560f; border-color: #c2560f; color: #fff; }
+.hof-admin-modes .button.button-outline[aria-pressed="true"] { background: #c2560f; border-color: #c2560f; color: #fff; }
 .hof-admin-or { font-size: 12px; color: #8c8072; align-self: center; }
 .hof-admin-edition { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
 .hof-admin-badge { font-size: 11px; font-weight: 700; color: #7a5a2e; background: #f3ead9; border-radius: 999px; padding: 2px 8px; }
 .hof-admin-list li.is-inactive > strong { color: #a99a88; text-decoration: line-through; }
+.news-admin { display: grid; gap: 14px; }
+.news-admin-layout { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 16px; align-items: start; }
+.news-admin-list { display: grid; gap: 10px; }
+.news-admin-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.news-admin-list li button { width: 100%; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; text-align: left; border: 1px solid #ead7b8; border-radius: 10px; background: #fff; padding: 8px 10px; cursor: pointer; color: #3e2d20; font: inherit; }
+.news-admin-list li button[aria-pressed="true"] { border-color: #c2560f; box-shadow: 0 0 0 2px rgba(194, 86, 15, .15); }
+.news-admin-list li button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 14px; }
+.news-admin-list li button small { grid-column: 2; }
+.news-admin-editor { border: 1px solid #ead7b8; border-radius: 12px; padding: 14px 16px; display: grid; gap: 12px; }
+.news-admin-editor h3 { margin: 0; font-size: 16px; color: #3e2d20; }
+.news-admin-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.news-admin-body { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: #5c4a3a; }
+.news-admin-pin { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.news-admin-history h4 { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 14px; color: #3e2d20; }
+.news-admin-history ol { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; color: #5c4a3a; }
+@media (max-width: 860px) { .news-admin-layout { grid-template-columns: 1fr; } }
+/* Header with more sections (Ao vivo, Hall da Fama, Notícias): labels never
+   wrap; icons hidden where space is short; collapsed menu up to 1200px. */
+.nav-link, .account-link, .login-link { white-space: nowrap; }
+@media (min-width: 1201px) and (max-width: 1440px) { .main-nav .nav-link > svg { display: none; } .main-nav { gap: 2px; } .nav-link, .account-link, .login-link { padding-left: 9px; padding-right: 9px; } }
+@media (min-width: 801px) and (max-width: 1200px) {
+  .mobile-toggle { display: block; }
+  .main-nav { display: none; position: absolute; right: 16px; top: 76px; width: min(340px, calc(100% - 32px)); background: #fff; border: 1px solid #eadcc7; border-radius: 8px; padding: 8px; box-shadow: 0 12px 30px #18181818; flex-direction: column; align-items: stretch; z-index: 50; }
+  .main-nav.is-open { display: flex; }
+  .nav-link, .account-link, .login-link { justify-content: flex-start; margin: 0; }
+}

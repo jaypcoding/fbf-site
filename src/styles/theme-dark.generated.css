@@ -223,7 +223,7 @@ html[data-theme="dark"] .admin-attention.attention-undated { background: #2e2721
 html[data-theme="dark"] .admin-list-item .admin-round-teams { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-score { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-date { color: #d8cbbb; }
-/* styles/site.css (234 regras) */
+/* styles/site.css (244 regras) */
 html[data-theme="dark"] .skip-link { background: #0d0b09; }
 html[data-theme="dark"] .numbers-band { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .numbers-band a { border-right: 1px solid #3a3129; }
@@ -458,7 +458,17 @@ html[data-theme="dark"] .compare-sample { color: #ab9d8c; }
 html[data-theme="dark"] .compare-h2h { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .compare-h2h h2 { color: #f3ebe0; }
 html[data-theme="dark"] .compare-h2h p { color: #d8cbbb; }
-/* styles/replay.css (115 regras) */
+html[data-theme="dark"] .news-card { border: 1px solid #3a3129; background: #211b17; }
+html[data-theme="dark"] .news-card h3 a { color: #f3ebe0; }
+html[data-theme="dark"] .news-card p { color: #d8cbbb; }
+html[data-theme="dark"] .news-card small { color: #ab9d8c; }
+html[data-theme="dark"] .news-kind { color: #f2a35e; }
+html[data-theme="dark"] .news-pinned { color: #ab9d8c; }
+html[data-theme="dark"] .news-article h1 { color: #f3ebe0; }
+html[data-theme="dark"] .news-meta { color: #ab9d8c; }
+html[data-theme="dark"] .news-summary { color: #d8cbbb; }
+html[data-theme="dark"] .news-body p { color: #f3ebe0; }
+/* styles/replay.css (123 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }
 html[data-theme="dark"] .replay-header p { color: #ab9d8c; }
@@ -574,3 +584,13 @@ html[data-theme="dark"] .hof-status.is-draft { color: #f2a35e; }
 html[data-theme="dark"] .hof-admin-or { color: #ab9d8c; }
 html[data-theme="dark"] .hof-admin-badge { color: #f2a35e; background: #2e2721; }
 html[data-theme="dark"] .hof-admin-list li.is-inactive > strong { color: #ab9d8c; }
+html[data-theme="dark"] .news-admin-list li button { border: 1px solid #3a3129; background: #211b17; color: #f3ebe0; }
+html[data-theme="dark"] .news-admin-list li button[aria-pressed="true"] { box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45); }
+html[data-theme="dark"] .news-admin-editor { border: 1px solid #3a3129; }
+html[data-theme="dark"] .news-admin-editor h3 { color: #f3ebe0; }
+html[data-theme="dark"] .news-admin-body { color: #d8cbbb; }
+html[data-theme="dark"] .news-admin-history h4 { color: #f3ebe0; }
+html[data-theme="dark"] .news-admin-history ol { color: #d8cbbb; }
+@media (min-width: 801px) and (max-width: 1200px) {
+  html[data-theme="dark"] .main-nav { background: #211b17; border: 1px solid #3a3129; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28); }
+}

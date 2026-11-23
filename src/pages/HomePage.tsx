@@ -8,6 +8,8 @@ import { buildMatchFeed } from '@/lib/matchFeed';
 import { usePageTitle } from '@/lib/pageTitle';
 import { FEED_SELECT, competitionOf, isPublicFeedRow, type FeedRow } from '@/lib/feedSelect';
 import { EmptyState, LoadingCard } from '@/components/ui';
+import { NewsCard } from '@/pages/NewsPages';
+import { usePublishedNews } from '@/lib/newsData';
 import { CompetitionGrid, FBF_LOGO, MatchCard } from '@/components/site';
 
 function useMatchFeed() {
@@ -70,6 +72,7 @@ export function HomePage() {
   const { competitions, loading, error } = useCompetitions();
   const { feed, error: feedError } = useMatchFeed();
   const counts = useDirectoryCounts();
+  const news = usePublishedNews(3);
   const active = competitions.filter((competition) => competition.status === 'ACTIVE');
   const upcoming = competitions.filter((competition) => ['UPCOMING', 'REGISTRATION'].includes(competition.status));
   const featured = [...active, ...upcoming];
@@ -113,8 +116,15 @@ export function HomePage() {
 
     {feed && feed.live.length > 0 && (
       <section className="container content-section live-section">
-        <div className="section-heading"><div><span className="section-kicker live-kicker"><Radio size={12} /> Ao vivo agora</span><h2>Partidas em andamento</h2></div></div>
+        <div className="section-heading"><div><span className="section-kicker live-kicker"><Radio size={12} /> Ao vivo agora</span><h2>Partidas em andamento</h2></div><Link to="/ao-vivo" className="text-link">Central ao Vivo <ArrowRight size={16} /></Link></div>
         <div className="matches-list">{feed.live.map((match) => <MatchCard key={match.id} match={match} context={competitionOf(match)?.name} />)}</div>
+      </section>
+    )}
+
+    {news.posts.length > 0 && (
+      <section className="container content-section news-home">
+        <div className="section-heading"><div><span className="section-kicker">FBF informa</span><h2>Notícias e comunicados</h2></div><Link to="/noticias" className="text-link">Ver todas <ArrowRight size={16} /></Link></div>
+        <div className="news-grid">{news.posts.map((p) => <NewsCard key={p.id} post={p} />)}</div>
       </section>
     )}
 

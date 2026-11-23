@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BadgeCheck, CalendarDays, CircleUserRound, ClipboardList, Crown, Flag, Goal, Hand, LayoutDashboard, ListOrdered, Mic, Shirt, Swords, Trophy, UserCog, Users } from 'lucide-react';
+import { BadgeCheck, CalendarDays, CircleUserRound, ClipboardList, Crown, Flag, Goal, Hand, LayoutDashboard, ListOrdered, Mic, Newspaper, Shirt, Swords, Trophy, UserCog, Users } from 'lucide-react';
 import type { Profile } from '@/lib/supabase';
 import { ThemeToggle } from '@/lib/theme';
 import { OverviewTab } from '@/components/admin/OverviewTab';
@@ -16,9 +16,10 @@ import { EventsTab } from '@/components/admin/EventsTab';
 import { GoalkeepersTab } from '@/components/admin/GoalkeepersTab';
 import { StreamersTab } from '@/components/admin/StreamersTab';
 import { HallOfFameTab } from '@/components/admin/HallOfFameTab';
+import { NewsTab } from '@/components/admin/NewsTab';
 import { OrganizersTab, UsersTab } from '@/components/admin/UsersTab';
 
-type Tab = 'overview' | 'competitions' | 'seasons' | 'teams' | 'players' | 'registrations' | 'rosters' | 'stages' | 'rounds' | 'matches' | 'events' | 'goalkeepers' | 'streamers' | 'hall' | 'organizers' | 'users';
+type Tab = 'overview' | 'competitions' | 'seasons' | 'teams' | 'players' | 'registrations' | 'rosters' | 'stages' | 'rounds' | 'matches' | 'events' | 'goalkeepers' | 'streamers' | 'hall' | 'news' | 'organizers' | 'users';
 
 const tabs: { id: Tab; label: string; icon: typeof Trophy; adminOnly?: boolean }[] = [
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
@@ -35,6 +36,7 @@ const tabs: { id: Tab; label: string; icon: typeof Trophy; adminOnly?: boolean }
   { id: 'goalkeepers', label: 'Goleiros', icon: Hand },
   { id: 'streamers', label: 'Streamers', icon: Mic, adminOnly: true },
   { id: 'hall', label: 'Hall da Fama', icon: Crown, adminOnly: true },
+  { id: 'news', label: 'Notícias', icon: Newspaper },
   { id: 'organizers', label: 'Organizadores', icon: BadgeCheck, adminOnly: true },
   { id: 'users', label: 'Usuários', icon: UserCog, adminOnly: true },
 ];
@@ -76,6 +78,7 @@ export function AdminPanel({ profile }: { profile: Profile | null }) {
         {tab === 'goalkeepers' && <GoalkeepersTab />}
         {tab === 'streamers' && isAdmin && <StreamersTab />}
         {tab === 'hall' && isAdmin && <HallOfFameTab />}
+        {tab === 'news' && <NewsTab profile={profile} />}
         {tab === 'organizers' && isAdmin && <OrganizersTab />}
         {tab === 'users' && isAdmin && <UsersTab currentUserId={profile?.id ?? ''} />}
       </div>
