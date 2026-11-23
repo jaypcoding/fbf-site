@@ -223,7 +223,7 @@ html[data-theme="dark"] .admin-attention.attention-undated { background: #2e2721
 html[data-theme="dark"] .admin-list-item .admin-round-teams { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-score { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-date { color: #d8cbbb; }
-/* styles/site.css (196 regras) */
+/* styles/site.css (197 regras) */
 html[data-theme="dark"] .skip-link { background: #0d0b09; }
 html[data-theme="dark"] .numbers-band { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .numbers-band a { border-right: 1px solid #3a3129; }
@@ -420,6 +420,7 @@ html[data-theme="dark"] .profile-achievements li.is-champion { background: linea
 html[data-theme="dark"] .profile-achievements li strong { color: #f3ebe0; }
 html[data-theme="dark"] .profile-achievements li span { color: #ab9d8c; }
 html[data-theme="dark"] .profile-achievement-historical { color: #f2a35e; }
+html[data-theme="dark"] .restart-heading { color: #f3ebe0; }
 /* styles/replay.css (115 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }

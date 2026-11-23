@@ -430,3 +430,4 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .profile-achievements li span { font-size: 13px; color: #8c8072; }
 .profile-achievements li a { color: inherit; }
 .profile-achievement-historical { font-size: 11px; font-weight: 700; color: #7a5a2e; letter-spacing: .03em; }
+.restart-heading { display: flex; align-items: center; gap: 6px; margin: 14px 0 8px; font-size: 14px; color: #3e2d20; }

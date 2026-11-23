@@ -13,6 +13,7 @@ import {
   type ResetResult,
 } from '@/lib/competitionReset';
 import { FormError, FormInput, LoadingCard, Modal } from '@/components/ui';
+import { CompetitionRestartDialog } from '@/components/admin/CompetitionRestartDialog';
 
 type Props = { competitions: Competition[]; onClose: () => void };
 
@@ -28,6 +29,7 @@ export function CompetitionResetDialog({ competitions, onClose }: Props) {
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ResetResult | null>(null);
+  const [restarting, setRestarting] = useState(false);
 
   function toggle(id: string) {
     setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
@@ -56,6 +58,11 @@ export function CompetitionResetDialog({ competitions, onClose }: Props) {
     }
     setResult(data as ResetResult);
     refreshAdminData();
+  }
+
+  if (restarting && selected.length === 1) {
+    const competition = competitions.find((c) => c.id === selected[0]) ?? { id: selected[0], name: 'Competição' };
+    return <CompetitionRestartDialog competition={competition} onClose={onClose} />;
   }
 
   return (
@@ -98,6 +105,9 @@ export function CompetitionResetDialog({ competitions, onClose }: Props) {
               <div className="deletion-blocked" role="alert">
                 <strong><AlertTriangle size={15} /> Reset bloqueado</strong>
                 <ul>{preview.blockers.map((blocker) => <li key={blocker.code}>{blocker.message}</li>)}</ul>
+                {preview.blockers.some((b) => b.code === 'HAS_HISTORY') && (selected.length === 1 ? (
+                  <button type="button" className="button button-outline button-small" onClick={() => setRestarting(true)}>Abrir o reinício auditado desta competição</button>
+                ) : <p>O reinício auditado é feito uma competição por vez: selecione só a competição com histórico.</p>)}
               </div>
             ) : (
               <form onSubmit={runReset}>

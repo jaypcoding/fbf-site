@@ -150,7 +150,7 @@ SELECT lives_ok($$SELECT set_config('hof.ed', public.save_historical_edition(NUL
 RESET ROLE;
 SET LOCAL ROLE anon;
 DO $$ BEGIN PERFORM pg_temp.as_user(''); END $$;
-SELECT is((SELECT count(*)::integer FROM public.historical_editions), 0, 'visitors do not see an edition without a published honour');
+SELECT is((SELECT count(*)::integer FROM public.historical_editions WHERE competition_name = 'FBF Antiga'), 0, 'visitors do not see an edition without a published honour');
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 DO $$ BEGIN PERFORM pg_temp.as_user('1f000000-0000-0000-0000-000000000001'); END $$;
@@ -170,7 +170,7 @@ SELECT is(public.publish_season_honour(current_setting('hof.hchamp')::uuid, true
 RESET ROLE;
 SET LOCAL ROLE anon;
 DO $$ BEGIN PERFORM pg_temp.as_user(''); END $$;
-SELECT is((SELECT count(*)::integer FROM public.historical_editions), 1, 'the edition becomes public with its first published honour');
+SELECT is((SELECT count(*)::integer FROM public.historical_editions WHERE competition_name = 'FBF Antiga'), 1, 'the edition becomes public with its first published honour');
 SELECT is((SELECT string_agg(kind, ',') FROM public.season_honours WHERE historical_edition_id = current_setting('hof.ed')::uuid), 'CHAMPION', 'visitors see only what was confirmed and published');
 RESET ROLE;
 SET LOCAL ROLE authenticated;
