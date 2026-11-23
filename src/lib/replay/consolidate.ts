@@ -825,6 +825,9 @@ export function officialPayload(sheet: MatchSheet) {
       return [{ side, player_id: id, started_at_seconds: Math.floor(firstGame?.offsetSeconds ?? 0) }];
     }),
     files: sheet.files.filter((f) => f.status === 'ANALYZED').map((f) => f.id),
+    // official lineup: identified roster players who were on the pitch in the
+    // pieces used by the sheet (one entry per player; side with more time)
+    participants: officialParticipants(sheet),
     aliases: sheet.players
       .filter((p) => p.playerId && p.resolution.status === 'matched' && p.resolution.via === 'manual')
       .flatMap((p) => p.names.map((n) => ({ player_id: p.playerId, alias: n }))),
@@ -832,6 +835,25 @@ export function officialPayload(sheet: MatchSheet) {
 }
 
 export type OfficialPayload = ReturnType<typeof officialPayload>;
+
+/** Players of the official lineup: identified, in the roster, with time on the pitch. */
+export function officialParticipants(sheet: MatchSheet): { player_id: string; side: Side; seconds_played: number }[] {
+  const byPlayer = new Map<string, { home: number; away: number }>();
+  for (const p of sheet.players) {
+    if (!p.playerId || !p.seasonTeamId || !p.side || p.resolution.status !== 'matched') continue;
+    const ticks = Math.max(0, p.stats.playedTicks ?? 0);
+    if (ticks <= 0) continue;
+    const t = byPlayer.get(p.playerId) ?? { home: 0, away: 0 };
+    t[p.side] += ticks;
+    byPlayer.set(p.playerId, t);
+  }
+  return [...byPlayer.entries()]
+    .map(([player_id, t]) => {
+      const side: Side = t.home >= t.away ? 'home' : 'away';
+      return { player_id, side, seconds_played: Math.round(t[side] / 60) };
+    })
+    .sort((a, b) => a.side.localeCompare(b.side) || a.player_id.localeCompare(b.player_id));
+}
 
 /** Public match report (statistics shown on the match page after confirmation). */
 export function publicReport(sheet: MatchSheet, playerNames: Record<string, string>) {
