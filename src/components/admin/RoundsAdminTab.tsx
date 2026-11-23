@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeftRight, CalendarClock, ClipboardPen, FileVideo, Lock, MoveRight, Save } from 'lucide-react';
+import { ArrowLeftRight, CalendarClock, ClipboardPen, FileVideo, Lock, MoveRight, Save, Users } from 'lucide-react';
 import { MatchEditDialog } from './MatchEditDialog';
+import { MatchLineupDialog } from './MatchLineupDialog';
 import { supabase, type Match } from '@/lib/supabase';
 import { useManagedCompetitions, useRounds, useSeasons, useStageMatches, useStages } from '@/lib/hooks';
 import { matchStatusLabels } from '@/lib/labels';
@@ -73,6 +74,7 @@ export function RoundsAdminTab() {
   const [scheduling, setScheduling] = useState<Match[] | null>(null);
   const [swapping, setSwapping] = useState<Match | null>(null);
   const [editingSheet, setEditingSheet] = useState<Match | null>(null);
+  const [editingLineup, setEditingLineup] = useState<Match | null>(null);
   const [moving, setMoving] = useState<Match | null>(null);
   const now = Date.now();
 
@@ -189,7 +191,7 @@ export function RoundsAdminTab() {
                             <button type="button" className="icon-button" title="Mover para outra rodada" aria-label="Mover para outra rodada" onClick={() => setMoving(m)}><MoveRight size={15} /></button>
                             <Link className="icon-button" to={`/painel?sumula=${m.id}`} title="Gravação e validação da partida" aria-label="Gravação e validação da partida"><FileVideo size={15} /></Link>
                           </span>
-                        ) : <span className="admin-round-actions">{m.status === 'FINISHED' && <button type="button" className="icon-button" title="Editar súmula da partida" aria-label="Editar súmula da partida" onClick={() => setEditingSheet(m)}><ClipboardPen size={15} /></button>}<Link className="icon-button" to={`/painel?sumula=${m.id}`} title="Gravação e súmula da partida" aria-label="Gravação e súmula da partida"><FileVideo size={15} /></Link></span>}
+                        ) : <span className="admin-round-actions">{m.status === 'FINISHED' && <button type="button" className="icon-button" title="Editar súmula da partida" aria-label="Editar súmula da partida" onClick={() => setEditingSheet(m)}><ClipboardPen size={15} /></button>}{m.status === 'FINISHED' && <button type="button" className="icon-button" title="Escalação: quem jogou a partida" aria-label="Escalação: quem jogou a partida" onClick={() => setEditingLineup(m as Match)}><Users size={15} /></button>}<Link className="icon-button" to={`/painel?sumula=${m.id}`} title="Gravação e súmula da partida" aria-label="Gravação e súmula da partida"><FileVideo size={15} /></Link></span>}
                       </div>
                     );
                   })}
@@ -207,6 +209,11 @@ export function RoundsAdminTab() {
       {editingSheet && (
         <Modal wide title={`Editar súmula: ${teamName(editingSheet, 'home')} × ${teamName(editingSheet, 'away')}`} onClose={() => setEditingSheet(null)}>
           <MatchEditDialog match={editingSheet} onDone={() => setEditingSheet(null)} />
+        </Modal>
+      )}
+      {editingLineup && (
+        <Modal wide title={`Escalação: ${teamName(editingLineup, 'home')} × ${teamName(editingLineup, 'away')}`} onClose={() => setEditingLineup(null)}>
+          <MatchLineupDialog match={editingLineup} teamNames={{ home: teamName(editingLineup, 'home'), away: teamName(editingLineup, 'away') }} onDone={() => setEditingLineup(null)} />
         </Modal>
       )}
       {swapping && (

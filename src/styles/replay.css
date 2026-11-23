@@ -153,3 +153,23 @@
 .replay-duration-note svg { flex: 0 0 auto; margin-top: 2px; color: #b5560f; }
 .replay-duration-note strong { color: #3e2d20; }
 @media (max-width: 600px) { .replay-duration-note { font-size: 12px; padding: 8px 10px; } }
+/* lineup editor (Escalação) */
+.lineup-dialog { display: grid; gap: 12px; }
+.lineup-source { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: #2f6b3a; }
+.lineup-source.is-missing { color: #8c4f16; }
+.lineup-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lineup-team { margin: 0; padding: 10px 12px; border: 1px solid #eadcc7; border-radius: 8px; min-width: 0; }
+.lineup-team legend { padding: 0 6px; font-weight: 700; color: #3e2d20; }
+.lineup-team legend span { font-weight: 400; font-size: 12px; color: #8c8072; margin-left: 4px; }
+.lineup-player { display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 1px solid #f3eadc; font-size: 13px; cursor: pointer; }
+.lineup-player:last-child { border-bottom: 0; }
+.lineup-player input { flex: 0 0 auto; }
+.lineup-player.is-other { opacity: .45; cursor: default; }
+.lineup-player.is-proven { cursor: default; }
+.lineup-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.lineup-name small { color: #8c8072; }
+.lineup-proof { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #8c4f16; background: #fff4e3; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.lineup-reason { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: #3e2d20; }
+.lineup-reason input { font-weight: 400; }
+.lineup-saved { display: flex; align-items: center; gap: 6px; margin: 0; color: #2f6b3a; font-size: 13px; }
+@media (max-width: 640px) { .lineup-columns { grid-template-columns: 1fr; } }

@@ -332,7 +332,7 @@ html[data-theme="dark"] .round-empty { color: #ab9d8c; }
 html[data-theme="dark"] .knockout-preview-round h4 { color: #f2a35e; }
 html[data-theme="dark"] .knockout-preview-series { border: 1px dashed #3a3129; background: #211b17; }
 html[data-theme="dark"] .knockout-preview-series span { color: #d8cbbb; }
-/* styles/replay.css (84 regras) */
+/* styles/replay.css (94 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }
 html[data-theme="dark"] .replay-header p { color: #ab9d8c; }
@@ -417,3 +417,13 @@ html[data-theme="dark"] .replay-link-form label { color: #f3ebe0; }
 html[data-theme="dark"] .replay-duration-note { border: 1px solid #3a3129; background: #16130f; color: #f2a35e; }
 html[data-theme="dark"] .replay-duration-note svg { color: #f2a35e; }
 html[data-theme="dark"] .replay-duration-note strong { color: #f3ebe0; }
+html[data-theme="dark"] .lineup-source { color: #93c79e; }
+html[data-theme="dark"] .lineup-source.is-missing { color: #f2a35e; }
+html[data-theme="dark"] .lineup-team { border: 1px solid #3a3129; }
+html[data-theme="dark"] .lineup-team legend { color: #f3ebe0; }
+html[data-theme="dark"] .lineup-team legend span { color: #ab9d8c; }
+html[data-theme="dark"] .lineup-player { border-bottom: 1px solid #3a3129; }
+html[data-theme="dark"] .lineup-name small { color: #ab9d8c; }
+html[data-theme="dark"] .lineup-proof { color: #f2a35e; background: #2e2721; }
+html[data-theme="dark"] .lineup-reason { color: #f3ebe0; }
+html[data-theme="dark"] .lineup-saved { color: #93c79e; }
