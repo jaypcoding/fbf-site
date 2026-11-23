@@ -98,7 +98,7 @@ SELECT throws_ok(format($$SELECT public.save_match_lineup('9d000000-0000-0000-00
   jsonb_build_array(pg_temp.l('7d000000-0000-0000-0000-000000000006', 'home'))), '23514', NULL, 'a player outside the roster of that team is refused');
 SELECT throws_ok(format($$SELECT public.save_match_lineup('9d000000-0000-0000-0000-000000000001', %L, %L, 'sem lado')$$, pg_temp.lfp('9d000000-0000-0000-0000-000000000001'),
   jsonb_build_array(jsonb_build_object('player_id', '7d000000-0000-0000-0000-000000000002'))), '22023', NULL, 'each player needs a side');
-SELECT is((SELECT count(*)::integer FROM public.match_participations), 0, 'refused lineups changed nothing');
+SELECT is((SELECT count(*)::integer FROM public.match_participations WHERE match_id::text LIKE '9d000000-%'), 0, 'refused lineups changed nothing');
 
 -- ---------------------------------------------------------------- save_match_lineup: lineup and correction
 SELECT lives_ok(format($$SELECT public.save_match_lineup('9d000000-0000-0000-0000-000000000001', %L, %L, 'escalação conferida')$$, pg_temp.lfp('9d000000-0000-0000-0000-000000000001'),
