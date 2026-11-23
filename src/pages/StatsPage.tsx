@@ -1,120 +1,159 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { BarChart3, CircleSlash, Goal, Handshake } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+// Rankings of the FBF (route /estatisticas). Totals from the official views;
+// ranking rules in src/lib/stats/rankings.ts. Filters live in the URL.
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { BarChart3, Info } from 'lucide-react';
 import { useAdminDataVersion } from '@/lib/adminRefresh';
-import { formatClock } from '@/lib/time';
 import { usePageTitle } from '@/lib/pageTitle';
-import { buildSeasonLeaders, type LeaderPlayer, type SeasonStatRow } from '@/lib/seasonLeaders';
+import { useRankingsData } from '@/lib/rankingsData';
+import { aggregate, rank, CATEGORIES, MIN_MATCHES_EFFICIENCY, type CategoryKey } from '@/lib/stats/rankings';
+import { FEATURE_MVP } from '@/lib/features';
 import { EmptyState, LoadingCard, PageIntro, PlayerPhoto } from '@/components/ui';
 import { GoalkeeperRanking } from '@/components/GoalkeeperRanking';
 
-const TOP = 10;
-
-type StatsData = {
-  goals: number;
-  assists: number;
-  ownGoals: number;
-  cleanSheetTime: number;
-  rows: SeasonStatRow[];
-  players: Map<string, LeaderPlayer>;
-};
-
-function Leaderboard({ title, icon, rows, kind, players, unit }: { title: string; icon: React.ReactNode; rows: SeasonStatRow[]; kind: 'goals' | 'assists' | 'own_goals'; players: Map<string, LeaderPlayer>; unit: [string, string] }) {
-  const leaders = buildSeasonLeaders(rows, kind, players, new Map()).slice(0, TOP);
-  return (
-    <div className="leaderboard">
-      <div className="leaderboard-heading">{icon}<h3>{title}</h3></div>
-      {leaders.length === 0 ? <p className="feed-empty">Ainda não há registros.</p> : (
-        <ol className="leaderboard-list">
-          {leaders.map((leader, index) => (
-            <li key={leader.player.id}>
-              <Link to={`/jogadores/${leader.player.id}`} className={index < 3 ? `podium-${index + 1}` : ''}>
-                <span className="stats-pos">{index + 1}</span>
-                <PlayerPhoto src={leader.player.photo_url} name={leader.player.nickname} size={30} />
-                <strong>{leader.player.nickname}</strong>
-                <span className="leaderboard-count">{leader.count}<small> {leader.count === 1 ? unit[0] : unit[1]}</small></span>
-              </Link>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
-  );
-}
+const PAGE = 30;
+const PARTICIPATION_BASED: CategoryKey[] = ['matches', 'wins', 'pointsPct', 'goalsPerMatch', 'assistsPerMatch', 'contributionsPerMatch'];
 
 export function StatsPage() {
-  usePageTitle('Estatísticas');
-  const [data, setData] = useState<StatsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  usePageTitle('Rankings');
   const refreshVersion = useAdminDataVersion();
+  const { loading, error, data } = useRankingsData(refreshVersion);
+  const [params, setParams] = useSearchParams();
+  const [showAll, setShowAll] = useState(false);
+  const competition = params.get('competicao') ?? '';
+  const season = params.get('temporada') ?? '';
+  const team = params.get('equipe') ?? '';
+  const category = params.get('categoria') ?? '';
+  const categories = CATEGORIES.filter((c) => !c.needsMvp || FEATURE_MVP);
+  const current = categories.find((c) => c.key === params.get('ranking')) ?? categories[0];
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(false);
-    async function load(): Promise<StatsData> {
-      const [statsResult, keeperResult] = await Promise.all([
-        supabase.from('player_career_statistics').select('player_id, goals, assists, own_goals'),
-        supabase.from('goalkeeper_clean_sheet_statistics').select('total_seconds'),
-      ]);
-      if (statsResult.error || keeperResult.error) throw statsResult.error ?? keeperResult.error;
-      const rows = (statsResult.data || []) as SeasonStatRow[];
-      const keeperRows = (keeperResult.data || []) as { total_seconds: number }[];
-      // Every player with at least one goal or assist, so ties at the cut-off are
-      // ordered correctly by name.
-      const topIds = new Set(rows.filter((row) => row.goals > 0 || row.assists > 0 || (row.own_goals ?? 0) > 0).map((row) => row.player_id));
-      const players = new Map<string, LeaderPlayer>();
-      if (topIds.size > 0) {
-        const { data: playerRows, error: playersError } = await supabase.from('players').select('id, nickname, photo_url, position').in('id', [...topIds]);
-        if (playersError) throw playersError;
-        for (const player of (playerRows || []) as LeaderPlayer[]) players.set(player.id, player);
-      }
-      return {
-        goals: rows.reduce((total, row) => total + row.goals, 0),
-        assists: rows.reduce((total, row) => total + row.assists, 0),
-        ownGoals: rows.reduce((total, row) => total + (row.own_goals ?? 0), 0),
-        cleanSheetTime: keeperRows.reduce((total, row) => total + row.total_seconds, 0),
-        rows,
-        players,
-      };
-    }
-    load().then((result) => {
-      if (!active) return;
-      setData(result);
-      setLoading(false);
-    }).catch(() => {
-      if (!active) return;
-      setError(true);
-      setLoading(false);
-    });
-    return () => { active = false; };
-  }, [refreshVersion]);
+  const set = (changes: Record<string, string>) => {
+    const next = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(changes)) { if (v) next.set(k, v); else next.delete(k); }
+    setParams(next, { replace: true });
+    setShowAll(false);
+  };
+
+  const view = useMemo(() => {
+    if (!data) return null;
+    const visibleComps = data.competitions.filter((c) => c.status !== 'CANCELLED');
+    const compIds = competition ? new Set([competition]) : category ? new Set(visibleComps.filter((c) => c.category === category).map((c) => c.id)) : new Set(visibleComps.map((c) => c.id));
+    const filter = { competitionIds: compIds, seasonId: season || null, teamId: team || null };
+    const totals = aggregate(data.summary, data.keeper, filter);
+    const nameOf = (id: string) => data.players.get(id)?.nickname ?? '';
+    const ranking = rank(totals, current, nameOf);
+    // options of the filters inside the current scope
+    const teamsInScope = [...new Set(data.summary.filter((r) => compIds.has(r.competition_id) && (!season || r.season_id === season)).map((r) => r.team_id))]
+      .map((id) => data.teams.get(id)).filter(Boolean).sort((a, b) => a!.name.localeCompare(b!.name, 'pt-BR'));
+    const all = [...totals.values()];
+    return {
+      ranking, nameOf, visibleComps, teamsInScope,
+      seasonsInScope: competition ? data.seasons.filter((s) => s.competition_id === competition) : [],
+      categoriesList: [...new Set(visibleComps.map((c) => c.category).filter(Boolean))] as string[],
+      summary: { goals: all.reduce((s, t) => s + t.goals, 0), assists: all.reduce((s, t) => s + t.assists, 0), ownGoals: all.reduce((s, t) => s + t.ownGoals, 0), players: all.filter((t) => t.matches > 0).length },
+    };
+  }, [data, competition, season, team, category, current]);
+
+  const scopeLabel = !data ? '' : competition ? [data.competitions.find((c) => c.id === competition)?.name, data.seasons.find((s) => s.id === season)?.name].filter(Boolean).join(' · ') : category ? `Histórico · categoria ${category}` : 'Histórico geral';
+  const fmt = (v: number) => (current.format ? current.format(v) : v.toLocaleString('pt-BR'));
+  const entries = view ? (showAll ? view.ranking.entries : view.ranking.entries.slice(0, PAGE)) : [];
 
   return (
     <>
-      <PageIntro eyebrow="Dados do jogo" title="Estatísticas" description="Os números oficiais da FBF são calculados a partir de partidas finalizadas, eventos e participações registradas." />
-      <section className="container stats-section">
-        {error ? <EmptyState icon={<BarChart3 />} title="Não foi possível carregar as estatísticas" description="Tente atualizar a página em instantes." /> : loading || !data ? <LoadingCard /> : (
+      <PageIntro eyebrow="Dados oficiais" title="Rankings" description="Classificações individuais calculadas a partir das súmulas oficiais da FBF: partidas finalizadas, eventos e participações registradas." />
+      <section className="container stats-section rankings-page">
+        {error ? <EmptyState icon={<BarChart3 />} title="Não foi possível carregar os rankings" description="Tente atualizar a página em instantes." /> : loading || !data || !view ? <LoadingCard /> : (
           <>
-            <div className="stat-preview-grid is-four">
-              <div className="stat-preview"><span>Gols</span><strong>{data.goals}</strong><small>Em partidas finalizadas</small></div>
-              <div className="stat-preview"><span>Assistências</span><strong>{data.assists}</strong><small>Em partidas finalizadas</small></div>
-              <div className="stat-preview"><span>Gols contra</span><strong>{data.ownGoals}</strong><small>Contam para o adversário</small></div>
-              <div className="stat-preview"><span>Goleiros / CS</span><strong>{formatClock(data.cleanSheetTime)}</strong><small>Tempo total sem sofrer gol</small></div>
+            <div className="rankings-filters" role="group" aria-label="Filtros dos rankings">
+              <label><span>Competição</span>
+                <select value={competition} onChange={(e) => set({ competicao: e.target.value, temporada: '', equipe: '', categoria: '' })}>
+                  <option value="">Histórico geral (todas)</option>
+                  {view.visibleComps.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </label>
+              <label><span>Temporada</span>
+                <select value={season} disabled={!competition} onChange={(e) => set({ temporada: e.target.value, equipe: '' })}>
+                  <option value="">{competition ? 'Todas as temporadas' : 'Escolha uma competição'}</option>
+                  {view.seasonsInScope.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </label>
+              <label><span>Equipe</span>
+                <select value={team} onChange={(e) => set({ equipe: e.target.value })}>
+                  <option value="">Todas as equipes</option>
+                  {view.teamsInScope.map((t) => <option key={t!.id} value={t!.id}>{t!.name}</option>)}
+                </select>
+              </label>
+              {view.categoriesList.length > 1 && (
+                <label><span>Categoria</span>
+                  <select value={category} disabled={Boolean(competition)} onChange={(e) => set({ categoria: e.target.value, equipe: '' })}>
+                    <option value="">Todas</option>
+                    {view.categoriesList.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
+              )}
             </div>
-            <div className="leaderboard-grid">
-              <Leaderboard title="Artilharia histórica" icon={<Goal size={18} />} rows={data.rows} kind="goals" players={data.players} unit={['gol', 'gols']} />
-              <Leaderboard title="Garçons históricos" icon={<Handshake size={18} />} rows={data.rows} kind="assists" players={data.players} unit={['assist.', 'assist.']} />
-              <Leaderboard title="Gols contra" icon={<CircleSlash size={18} />} rows={data.rows} kind="own_goals" players={data.players} unit={['gol contra', 'gols contra']} />
+
+            <div className="stat-preview-grid is-four">
+              <div className="stat-preview"><span>Gols</span><strong>{view.summary.goals}</strong><small>{scopeLabel}</small></div>
+              <div className="stat-preview"><span>Assistências</span><strong>{view.summary.assists}</strong><small>{scopeLabel}</small></div>
+              <div className="stat-preview"><span>Gols contra</span><strong>{view.summary.ownGoals}</strong><small>Contam para o adversário</small></div>
+              <div className="stat-preview"><span>Jogadores</span><strong>{view.summary.players}</strong><small>Com participação comprovada</small></div>
+            </div>
+
+            <nav className="ranking-tabs" aria-label="Rankings">
+              {categories.map((c) => (
+                <button key={c.key} type="button" className={`ranking-tab${c.key === current.key ? ' active' : ''}${c.informative ? ' is-informative' : ''}`} aria-pressed={c.key === current.key} onClick={() => set({ ranking: c.key === categories[0].key ? '' : c.key })}>{c.label}</button>
+              ))}
+            </nav>
+
+            <p className="ranking-min-rule"><Info size={14} aria-hidden="true" /> Rankings de eficiência (aproveitamento e médias por partida) exigem <strong>no mínimo {MIN_MATCHES_EFFICIENCY} partidas</strong> no recorte escolhido.</p>
+
+            <div className="ranking-board">
+              <div className="ranking-board-head">
+                <h2>{current.label}</h2>
+                <span>{scopeLabel}</span>
+              </div>
+              {current.efficiency && (
+                <p className="ranking-note is-min">
+                  Mínimo de {MIN_MATCHES_EFFICIENCY} {current.key === 'keeperConcededPerMatch' ? 'partidas como goleiro' : 'partidas'}.
+                  {view.ranking.belowMinimum > 0 ? ` ${view.ranking.belowMinimum} ${view.ranking.belowMinimum === 1 ? 'jogador ainda não alcançou' : 'jogadores ainda não alcançaram'} o mínimo e não ${view.ranking.belowMinimum === 1 ? 'aparece' : 'aparecem'}.` : ''}
+                  {current.key === 'pointsPct' && ' Aproveitamento = pontos conquistados ÷ pontos possíveis (vitória 3, empate 1).'}
+                  {current.key === 'keeperConcededPerMatch' && ' Menor é melhor; conta só os gols sofridos enquanto o jogador estava no gol.'}
+                </p>
+              )}
+              {current.informative && <p className="ranking-note">Categoria informativa, não é premiação. Gols contra contam para a equipe adversária.</p>}
+              {PARTICIPATION_BASED.includes(current.key) && <p className="ranking-note">Partidas e vitórias contam apenas participações comprovadas: escalação registrada, gol, assistência ou registro de goleiro.</p>}
+              {view.ranking.entries.length === 0 ? (
+                <p className="feed-empty">{current.efficiency ? `Ainda não há jogadores com ${MIN_MATCHES_EFFICIENCY} partidas neste recorte.` : 'Ainda não há registros neste recorte.'}</p>
+              ) : (
+                <ol className="ranking-list">
+                  {entries.map((e) => {
+                    const p = data.players.get(e.totals.playerId);
+                    const teamNames = e.totals.teamIds.map((id) => data.teams.get(id)?.name).filter(Boolean);
+                    return (
+                      <li key={e.totals.playerId}>
+                        <Link to={`/jogadores/${p?.slug ?? e.totals.playerId}`} className={`ranking-row${e.position <= 3 ? ` podium-${e.position}` : ''}`}>
+                          <span className="stats-pos" title={e.tied ? 'Empatado nesta posição' : undefined}>{e.position}{e.tied ? '=' : ''}</span>
+                          <PlayerPhoto src={p?.photo_url ?? null} name={p?.nickname ?? '?'} size={32} />
+                          <span className="ranking-player"><strong>{p?.nickname ?? 'Jogador'}</strong><small>{teamNames.length > 2 ? `${teamNames.length} equipes` : teamNames.join(' · ')}</small></span>
+                          <span className="ranking-sample">{current.key === 'keeperConcededPerMatch' ? `${e.totals.keeperMatches} J no gol` : `${e.totals.matches} J`}</span>
+                          <span className="ranking-value">{fmt(e.value)}{!current.format && <small> {e.value === 1 ? current.unit[0] : current.unit[1]}</small>}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+              {view.ranking.entries.length > PAGE && <button type="button" className="button button-outline profile-more" onClick={() => setShowAll((s) => !s)}>{showAll ? 'Mostrar menos' : `Ver todos (${view.ranking.entries.length})`}</button>}
+              <p className="ranking-note is-rules">Empates dividem a posição (indicados com “=”); a ordem dentro do empate é alfabética e não é critério de desempate.</p>
             </div>
           </>
         )}
       </section>
       <section className="container content-section">
         <div className="section-heading"><div><span className="section-kicker">Goleiros / CS</span><h2>Tempo sem sofrer gol</h2></div></div>
-        <GoalkeeperRanking />
+        {(season || team) && <p className="ranking-note">Este ranking oficial de goleiros considera a competição escolhida (sem filtro de temporada ou equipe).</p>}
+        <GoalkeeperRanking competitionId={competition || undefined} />
       </section>
     </>
   );

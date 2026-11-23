@@ -29,7 +29,7 @@ const navItems = [
   { label: 'Competições', to: '/competicoes', icon: ClipboardList, end: false },
   { label: 'Times', to: '/times', icon: Users, end: false },
   { label: 'Jogadores', to: '/jogadores', icon: CircleUserRound, end: false },
-  { label: 'Estatísticas', to: '/estatisticas', icon: BarChart3, end: false },
+  { label: 'Rankings', to: '/estatisticas', icon: BarChart3, end: false },
 ];
 
 function App() {

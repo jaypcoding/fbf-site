@@ -223,7 +223,7 @@ html[data-theme="dark"] .admin-attention.attention-undated { background: #2e2721
 html[data-theme="dark"] .admin-list-item .admin-round-teams { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-score { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-date { color: #d8cbbb; }
-/* styles/site.css (147 regras) */
+/* styles/site.css (167 regras) */
 html[data-theme="dark"] .skip-link { background: #0d0b09; }
 html[data-theme="dark"] .numbers-band { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .numbers-band a { border-right: 1px solid #3a3129; }
@@ -371,6 +371,26 @@ html[data-theme="dark"] .perf-bars figcaption { color: #f3ebe0; }
 html[data-theme="dark"] .perf-legend { color: #ab9d8c; }
 html[data-theme="dark"] .perf-label { color: #ab9d8c; }
 html[data-theme="dark"] .perf-bar-line b { color: #f3ebe0; }
+html[data-theme="dark"] .rankings-filters span { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-tab { border: 1px solid #3a3129; background: #211b17; color: #f2a35e; }
+html[data-theme="dark"] .ranking-tab:hover { border-color: #3a3129; }
+html[data-theme="dark"] .ranking-tab.active { background: #0d0b09; border-color: #4d4136; }
+html[data-theme="dark"] .ranking-tab.is-informative:not(.active) { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-min-rule { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-board { background: #211b17; border: 1px solid #3a3129; }
+html[data-theme="dark"] .ranking-board-head h2 { color: #f3ebe0; }
+html[data-theme="dark"] .ranking-board-head span { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-note { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-note.is-min { background: #16130f; color: #f2a35e; }
+html[data-theme="dark"] .ranking-note.is-rules { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-row { border-top: 1px solid #3a3129; }
+html[data-theme="dark"] .ranking-row:hover { background: #211b17; }
+html[data-theme="dark"] .ranking-player strong { color: #f3ebe0; }
+html[data-theme="dark"] .ranking-player small { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-sample { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-value { color: #f2a35e; }
+html[data-theme="dark"] .ranking-value small { color: #ab9d8c; }
+html[data-theme="dark"] .ranking-row.podium-1 .stats-pos { color: #f2a35e; }
 /* styles/replay.css (94 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }
