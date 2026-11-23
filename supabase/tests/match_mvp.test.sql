@@ -102,7 +102,7 @@ CREATE FUNCTION pg_temp.line(m text, p text) RETURNS text LANGUAGE sql AS $$
 $$;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA pg_temp TO anon, authenticated;
 
-SELECT plan(50);
+SELECT plan(51);
 
 -- M1
 SELECT is((SELECT home_score || 'x' || away_score FROM public.matches WHERE id = '9e000000-0000-0000-0000-000000000001'), '4x1', 'M1 finished 4 x 1');
@@ -201,6 +201,11 @@ SELECT ok((SELECT count(*) FROM public.mvp_results() WHERE competition_id = '2e0
 SELECT throws_ok($$SELECT count(*) FROM public.match_mvp_scores$$, '42501', NULL, 'switch on: the views themselves stay closed');
 RESET ROLE;
 SELECT is((SELECT count(*)::integer FROM public.feature_flag_changes WHERE key = 'mvp_public'), 1, 'the activation is recorded with its reason');
+
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN PERFORM set_config('request.jwt.claim.sub', '1e000000-0000-0000-0000-000000000099', true); END $$;
+SELECT throws_ok($$SELECT public.review_match_mvp('00000000-0000-0000-0000-000000000000', 'VALID', 'sonda')$$, '42501', NULL, 'without permission nobody learns whether a match exists');
+RESET ROLE;
 
 SELECT * FROM finish();
 ROLLBACK;
