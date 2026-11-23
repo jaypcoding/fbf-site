@@ -66,6 +66,7 @@ export type Player = {
   full_name: string | null;
   photo_url: string | null;
   nationality: string | null;
+  slug?: string | null;
   position: 'Goleiro' | 'Volante' | 'Pivô';
 };
 

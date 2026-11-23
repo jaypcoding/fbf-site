@@ -223,7 +223,7 @@ html[data-theme="dark"] .admin-attention.attention-undated { background: #2e2721
 html[data-theme="dark"] .admin-list-item .admin-round-teams { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-score { color: #f3ebe0; }
 html[data-theme="dark"] .admin-list-item .admin-round-date { color: #d8cbbb; }
-/* styles/site.css (126 regras) */
+/* styles/site.css (147 regras) */
 html[data-theme="dark"] .skip-link { background: #0d0b09; }
 html[data-theme="dark"] .numbers-band { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .numbers-band a { border-right: 1px solid #3a3129; }
@@ -350,6 +350,27 @@ html[data-theme="dark"] .mvp-table td small { color: #ab9d8c; }
 html[data-theme="dark"] .mvp-table td:first-child a { color: #f3ebe0; }
 html[data-theme="dark"] .mvp-table tr.is-mvp td { background: #2e2721; }
 html[data-theme="dark"] .mvp-rules { color: #ab9d8c; }
+html[data-theme="dark"] .profile-stats strong small { color: #ab9d8c; }
+html[data-theme="dark"] .profile-stats .is-mvp { border-color: #3a3129; background: #16130f; }
+html[data-theme="dark"] .profile-stats .is-mvp strong { color: #f2a35e; }
+html[data-theme="dark"] .profile-table-wrap { background: #211b17; border: 1px solid #3a3129; }
+html[data-theme="dark"] .profile-table th { color: #ab9d8c; background: #3b2918; }
+html[data-theme="dark"] .profile-table td { border-top: 1px solid #3a3129; color: #ab9d8c; }
+html[data-theme="dark"] .profile-table td:first-child { color: #f3ebe0; }
+html[data-theme="dark"] .profile-table td strong { color: #f2a35e; }
+html[data-theme="dark"] .profile-team { color: #f3ebe0; }
+html[data-theme="dark"] .profile-match { background: #211b17; border: 1px solid #3a3129; }
+html[data-theme="dark"] .profile-match:hover { border-color: #3a3129; background: #211b17; }
+html[data-theme="dark"] .profile-match-teams { color: #f3ebe0; }
+html[data-theme="dark"] .profile-match-teams small, html[data-theme="dark"] .profile-match-main > small { color: #ab9d8c; }
+html[data-theme="dark"] .profile-tag { background: #3b2918; color: #f2a35e; }
+html[data-theme="dark"] .profile-tag.is-negative { background: #3a1f1b; color: #f29d92; }
+html[data-theme="dark"] .profile-tag.is-mvp { background: #6a4826; color: #f2a35e; }
+html[data-theme="dark"] .perf-bars { background: #211b17; border: 1px solid #3a3129; }
+html[data-theme="dark"] .perf-bars figcaption { color: #f3ebe0; }
+html[data-theme="dark"] .perf-legend { color: #ab9d8c; }
+html[data-theme="dark"] .perf-label { color: #ab9d8c; }
+html[data-theme="dark"] .perf-bar-line b { color: #f3ebe0; }
 /* styles/replay.css (94 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }

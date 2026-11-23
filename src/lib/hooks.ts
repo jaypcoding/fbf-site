@@ -159,7 +159,7 @@ export function usePlayers() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    supabase.from('players').select('id, nickname, full_name, photo_url, nationality, position').order('nickname', { ascending: true }).then(({ data, error: queryError }) => {
+    supabase.from('players').select('id, nickname, full_name, photo_url, nationality, position, slug').order('nickname', { ascending: true }).then(({ data, error: queryError }) => {
       if (active) {
         setError(Boolean(queryError));
         setPlayers(queryError ? [] : (data || []) as Player[]);

@@ -296,3 +296,51 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
 .mvp-table tr.is-mvp td { background: #fff7e0; }
 .mvp-rules { font-size: 12px; color: #8c8072; line-height: 1.55; margin: 10px 0 0; }
 @media (max-width: 600px) { .mvp-total { font-size: 24px; } .mvp-card { padding: 12px; } }
+/* player profile */
+.profile-stats { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.profile-stats strong small { font-size: 13px; font-weight: 600; color: #8c8072; }
+.profile-stats .is-mvp { border-color: #ecd9a8; background: #fffaf0; }
+.profile-stats .is-mvp strong { color: #8a6410; }
+.profile-notice { margin-top: 4px; line-height: 1.55; }
+.profile-table-wrap { overflow-x: auto; background: #fff; border: 1px solid #eee4d1; border-radius: 8px; }
+.profile-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.profile-table th { font: 10px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .04em; color: #8c8072; background: #fff0d5; text-align: center; padding: 10px 8px; white-space: nowrap; }
+.profile-table th:first-child, .profile-table th:nth-child(2) { text-align: left; }
+.profile-table td { padding: 10px 8px; border-top: 1px solid #f4ece0; text-align: center; color: #756b61; white-space: nowrap; }
+.profile-table td:first-child { text-align: left; color: #30251d; font-weight: 600; white-space: normal; min-width: 150px; }
+.profile-table td:nth-child(2) { text-align: left; }
+.profile-table td strong { color: #d46616; }
+.profile-team { display: inline-flex; align-items: center; gap: 6px; color: #30251d; text-decoration: none; font-weight: 600; }
+.profile-team:hover { text-decoration: underline; }
+.profile-matches { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.profile-match { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border: 1px solid #eee4d1; border-radius: 8px; text-decoration: none; color: inherit; transition: .2s ease; }
+.profile-match:hover { border-color: #e0c9a6; background: #fffdf8; }
+.profile-result { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font: 700 12px 'DM Mono', monospace; color: #fff; background: #a39686; }
+.profile-result.result-w { background: #2f7d43; }
+.profile-result.result-d { background: #9a8a76; }
+.profile-result.result-l { background: #b4472c; }
+.profile-match-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.profile-match-teams { font-size: 14px; color: #30251d; overflow-wrap: anywhere; }
+.profile-match-teams small, .profile-match-main > small { font-size: 12px; color: #8c8072; }
+.profile-match-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 45%; }
+.profile-tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #fff0d5; color: #8c4f16; white-space: nowrap; }
+.profile-tag.is-negative { background: #fdecea; color: #b42318; }
+.profile-tag.is-mvp { background: #f7e3ac; color: #6f500c; font-weight: 700; }
+.profile-more { margin-top: 12px; }
+.perf-bars { margin: 16px 0 0; padding: 14px 16px; background: #fff; border: 1px solid #eee4d1; border-radius: 8px; display: grid; gap: 10px; }
+.perf-bars figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 700; color: #30251d; }
+.perf-legend { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: #756b61; font-size: 12px; }
+.perf-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-left: 6px; }
+.perf-legend i.is-goals, .perf-bar.is-goals { background: #d46616; }
+.perf-legend i.is-assists, .perf-bar.is-assists { background: #0a7ea4; }
+.perf-row { display: grid; grid-template-columns: minmax(110px, 30%) 1fr; gap: 12px; align-items: center; }
+.perf-label { font-size: 12px; color: #756b61; overflow-wrap: anywhere; }
+.perf-track { display: grid; gap: 2px; }
+.perf-bar-line { display: flex; align-items: center; gap: 6px; min-height: 12px; }
+.perf-bar { display: block; height: 10px; min-width: 2px; border-radius: 0 4px 4px 0; }
+.perf-bar-line b { font-size: 11px; font-weight: 600; color: #30251d; }
+@media (max-width: 640px) {
+  .profile-match { flex-wrap: wrap; }
+  .profile-match-tags { max-width: none; justify-content: flex-start; width: 100%; padding-left: 42px; }
+  .perf-row { grid-template-columns: 1fr; gap: 4px; }
+}

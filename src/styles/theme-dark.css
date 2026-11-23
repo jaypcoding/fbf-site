@@ -39,3 +39,10 @@ html[data-theme="dark"] .pitch-map svg, html[data-theme="dark"] .pitch-ground { 
 
 /* recording length guidance: keep the accent bar on the left */
 html[data-theme="dark"] .replay-duration-note { border-left: 3px solid #e07a2c; }
+
+/* profile chart: validated dark pair (orange + blue) */
+html[data-theme="dark"] .perf-legend i.is-goals, html[data-theme="dark"] .perf-bar.is-goals { background: #d46616; }
+html[data-theme="dark"] .perf-legend i.is-assists, html[data-theme="dark"] .perf-bar.is-assists { background: #1d8ac0; }
+html[data-theme="dark"] .profile-result.result-w { background: #2f7d43; }
+html[data-theme="dark"] .profile-result.result-l { background: #b4472c; }
+html[data-theme="dark"] .profile-result.result-d { background: #6f6355; }
