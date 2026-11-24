@@ -28,7 +28,7 @@ export function StreamersTab() {
 
   useEffect(() => {
     let active = true;
-    supabase.from('streamers').select('id, display_name, platform, channel').order('display_name', { ascending: true }).then(({ data, error: err }) => {
+    supabase.from('streamers').select('id, display_name, platform, channel, is_live, live_since').order('display_name', { ascending: true }).then(({ data, error: err }) => {
       if (!active) return;
       if (err) setError('Não foi possível carregar os streamers.');
       else setStreamers((data || []) as Streamer[]);
@@ -52,6 +52,14 @@ export function StreamersTab() {
     if (err) { setError('Não foi possível cadastrar o streamer.'); return; }
     formElement.reset();
     setNewPlatform('TWITCH');
+    refreshAdminData();
+  }
+
+  // the streamer's own on-air status: the global mini player shows it on every public page
+  async function setLive(s: Streamer, live: boolean) {
+    setError(null);
+    const { error: err } = await supabase.from('streamers').update({ is_live: live }).eq('id', s.id);
+    if (err) { setError(live ? 'Não foi possível colocar o streamer ao vivo.' : 'Não foi possível tirar o streamer do ar.'); return; }
     refreshAdminData();
   }
 
@@ -84,15 +92,17 @@ export function StreamersTab() {
       </div>
       <div className="admin-list-card">
         <h3>Streamers</h3>
+        <p className="admin-hint">"Colocar ao vivo" mostra a transmissão no mini player de todas as páginas públicas, sem precisar vincular a uma partida. Streamers vinculados a uma partida ao vivo também aparecem. Tirar do ar não apaga nada.</p>
         {error && loading === false && streamers.length === 0 ? <FormError message={error} /> : loading ? <LoadingCard /> : streamers.length === 0 ? <p className="admin-empty-text">Nenhum streamer cadastrado ainda.</p> : (
           <div className="admin-list">
             {streamers.map((s) => (
               <div key={s.id} className="admin-list-item">
                 <div>
-                  <strong>{s.display_name}</strong>
-                  <span>{platformLabel(s.platform)} · {s.channel}</span>
+                  <strong>{s.display_name}{s.is_live && <span className="streamer-live-pill"><span className="live-dot" aria-hidden="true" /> Ao vivo</span>}</strong>
+                  <span>{platformLabel(s.platform)} · {s.channel}{s.is_live && s.live_since ? ` · no ar desde ${new Date(s.live_since).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}</span>
                 </div>
                 <div className="admin-list-actions">
+                  <button className={s.is_live ? 'button button-outline' : 'button button-primary'} onClick={() => void setLive(s, !s.is_live)} aria-pressed={Boolean(s.is_live)}>{s.is_live ? 'Tirar do ar' : 'Colocar ao vivo'}</button>
                   <button className="button" onClick={() => setLinking(s)}>Partidas</button>
                   <button className="icon-button" onClick={() => setEditing(s)} title="Editar"><Pencil size={15} /></button>
                   <button className="icon-button-danger" onClick={() => remove(s.id)} title="Remover"><Trash2 size={15} /></button>

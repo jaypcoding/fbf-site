@@ -180,4 +180,6 @@ export type Streamer = {
   display_name: string;
   platform: 'TWITCH' | 'YOUTUBE' | 'KICK';
   channel: string;
+  is_live?: boolean;
+  live_since?: string | null;
 };

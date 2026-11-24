@@ -218,3 +218,4 @@
   .main-nav.is-open { display: flex; }
   .nav-link, .account-link, .login-link { justify-content: flex-start; margin: 0; }
 }
+.streamer-live-pill { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #b42318; background: #fdecea; border-radius: 999px; padding: 2px 8px; vertical-align: middle; }

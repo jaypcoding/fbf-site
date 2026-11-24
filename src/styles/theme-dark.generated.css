@@ -1,5 +1,5 @@
 /* Gerado por scripts/build-dark-theme.mjs a partir das folhas de estilo do site. Não edite à mão: rode o script. */
-/* index.css (221 regras) */
+/* index.css (230 regras) */
 html[data-theme="dark"] body { background: #16130f; }
 html[data-theme="dark"] .site-header { background: rgba(22, 19, 15, 0.95); border-bottom: 1px solid #3a3129; }
 html[data-theme="dark"] .brand { color: #f3ebe0; }
@@ -144,13 +144,22 @@ html[data-theme="dark"] .icon-button:hover { color: #f3ebe0; background: #3b2918
 html[data-theme="dark"] .modal-backdrop { background: rgba(13, 11, 9, 0.4); }
 html[data-theme="dark"] .modal-card { background: #211b17; border: 1px solid #3a3129; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6); }
 html[data-theme="dark"] .modal-header h3 { color: #f3ebe0; }
-html[data-theme="dark"] .live-mini { background: #0d0b09; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6); }
-html[data-theme="dark"] .live-mini-title { color: #f2a35e; }
-html[data-theme="dark"] .live-mini-title span { background: #6a4826; }
+html[data-theme="dark"] .live-mini { background: #0d0b09; border: 1px solid rgba(106, 72, 38, 0.22); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6); }
+html[data-theme="dark"] .live-badge-mini { color: #f29d92; }
+html[data-theme="dark"] .live-dot { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.6); }
+html[data-theme="dark"] .live-mini-who small { color: #857767; }
 html[data-theme="dark"] .live-mini-controls button { color: #857767; }
-html[data-theme="dark"] .live-mini-controls button:hover { background: rgba(33, 27, 23, 0.102); }
-html[data-theme="dark"] .live-mini-tabs button { background: rgba(33, 27, 23, 0.078); color: #857767; }
-html[data-theme="dark"] .live-mini-match { color: #857767; }
+html[data-theme="dark"] .live-mini-controls button:hover, html[data-theme="dark"] .live-mini-controls button:focus-visible { background: rgba(33, 27, 23, 0.1); }
+html[data-theme="dark"] .live-mini-list button { background: rgba(33, 27, 23, 0.05); }
+html[data-theme="dark"] .live-mini-list button:hover { background: rgba(33, 27, 23, 0.09); }
+html[data-theme="dark"] .live-mini-list button[aria-pressed="true"] { border-color: rgba(106, 72, 38, 0.6); }
+html[data-theme="dark"] .live-mini-item small { color: #857767; }
+html[data-theme="dark"] .live-mini-body { background: #0d0b09; }
+html[data-theme="dark"] .live-mini-foot { color: #857767; }
+html[data-theme="dark"] .live-mini-foot > a:first-child, html[data-theme="dark"] .live-mini-foot > span { color: #857767; }
+html[data-theme="dark"] .live-mini-more { border-top: 1px solid rgba(58, 49, 41, 0.08); color: #857767; }
+html[data-theme="dark"] .live-mini-reopen { border: 1px solid rgba(106, 72, 38, 0.35); background: #0d0b09; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6); }
+html[data-theme="dark"] .live-mini-reopen:hover, html[data-theme="dark"] .live-mini-reopen:focus-visible { border-color: #6a4826; }
 html[data-theme="dark"] .timeline-item { border: 1px solid #3a3129; background: #211b17; }
 html[data-theme="dark"] .timeline-minute { color: #f2a35e; }
 html[data-theme="dark"] .timeline-body strong { color: #f3ebe0; }
@@ -454,7 +463,7 @@ html[data-theme="dark"] .tac-check { color: #f3ebe0; }
 html[data-theme="dark"] .tac-managers li { border: 1px solid #3a3129; }
 html[data-theme="dark"] .tac-avatar-editor .tac-symbol-grid button[aria-pressed="true"] { border: 2px solid #6a4826; color: #f2a35e; }
 html[data-theme="dark"] .tac-avatar-editor .tac-swatch[aria-pressed="true"] { outline: 3px solid #6a4826; }
-/* styles/replay.css (116 regras) */
+/* styles/replay.css (117 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }
 html[data-theme="dark"] .replay-header p { color: #ab9d8c; }
@@ -573,3 +582,4 @@ html[data-theme="dark"] .hof-admin-list li.is-inactive > strong { color: #ab9d8c
 @media (min-width: 801px) and (max-width: 1200px) {
   html[data-theme="dark"] .main-nav { background: #211b17; border: 1px solid #3a3129; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28); }
 }
+html[data-theme="dark"] .streamer-live-pill { color: #f29d92; background: #3a1f1b; }

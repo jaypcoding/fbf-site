@@ -164,20 +164,48 @@ h1, h2, h3, p { margin: 0; }
 .modal-header h3 { font-size: 16px; color: #181818; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
-.live-mini { position: fixed; right: 16px; bottom: 16px; width: 330px; background: #181818; color: #fff; border-radius: 10px; box-shadow: 0 18px 40px #18181855; overflow: hidden; z-index: 90; animation: modal-in .3s ease; }
-.live-mini-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; }
-.live-mini-title { display: flex; align-items: center; gap: 8px; font: 10px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .08em; color: #ffd36a; }
-.live-mini-title span { width: 6px; height: 6px; border-radius: 50%; background: #ffd36a; }
-.live-mini-controls { display: flex; gap: 2px; }
-.live-mini-controls button { border: 0; background: none; color: #cbbba8; cursor: pointer; padding: 4px; border-radius: 5px; display: grid; place-items: center; }
-.live-mini-controls button:hover { color: #fff; background: #ffffff1a; }
-.live-mini-tabs { display: flex; gap: 6px; padding: 0 12px 10px; overflow-x: auto; }
-.live-mini-tabs button { border: 0; background: #ffffff14; color: #e8dccb; font-size: 11px; padding: 6px 10px; border-radius: 50px; cursor: pointer; white-space: nowrap; }
-.live-mini-tabs button.active { background: #d46616; color: #fff; }
+.live-mini { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: 340px; max-width: calc(100vw - 32px); background: #17110d; color: #f3ebe0; border-radius: 14px; border: 1px solid rgba(242, 163, 94, 0.22); box-shadow: 0 18px 40px rgba(12, 8, 5, 0.45); overflow: hidden; z-index: 90; animation: live-mini-in .28s ease; }
+@keyframes live-mini-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.live-mini-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 10px 9px 12px; }
+.live-mini-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.live-badge-mini { display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #ffb4a8; background: rgba(217, 45, 32, 0.18); border-radius: 999px; padding: 3px 8px; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: #f04438; box-shadow: 0 0 0 0 rgba(240, 68, 56, 0.6); animation: live-dot-pulse 1.8s ease-out infinite; flex: none; }
+@keyframes live-dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(240, 68, 56, 0.55); } 70% { box-shadow: 0 0 0 7px rgba(240, 68, 56, 0); } 100% { box-shadow: 0 0 0 0 rgba(240, 68, 56, 0); } }
+.live-mini-who { display: grid; min-width: 0; line-height: 1.2; }
+.live-mini-who strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-mini-who small { font-size: 11px; color: #cbbba8; }
+.live-mini-controls { display: flex; gap: 2px; flex: none; }
+.live-mini-controls button { border: 0; background: none; color: #cbbba8; cursor: pointer; min-width: 32px; min-height: 32px; padding: 4px 6px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font: inherit; font-size: 12px; font-weight: 700; }
+.live-mini-controls button:hover, .live-mini-controls button:focus-visible { color: #fff; background: rgba(255, 255, 255, 0.1); outline: none; }
+.live-mini-switch { color: #f2a35e !important; }
+.live-mini-list { list-style: none; margin: 0; padding: 0 8px 8px; display: grid; gap: 4px; max-height: 240px; overflow-y: auto; }
+.live-mini-list button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.05); color: inherit; cursor: pointer; text-align: left; font: inherit; }
+.live-mini-list button:hover { background: rgba(255, 255, 255, 0.09); }
+.live-mini-list button[aria-pressed="true"] { border-color: rgba(242, 163, 94, 0.6); background: rgba(194, 86, 15, 0.22); color: #fff; }
+.live-mini-list button svg { margin-left: auto; color: #f2a35e; flex: none; }
+.live-mini-item { display: grid; min-width: 0; line-height: 1.25; }
+.live-mini-item strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-mini-item small { font-size: 11px; color: #cbbba8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-platform { flex: none; font-size: 10px; font-weight: 800; letter-spacing: .04em; padding: 3px 7px; border-radius: 6px; color: #fff; }
+.live-platform.is-twitch { background: #7b3fbf; }
+.live-platform.is-kick { background: #1f8f3a; }
+.live-platform.is-youtube { background: #b42318; }
+.live-mini-body { background: #000; }
 .live-mini-body iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
-.live-mini-match { font-size: 11px; color: #cbbba8; padding: 0 12px 10px; }
-.live-mini.is-collapsed .live-mini-body, .live-mini.is-collapsed .live-mini-tabs, .live-mini.is-collapsed .live-mini-match { display: none; }
-@media (max-width: 600px) { .live-mini { left: 12px; right: 12px; bottom: 12px; width: auto; } }
+.live-mini-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px 10px; font-size: 11.5px; color: #cbbba8; }
+.live-mini-foot a { color: #f2a35e; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; flex: none; }
+.live-mini-foot > a:first-child, .live-mini-foot > span { color: #e8dccb; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.live-mini-more { width: 100%; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); background: none; color: #cbbba8; font: inherit; font-size: 12px; padding: 8px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.live-mini.is-collapsed { width: auto; min-width: 250px; }
+.live-mini-reopen { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); z-index: 90; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(242, 163, 94, 0.35); background: #17110d; color: #f3ebe0; font: inherit; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 9px 14px; border-radius: 999px; box-shadow: 0 10px 24px rgba(12, 8, 5, 0.4); cursor: pointer; animation: live-mini-in .28s ease; }
+.live-mini-reopen:hover, .live-mini-reopen:focus-visible { border-color: #f2a35e; outline: none; }
+@media (max-width: 600px) {
+  .live-mini { right: max(12px, env(safe-area-inset-right, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px)); width: auto; max-width: none; }
+  .live-mini.is-collapsed { left: auto; min-width: 0; max-width: calc(100vw - 24px); }
+  .live-mini-reopen { right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+}
+@media (min-width: 601px) and (max-width: 1024px) { .live-mini { width: 300px; } }
+@media (prefers-reduced-motion: reduce) { .live-mini, .live-mini-reopen { animation: none; } .live-dot { animation: none; } }
 .timeline { display: flex; flex-direction: column; gap: 10px; }
 .timeline-item { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; padding: 12px 14px; border: 1px solid #eee4d1; border-radius: 7px; background: #fff; }
 .timeline-minute { font: 700 12px 'DM Mono', monospace; color: #d46616; }
