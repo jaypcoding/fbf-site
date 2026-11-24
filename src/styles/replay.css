@@ -208,6 +208,7 @@
 .hof-admin-edition { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
 .hof-admin-badge { font-size: 11px; font-weight: 700; color: #7a5a2e; background: #f3ead9; border-radius: 999px; padding: 2px 8px; }
 .hof-admin-list li.is-inactive > strong { color: #a99a88; text-decoration: line-through; }
+<<<<<<< HEAD
 .news-admin { display: grid; gap: 14px; }
 .news-admin-layout { display: grid; grid-template-columns: minmax(220px, 300px) 1fr; gap: 16px; align-items: start; }
 .news-admin-list { display: grid; gap: 10px; }
@@ -224,6 +225,8 @@
 .news-admin-history h4 { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 14px; color: #3e2d20; }
 .news-admin-history ol { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; color: #5c4a3a; }
 @media (max-width: 860px) { .news-admin-layout { grid-template-columns: 1fr; } }
+=======
+>>>>>>> feature/expansao-comparador
 /* Header with more sections (Ao vivo, Hall da Fama, Notícias): labels never
    wrap; icons hidden where space is short; collapsed menu up to 1200px. */
 .nav-link, .account-link, .login-link { white-space: nowrap; }
