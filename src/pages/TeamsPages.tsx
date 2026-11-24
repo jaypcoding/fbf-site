@@ -17,7 +17,8 @@ import { useAdminDataVersion } from '@/lib/adminRefresh';
 import { usePageTitle } from '@/lib/pageTitle';
 import { matchesSearch } from '@/lib/search';
 import { plural } from '@/lib/format';
-import { EmptyState, LoadingCard, PageIntro, PlayerPhoto, TeamLogo } from '@/components/ui';
+import { EmptyState, LoadingCard, PageIntro, TeamLogo } from '@/components/ui';
+import { TacticalMap } from '@/components/tactics/TacticalMap';
 import { SearchField } from '@/components/site';
 import { TeamRecordStats } from '@/components/TeamRecordStats';
 
@@ -163,13 +164,8 @@ export function TeamDetailPage() {
       {rostersLoading && seasonTeamId ? <LoadingCard />
         : seasonError || rostersError ? <EmptyState icon={<Users />} title="Não foi possível carregar o elenco" description="Tente novamente mais tarde." />
         : rosters.length === 0 ? <EmptyState icon={<CircleUserRound />} title="Elenco não definido" description="Os jogadores deste time aparecerão aqui assim que um elenco for registrado em uma temporada." />
-        : <div className="roster-grid">{rosters.map((r) => (
-          <Link key={r.id} to={`/jogadores/${r.player_id}`} className="roster-card">
-            <div className="roster-number">{r.shirt_number ?? '—'}</div>
-            <div className="roster-photo"><PlayerPhoto src={r.player?.photo_url || null} name={r.player?.nickname || ''} size={44} /></div>
-            <div className="roster-info"><strong>{r.player?.nickname}</strong><span>{r.player?.position}</span></div>
-          </Link>
-        ))}</div>}
+        : <TacticalMap team={team} seasonName={seasonTeams.find((row) => row.id === seasonTeamId)?.season?.name ?? null} seasonTeamId={seasonTeamId}
+            roster={rosters.map((r) => ({ player_id: r.player_id, nickname: r.player?.nickname ?? 'Jogador', position: r.player?.position ?? null, shirt_number: r.shirt_number ?? null, slug: (r.player as { slug?: string | null } | null)?.slug ?? null }))} />}
     </section>
   );
 }

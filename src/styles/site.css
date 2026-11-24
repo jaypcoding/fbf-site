@@ -379,3 +379,83 @@ a.feature-card:hover { border-color: #d4b896; transform: translateY(-2px); box-s
   .ranking-row { grid-template-columns: 32px 28px 1fr auto; gap: 8px; }
   .ranking-sample { display: none; }
 }
+/* Mapa tático ------------------------------------------------------ */
+.tac-section { display: grid; gap: 14px; margin-top: 8px; }
+.tac-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.tac-identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.tac-identity h2 { margin: 0; font-size: 22px; color: #2e2219; line-height: 1.15; overflow-wrap: anywhere; }
+.tac-kicker { display: block; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #c2560f; }
+.tac-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tac-note { margin: -4px 0 0; font-size: 12.5px; color: #8c8072; }
+.tac-message { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13.5px; padding: 9px 12px; border-radius: 10px; }
+.tac-message.is-ok { background: #e7f4ea; color: #1f6b33; }
+.tac-message.is-error, .tac-message.is-conflict { background: #fdecea; color: #9c2a1e; }
+.tac-empty { display: flex; align-items: center; gap: 8px; padding: 18px; border: 1px dashed #e0c9a6; border-radius: 14px; color: #8c8072; }
+.tac-layout { display: grid; grid-template-columns: minmax(0, 560px) minmax(260px, 380px); gap: 20px; align-items: start; justify-content: start; }
+.tac-court-wrap { display: grid; gap: 8px; min-width: 0; justify-items: center; background: #0f0b08; border-radius: 22px; padding: clamp(10px, 2vw, 18px); box-shadow: 0 18px 40px rgba(30, 18, 8, 0.22), inset 0 0 0 1px rgba(242, 163, 94, 0.18); }
+.tac-court { width: 100%; max-width: 520px; height: auto; display: block; user-select: none; -webkit-user-select: none; }
+.tac-section.is-editing .tac-court { touch-action: none; }
+.tac-token.is-link { cursor: pointer; }
+.tac-token.is-editable { cursor: grab; }
+.tac-token.is-editable:active { cursor: grabbing; }
+.tac-token:focus-visible { outline: none; }
+.tac-slot.is-clickable { cursor: pointer; }
+.tac-hint { margin: 0; font-size: 12.5px; color: rgba(243, 235, 224, 0.72); text-align: center; max-width: 520px; }
+.tac-bench { display: grid; gap: 10px; align-content: start; border: 1px solid #ead7b8; border-radius: 16px; background: #fffaf2; padding: 14px; min-width: 0; }
+.tac-bench h3 { margin: 0; display: flex; align-items: center; justify-content: space-between; font-size: 15px; color: #2e2219; }
+.tac-bench h3 span { font-size: 12px; font-weight: 800; color: #9a5b12; background: #fff1dc; border-radius: 999px; padding: 2px 9px; }
+.tac-bench ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tac-bench li { display: flex; align-items: center; gap: 4px; border-radius: 12px; }
+.tac-bench li.is-selected { background: #fff1dc; box-shadow: inset 0 0 0 2px #f0c27a; }
+.tac-bench-player { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 0; background: none; border-radius: 12px; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.tac-bench-player:hover { background: #fbf1e2; }
+.tac-bench-info { display: grid; min-width: 0; }
+.tac-bench-info strong { font-size: 14px; color: #2e2219; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tac-bench-info small { font-size: 12px; color: #8c8072; }
+.tac-bench-empty { margin: 0; font-size: 13px; color: #8c8072; }
+.tac-mini-avatar { flex: none; display: block; }
+.tac-grip { display: inline-flex; padding: 8px 2px; color: #a99a88; cursor: grab; touch-action: none; }
+.tac-order { display: inline-flex; }
+.tac-panel { display: grid; gap: 8px; border-top: 1px solid #f1e5d2; padding-top: 10px; }
+.tac-panel-empty, .tac-panel-tip { margin: 0; font-size: 12.5px; color: #8c8072; }
+.tac-panel-title { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.tac-panel-title span { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #9a5b12; }
+.tac-roles { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tac-roles button { min-width: 44px; min-height: 36px; border-radius: 999px; border: 1px solid #e0c9a6; background: #fff; font-weight: 800; font-size: 12.5px; letter-spacing: .05em; color: #5c4a3a; cursor: pointer; }
+.tac-roles button[aria-pressed="true"] { background: #c2560f; border-color: #c2560f; color: #fff; }
+.tac-roles input { width: 76px; min-height: 36px; text-transform: uppercase; }
+.tac-editbar { position: sticky; bottom: env(safe-area-inset-bottom, 0px); z-index: 6; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-radius: 14px; background: #2e2219; color: #f3ebe0; box-shadow: 0 10px 24px rgba(30, 18, 8, 0.25); }
+.tac-editbar > span { margin-right: auto; font-size: 13px; font-weight: 700; }
+.tac-ghost { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -50%); filter: drop-shadow(0 8px 14px rgba(0,0,0,.45)); }
+.tac-avatar-editor { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 18px; align-items: start; }
+.tac-avatar-preview { display: grid; justify-items: center; gap: 10px; padding: 14px; border-radius: 16px; background: #0f0b08; }
+.tac-avatar-preview-small { display: flex; align-items: center; gap: 8px; font-size: 11px; color: rgba(243, 235, 224, 0.7); }
+.tac-avatar-fields { display: grid; gap: 12px; min-width: 0; }
+.tac-avatar-fields fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
+.tac-avatar-fields legend, .tac-field > span { font-size: 12px; font-weight: 800; color: #5c4a3a; margin-bottom: 4px; }
+.tac-symbol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; }
+.tac-symbol-grid button { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; border: 1px solid #ead7b8; background: #fff; color: #2e2219; cursor: pointer; font: inherit; font-size: 11px; }
+.tac-symbol-grid button[aria-pressed="true"] { border-color: #c2560f; background: #fff1dc; box-shadow: inset 0 0 0 1px #c2560f; }
+.tac-avatar-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; }
+.tac-field { display: grid; }
+.tac-avatar-fields .tac-styles { display: flex; flex-wrap: wrap; gap: 6px; }
+.tac-styles button { padding: 7px 12px; border-radius: 999px; border: 1px solid #e0c9a6; background: #fff; font: inherit; font-size: 12.5px; font-weight: 700; color: #5c4a3a; cursor: pointer; }
+.tac-styles button[aria-pressed="true"] { background: #c2560f; border-color: #c2560f; color: #fff; }
+.tac-swatch-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tac-swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(46, 34, 25, 0.18); cursor: pointer; padding: 0; }
+.tac-swatch[aria-pressed="true"] { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #c2560f; }
+.tac-swatch-custom { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #5c4a3a; cursor: pointer; }
+.tac-swatch-custom input { width: 30px; height: 30px; padding: 0; border: 0; background: none; cursor: pointer; }
+.tac-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: #3e2d20; }
+.tac-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+.tac-spacer { flex: 1; }
+.tac-managers { display: grid; gap: 10px; }
+.tac-managers ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tac-managers li { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid #ead7b8; border-radius: 10px; font-size: 13.5px; }
+.tac-managers-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; align-items: end; }
+@media (max-width: 860px) { .tac-layout { grid-template-columns: 1fr; } .tac-court { max-width: 460px; } }
+@media (max-width: 560px) { .tac-avatar-editor { grid-template-columns: 1fr; } .tac-identity h2 { font-size: 19px; } .tac-editbar > span { width: 100%; } }
+/* chosen options stay clearly marked in both themes */
+.tac-section .tac-roles button[aria-pressed="true"], .tac-avatar-editor .tac-styles button[aria-pressed="true"] { background: #c2560f; border-color: #c2560f; color: #ffffff; }
+.tac-avatar-editor .tac-symbol-grid button[aria-pressed="true"] { border: 2px solid #f2a35e; color: #c2560f; }
+.tac-avatar-editor .tac-swatch[aria-pressed="true"] { outline: 3px solid #f2a35e; outline-offset: 2px; }

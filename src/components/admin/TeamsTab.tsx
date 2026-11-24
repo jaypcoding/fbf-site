@@ -5,6 +5,7 @@ import { useTeams } from '@/lib/hooks';
 import { refreshAdminData } from '@/lib/adminRefresh';
 import { LoadingCard, Modal, TeamLogo, FormField, FormInput, FormError } from '@/components/ui';
 import { useConfirm } from '@/components/site';
+import { TeamManagersCard } from '@/components/admin/TeamManagersCard';
 
 export function TeamsTab() {
   const confirm = useConfirm();
@@ -68,6 +69,7 @@ export function TeamsTab() {
           </div>
         )}
       </div>
+      {teams.length > 0 && <TeamManagersCard teams={teams} />}
       {editing && (
         <Modal title="Editar time" onClose={() => setEditing(null)}>
           <TeamEditForm team={editing} onSaved={() => setEditing(null)} />

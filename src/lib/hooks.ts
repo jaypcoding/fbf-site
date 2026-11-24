@@ -213,7 +213,7 @@ export function useRosters(seasonTeamId?: string) {
       return () => { active = false; };
     }
     setLoading(true);
-    let q = supabase.from('rosters').select('id, season_team_id, player_id, shirt_number, player:player_id ( id, nickname, full_name, photo_url, nationality, position )').order('shirt_number', { ascending: true });
+    let q = supabase.from('rosters').select('id, season_team_id, player_id, shirt_number, player:player_id ( id, nickname, full_name, photo_url, nationality, position, slug )').order('shirt_number', { ascending: true });
     q = q.eq('season_team_id', seasonTeamId);
     q.then(({ data, error: queryError }) => {
       if (active) {
