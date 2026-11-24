@@ -8,7 +8,8 @@ SET LOCAL search_path = public, extensions;
 
 INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at) VALUES
   ('1e000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rst-admin@example.invalid', '', now()),
-  ('1e000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rst-org@example.invalid', '', now())
+  ('1e000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rst-org@example.invalid', '', now()),
+  ('1e000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rst-user@example.invalid', '', now())
 ON CONFLICT (id) DO NOTHING;
 UPDATE public.profiles SET role = 'ADMIN' WHERE id = '1e000000-0000-0000-0000-000000000001';
 UPDATE public.profiles SET role = 'ORGANIZER' WHERE id = '1e000000-0000-0000-0000-000000000002';
@@ -56,7 +57,7 @@ CREATE TEMP TABLE before_counts AS SELECT
   (SELECT count(*) FROM public.match_events WHERE match_id = '9e000000-0000-0000-0000-000000000001') AS events;
 GRANT SELECT ON before_counts TO authenticated;
 
-SELECT plan(26);
+SELECT plan(28);
 
 -- the ordinary reset stays blocked, now with an explicit reason
 SET LOCAL ROLE authenticated;
@@ -73,6 +74,8 @@ DO $$ BEGIN PERFORM pg_temp.as_user('1e000000-0000-0000-0000-000000000002'); END
 SELECT throws_ok($$SELECT public.competition_restart_preview('2e000000-0000-0000-0000-000000000001')$$, '42501', NULL, 'an organizer cannot preview an audited restart');
 SELECT throws_ok($$SELECT public.restart_competition_audited('2e000000-0000-0000-0000-000000000001', 'REINICIAR Rst Copa', 'x', 'motivo suficientemente longo para o teste')$$,
   '42501', NULL, 'an organizer cannot run an audited restart');
+DO $$ BEGIN PERFORM pg_temp.as_user('1e000000-0000-0000-0000-000000000003'); END $$;
+SELECT throws_ok($$SELECT public.competition_restart_preview('2e000000-0000-0000-0000-000000000001')$$, '42501', NULL, 'a common user (player) cannot preview an audited restart');
 DO $$ BEGIN PERFORM pg_temp.as_user('1e000000-0000-0000-0000-000000000001'); END $$;
 SELECT is(public.competition_restart_preview('2e000000-0000-0000-0000-000000000001')->>'confirmation', 'REINICIAR Rst Copa', 'the confirmation names the competition');
 SELECT is(public.competition_restart_preview('2e000000-0000-0000-0000-000000000001')->'history',
@@ -98,6 +101,19 @@ SELECT throws_ok(format($$SELECT public.restart_competition_audited('2e000000-00
 RESET ROLE;
 UPDATE public.season_honours SET status = 'DRAFT' WHERE id = '0e000000-0000-0000-0000-000000000001';
 
+-- data really changed after the preview: the old fingerprint is refused
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN PERFORM pg_temp.as_user('1e000000-0000-0000-0000-000000000001'); END $$;
+SELECT set_config('rst.fp', public.competition_restart_preview('2e000000-0000-0000-0000-000000000001')->>'fingerprint', true);
+RESET ROLE;
+INSERT INTO public.match_edit_history (match_id, source, reason, before, after) VALUES ('9e000000-0000-0000-0000-000000000001', 'MANUAL', 'edição feita depois da prévia', '{}', '{}');
+SET LOCAL ROLE authenticated;
+DO $$ BEGIN PERFORM pg_temp.as_user('1e000000-0000-0000-0000-000000000001'); END $$;
+SELECT throws_ok($$SELECT public.restart_competition_audited('2e000000-0000-0000-0000-000000000001', 'REINICIAR Rst Copa', current_setting('rst.fp'), 'final registrada com a equipe errada')$$,
+  '22023', NULL, 'an edit made after the preview makes it stale: nothing runs');
+SELECT set_config('rst.fp', public.competition_restart_preview('2e000000-0000-0000-0000-000000000001')->>'fingerprint', true);
+RESET ROLE;
+
 -- the restart itself
 SET LOCAL ROLE authenticated;
 DO $$ BEGIN PERFORM pg_temp.as_user('1e000000-0000-0000-0000-000000000001'); END $$;
@@ -109,7 +125,7 @@ SELECT is((SELECT count(*)::integer FROM public.match_participations WHERE match
   + (SELECT count(*)::integer FROM public.match_edit_history WHERE match_id = '9e000000-0000-0000-0000-000000000001')
   + (SELECT count(*)::integer FROM public.match_mvp_reviews WHERE match_id = '9e000000-0000-0000-0000-000000000001'), 0, 'its history left the live tables');
 SELECT is((SELECT (history_counts->>'match_participations')::integer + (history_counts->>'match_edit_history')::integer + (history_counts->>'season_honours')::integer
-  FROM public.competition_restart_archive WHERE id = current_setting('rst.archive')::uuid), 4, '... and is in the archive, with the reason');
+  FROM public.competition_restart_archive WHERE id = current_setting('rst.archive')::uuid), 5, '... and is in the archive, with the reason');
 SELECT is((SELECT count(*)::integer FROM public.deletion_log WHERE competition_id = '2e000000-0000-0000-0000-000000000001' AND reset_batch_id IS NOT NULL), 1,
   'the competition rows are in the deletion log, like any safe reset');
 SELECT ok((SELECT teams = (SELECT count(*) FROM public.teams) AND players = (SELECT count(*) FROM public.players) FROM before_counts), 'teams and players untouched');
@@ -126,7 +142,7 @@ RESET ROLE;
 
 -- nothing is lost: the owner restores everything
 SELECT is(public.restore_competition_restart(current_setting('rst.archive')::uuid),
-  '{"match_replays":0,"match_replay_reviews":0,"match_replay_reports":0,"match_replay_audit":0,"match_edit_history":1,"match_participations":2,"match_mvp_reviews":1,"season_honours":1}'::jsonb,
+  '{"match_replays":0,"match_replay_reviews":0,"match_replay_reports":0,"match_replay_audit":0,"match_edit_history":2,"match_participations":2,"match_mvp_reviews":1,"season_honours":1}'::jsonb,
   'the restore brings back every history row');
 SELECT ok((SELECT count(*) FROM public.competitions WHERE id = '2e000000-0000-0000-0000-000000000001') = 1
   AND (SELECT count(*) FROM public.match_events WHERE match_id = '9e000000-0000-0000-0000-000000000001') = (SELECT events FROM before_counts)
