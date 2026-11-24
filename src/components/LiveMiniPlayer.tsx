@@ -3,7 +3,14 @@
 // between pages. Only the selected transmission loads a player; the others
 // stay in the list. Players start muted. Closing or minimizing never changes
 // the streamer's status. Hidden in the admin panel and the login pages.
-import { useEffect, useMemo, useState } from 'react';
+// It never covers page controls: it rises above any bottom bar marked with
+// [data-live-mini-avoid], steps aside (a small "Ao vivo" button) while a page
+// sets <html data-live-mini-park> (e.g. the tactical map editor), and a spacer
+// at the end of the page keeps the last content reachable above it. While an
+// element marked [data-live-mini-shy] (the tactical court, the bench) is inside
+// the corner area of the open player, it folds into its header bar
+// (the player stays loaded, it is not recreated); "Expandir" shows it anyway.
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, ExternalLink, ListVideo, Minus, Plus, Radio, X } from 'lucide-react';
 import { useLiveStreams } from '@/lib/liveStreamsData';
@@ -15,6 +22,61 @@ const MODE_KEY = 'fbf-live-mini-mode';
 const PICK_KEY = 'fbf-live-mini-pick';
 const HIDDEN_PREFIXES = ['/painel', '/login', '/recuperar-senha', '/redefinir-senha'];
 const readPick = (): string | null => { try { return sessionStorage.getItem(PICK_KEY); } catch { return null; } };
+const LIFT_VAR = '--live-mini-lift';
+
+/** True while a page asks the mini player to step aside (<html data-live-mini-park>). */
+function useParked() {
+  const read = () => typeof document !== 'undefined' && 'liveMiniPark' in document.documentElement.dataset;
+  const [parked, setParked] = useState(read);
+  useEffect(() => {
+    const obs = new MutationObserver(() => setParked(read()));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-live-mini-park'] });
+    return () => obs.disconnect();
+  }, []);
+  return parked;
+}
+
+// area the open player takes in the corner (with its margins): 16:9 video + header + footer
+const openArea = (vw: number, vh: number, lift: number) => {
+  const width = vw <= 600 ? vw : (vw <= 1024 ? 300 : 340) + 32;
+  return { left: vw - width, right: vw, top: vh - lift - (vw <= 600 ? vw * 0.5625 + 110 : width * 0.5625 + 110), bottom: vh };
+};
+
+/** Keeps the player above bottom bars marked [data-live-mini-avoid] (save bars, sticky controls)
+ *  and reports when a [data-live-mini-shy] element is inside the area the open player would take. */
+function useAvoidLift(enabled: boolean, onShy: (shy: boolean) => void) {
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!enabled) { root.style.removeProperty(LIFT_VAR); onShy(false); return undefined; }
+    let frame = 0;
+    let last = -1;
+    const measure = () => {
+      frame = 0;
+      const vh = window.innerHeight;
+      let lift = 0;
+      document.querySelectorAll('[data-live-mini-avoid]').forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.height > 0 && r.top < vh && r.bottom > vh - 200) lift = Math.max(lift, Math.ceil(vh - r.top));
+      });
+      if (lift !== last) { last = lift; root.style.setProperty(LIFT_VAR, `${lift}px`); }
+      let shy = false;
+      const area = openArea(window.innerWidth, vh, lift);
+      document.querySelectorAll('[data-live-mini-shy]').forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.height > 0 && r.left < area.right && r.right > area.left && r.top < area.bottom && r.bottom > area.top) shy = true;
+      });
+      onShy(shy);
+    };
+    const schedule = () => { if (!frame) frame = window.requestAnimationFrame(measure); };
+    measure();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    const obs = new MutationObserver(schedule);
+    obs.observe(document.body, { childList: true, subtree: true });
+    return () => { if (frame) window.cancelAnimationFrame(frame); window.removeEventListener('scroll', schedule); window.removeEventListener('resize', schedule); obs.disconnect(); root.style.removeProperty(LIFT_VAR); };
+  }, [enabled, onShy]);
+}
+
 const readMode = (): Mode => { try { const v = sessionStorage.getItem(MODE_KEY); return v === 'min' || v === 'closed' ? v : 'open'; } catch { return 'open'; } };
 
 export function LiveMiniPlayer() {
@@ -32,9 +94,41 @@ export function LiveMiniPlayer() {
   useEffect(() => { if (selectedKey && entries.length > 0 && !entries.some((e) => e.key === selectedKey)) setSelectedKey(null); }, [entries, selectedKey]);
   useEffect(() => { if (entries.length < 2) setListOpen(false); }, [entries.length]);
 
-  if (!active || HIDDEN_PREFIXES.some((p) => pathname.startsWith(p))) return null;
+  const parked = useParked();
+  const [unparked, setUnparked] = useState(false); // the visitor reopened it during the edit: their choice
+  useEffect(() => { if (!parked) setUnparked(false); }, [parked]);
+  const hidden = !active || HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
+  const [shy, setShy] = useState(false);
+  const [forceOpen, setForceOpen] = useState(false); // "Expandir" while folded: the visitor's choice
+  useEffect(() => { if (!shy) setForceOpen(false); }, [shy]);
+  useAvoidLift(!hidden, setShy);
+
+  // spacer at the end of the page, the height of the open player, so nothing stays hidden under it
+  const boxRef = useRef<HTMLElement | null>(null);
+  const [space, setSpace] = useState(0);
+  const showBox = !hidden && mode !== 'closed' && (!parked || unparked);
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!showBox || !el) { setSpace(0); return undefined; }
+    const update = () => setSpace(Math.ceil(el.getBoundingClientRect().height) + 24);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [showBox, mode, listOpen]);
+
+  if (hidden) return null;
+  const folded = shy && !forceOpen && mode === 'open';
   const { streamer, match } = active;
   const count = entries.length;
+
+  if (parked && !unparked && mode !== 'closed') {
+    return (
+      <button type="button" className="live-mini-reopen is-parked" onClick={() => setUnparked(true)} title="O mini player foi recolhido durante a edição" aria-label={`Mostrar transmissão ao vivo (${count})`}>
+        <span className="live-dot" aria-hidden="true" /> Ao vivo{count > 1 ? ` · ${count}` : ''}
+      </button>
+    );
+  }
 
   if (mode === 'closed') {
     return (
@@ -45,7 +139,8 @@ export function LiveMiniPlayer() {
   }
 
   return (
-    <aside className={`live-mini${mode === 'min' ? ' is-collapsed' : ''}`} aria-label="Transmissão ao vivo">
+    <>
+    <aside ref={boxRef} className={`live-mini${mode === 'min' ? ' is-collapsed' : ''}${folded ? ' is-folded' : ''}`} aria-label="Transmissão ao vivo">
       <div className="live-mini-header">
         <div className="live-mini-title">
           <span className="live-badge-mini"><span className="live-dot" aria-hidden="true" /> Ao vivo</span>
@@ -58,9 +153,13 @@ export function LiveMiniPlayer() {
               <ListVideo size={15} aria-hidden="true" /> {count}
             </button>
           )}
-          <button type="button" onClick={() => setMode(mode === 'min' ? 'open' : 'min')} title={mode === 'min' ? 'Expandir' : 'Minimizar'} aria-label={mode === 'min' ? 'Expandir' : 'Minimizar'}>
-            {mode === 'min' ? <Plus size={15} /> : <Minus size={15} />}
-          </button>
+          {folded ? (
+            <button type="button" onClick={() => setForceOpen(true)} title="Expandir" aria-label="Expandir"><Plus size={15} /></button>
+          ) : (
+            <button type="button" onClick={() => setMode(mode === 'min' ? 'open' : 'min')} title={mode === 'min' ? 'Expandir' : 'Minimizar'} aria-label={mode === 'min' ? 'Expandir' : 'Minimizar'}>
+              {mode === 'min' ? <Plus size={15} /> : <Minus size={15} />}
+            </button>
+          )}
           <button type="button" onClick={() => { setMode('closed'); setListOpen(false); }} title="Fechar" aria-label="Fechar o mini player"><X size={15} /></button>
         </div>
       </div>
@@ -96,5 +195,7 @@ export function LiveMiniPlayer() {
         <button type="button" className="live-mini-more" onClick={() => setListOpen(true)}><ChevronDown size={13} aria-hidden="true" /> {count} transmissões ao vivo</button>
       )}
     </aside>
+    {space > 0 && <div className="live-mini-spacer" style={{ height: space }} aria-hidden="true" />}
+    </>
   );
 }

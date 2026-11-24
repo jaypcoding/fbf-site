@@ -48,6 +48,12 @@ export function TacticalMap({ team, seasonName, seasonTeamId, roster }: Props) {
 
   useEffect(() => { if (!editing) setDraft(live); }, [live, editing]);
   useEffect(() => { setEditing(false); setSelected(null); setMessage(null); }, [seasonTeamId]);
+  // while editing, the global live mini player steps aside (it must not cover the court, the bench or the save bar)
+  useEffect(() => {
+    if (!editing) return undefined;
+    document.documentElement.dataset.liveMiniPark = 'tactics';
+    return () => { delete document.documentElement.dataset.liveMiniPark; };
+  }, [editing]);
   useEffect(() => {
     if (!dirty) return undefined;
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
@@ -194,7 +200,7 @@ export function TacticalMap({ team, seasonName, seasonTeamId, roster }: Props) {
         <div className="tac-empty"><Users size={18} aria-hidden="true" /> O elenco desta temporada ainda não foi registrado.</div>
       ) : (
         <div className="tac-layout">
-          <div className="tac-court-wrap">
+          <div className="tac-court-wrap" data-live-mini-shy="">
             <svg ref={svgRef} viewBox={`0 0 ${COURT.w} ${COURT.h}`} className="tac-court" role="img"
               aria-label={`Quadra com ${shown.starters.length} titular(es): ${shown.starters.map((s) => `${byId.get(s.player_id)?.nickname} (${s.role})`).join(', ') || 'nenhum'}`}
               onPointerMove={onDragMove} onPointerUp={endDrag} onPointerCancel={() => { dragRef.current = null; setDrag(null); }}
@@ -232,7 +238,7 @@ export function TacticalMap({ team, seasonName, seasonTeamId, roster }: Props) {
             {editing && <p className="tac-hint">Arraste os titulares na quadra. Para trocar ou escalar, toque em um jogador e depois no destino: na quadra, numa vaga ou em outro jogador.</p>}
           </div>
 
-          <aside className="tac-bench" aria-label="Banco de reservas">
+          <aside className="tac-bench" aria-label="Banco de reservas" data-live-mini-shy="">
             <h3>Banco de reservas <span>{shown.bench.length}</span></h3>
             {shown.bench.length === 0 ? <p className="tac-bench-empty">Sem reservas nesta temporada.</p> : (
               <ol>
@@ -301,7 +307,7 @@ export function TacticalMap({ team, seasonName, seasonTeamId, roster }: Props) {
       )}
 
       {editing && (
-        <div className="tac-editbar">
+        <div className="tac-editbar" data-live-mini-avoid="">
           {confirmDiscard ? (
             <>
               <span>Descartar as alterações não salvas?</span>
