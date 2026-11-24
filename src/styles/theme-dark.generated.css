@@ -421,7 +421,7 @@ html[data-theme="dark"] .profile-achievements li strong { color: #f3ebe0; }
 html[data-theme="dark"] .profile-achievements li span { color: #ab9d8c; }
 html[data-theme="dark"] .profile-achievement-historical { color: #f2a35e; }
 html[data-theme="dark"] .restart-heading { color: #f3ebe0; }
-/* styles/replay.css (115 regras) */
+/* styles/replay.css (116 regras) */
 html[data-theme="dark"] .replay-header h2 { color: #f3ebe0; }
 html[data-theme="dark"] .replay-header h2 small { color: #857767; }
 html[data-theme="dark"] .replay-header p { color: #ab9d8c; }
@@ -537,3 +537,6 @@ html[data-theme="dark"] .hof-status.is-draft { color: #f2a35e; }
 html[data-theme="dark"] .hof-admin-or { color: #ab9d8c; }
 html[data-theme="dark"] .hof-admin-badge { color: #f2a35e; background: #2e2721; }
 html[data-theme="dark"] .hof-admin-list li.is-inactive > strong { color: #ab9d8c; }
+@media (min-width: 801px) and (max-width: 1200px) {
+  html[data-theme="dark"] .main-nav { background: #211b17; border: 1px solid #3a3129; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28); }
+}

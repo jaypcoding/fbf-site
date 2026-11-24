@@ -208,3 +208,13 @@
 .hof-admin-edition { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; }
 .hof-admin-badge { font-size: 11px; font-weight: 700; color: #7a5a2e; background: #f3ead9; border-radius: 999px; padding: 2px 8px; }
 .hof-admin-list li.is-inactive > strong { color: #a99a88; text-decoration: line-through; }
+/* Header with more sections (Ao vivo, Hall da Fama, Notícias): labels never
+   wrap; icons hidden where space is short; collapsed menu up to 1200px. */
+.nav-link, .account-link, .login-link { white-space: nowrap; }
+@media (min-width: 1201px) and (max-width: 1440px) { .main-nav .nav-link > svg { display: none; } .main-nav { gap: 2px; } .nav-link, .account-link, .login-link { padding-left: 9px; padding-right: 9px; } }
+@media (min-width: 801px) and (max-width: 1200px) {
+  .mobile-toggle { display: block; }
+  .main-nav { display: none; position: absolute; right: 16px; top: 76px; width: min(340px, calc(100% - 32px)); background: #fff; border: 1px solid #eadcc7; border-radius: 8px; padding: 8px; box-shadow: 0 12px 30px #18181818; flex-direction: column; align-items: stretch; z-index: 50; }
+  .main-nav.is-open { display: flex; }
+  .nav-link, .account-link, .login-link { justify-content: flex-start; margin: 0; }
+}
