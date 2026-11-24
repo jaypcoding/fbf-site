@@ -46,3 +46,16 @@ html[data-theme="dark"] .perf-legend i.is-assists, html[data-theme="dark"] .perf
 html[data-theme="dark"] .profile-result.result-w { background: #2f7d43; }
 html[data-theme="dark"] .profile-result.result-l { background: #b4472c; }
 html[data-theme="dark"] .profile-result.result-d { background: #6f6355; }
+
+/* Mini player: already dark in both themes, keep its own colours */
+html[data-theme="dark"] .live-mini, html[data-theme="dark"] .live-mini-reopen { background: #17110d; border-color: rgba(242, 163, 94, 0.28); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55); }
+html[data-theme="dark"] .live-mini-body { background: #000; }
+html[data-theme="dark"] .live-badge-mini { color: #ffb4a8; }
+html[data-theme="dark"] .live-dot { box-shadow: 0 0 0 0 rgba(240, 68, 56, 0.6); }
+html[data-theme="dark"] .live-mini-who small, html[data-theme="dark"] .live-mini-controls button, html[data-theme="dark"] .live-mini-item small, html[data-theme="dark"] .live-mini-foot, html[data-theme="dark"] .live-mini-more { color: #cbbba8; }
+html[data-theme="dark"] .live-mini-foot > a:first-child, html[data-theme="dark"] .live-mini-foot > span { color: #e8dccb; }
+html[data-theme="dark"] .live-mini-controls button:hover, html[data-theme="dark"] .live-mini-controls button:focus-visible { color: #fff; background: rgba(255, 255, 255, 0.1); }
+html[data-theme="dark"] .live-mini-list button { background: rgba(255, 255, 255, 0.05); }
+html[data-theme="dark"] .live-mini-list button:hover { background: rgba(255, 255, 255, 0.09); }
+html[data-theme="dark"] .live-mini-list button[aria-pressed="true"] { border-color: rgba(242, 163, 94, 0.6); }
+html[data-theme="dark"] .live-mini-more { border-top-color: rgba(255, 255, 255, 0.08); }

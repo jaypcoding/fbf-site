@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase, type Competition, type Season, type Team, type Player, type SeasonTeam, type Roster, type Stage, type Round, type Match, type MatchEvent, type GoalkeeperParticipation, type Streamer } from './supabase';
+import { supabase, type Competition, type Season, type Team, type Player, type SeasonTeam, type Roster, type Stage, type Round, type Match, type MatchEvent, type GoalkeeperParticipation } from './supabase';
 import { useAdminDataVersion } from './adminRefresh';
 import { useAuth } from './auth';
 import { linksFromRows, type ParticipationLink, type RawParticipationRow } from './teamCategories';
@@ -429,51 +429,3 @@ export function useGoalkeeperParticipations(matchIds: string[]) {
   return { spells, loading, error };
 }
 
-export type LiveStream = {
-  key: string;
-  streamer: Streamer;
-  matchId: string;
-  homeName: string;
-  awayName: string;
-  homeScore: number | null;
-  awayScore: number | null;
-};
-
-type LiveMatchRow = {
-  id: string;
-  home_score: number | null;
-  away_score: number | null;
-  home_team: { team: { name: string } | null } | null;
-  away_team: { team: { name: string } | null } | null;
-  match_streamers: { streamer: Streamer | null }[];
-};
-
-const LIVE_REFRESH_MS = 60000;
-
-export function useLiveStreams() {
-  const [streams, setStreams] = useState<LiveStream[]>([]);
-  useEffect(() => {
-    let active = true;
-    const load = () => {
-      supabase.from('matches').select('id, home_score, away_score, home_team:home_team_id ( team:team_id ( name ) ), away_team:away_team_id ( team:team_id ( name ) ), match_streamers ( streamer:streamer_id ( id, display_name, platform, channel ) )').eq('status', 'LIVE').then(({ data, error }) => {
-        if (!active || error) return;
-        const rows = (data || []) as unknown as LiveMatchRow[];
-        setStreams(rows.flatMap((row) => row.match_streamers
-          .filter((link) => link.streamer)
-          .map((link) => ({
-            key: `${row.id}-${link.streamer!.id}`,
-            streamer: link.streamer!,
-            matchId: row.id,
-            homeName: row.home_team?.team?.name || '—',
-            awayName: row.away_team?.team?.name || '—',
-            homeScore: row.home_score,
-            awayScore: row.away_score,
-          }))));
-      });
-    };
-    load();
-    const timer = window.setInterval(load, LIVE_REFRESH_MS);
-    return () => { active = false; window.clearInterval(timer); };
-  }, []);
-  return { streams };
-}

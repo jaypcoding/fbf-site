@@ -48,6 +48,20 @@ export function embedUrl(platform: string, channel: string, hostname: string): s
   return `https://www.youtube.com/embed/live_stream?channel=${c}`;
 }
 
+/** True when the stored identifier is valid for the platform (nothing else is ever embedded). */
+export function isValidChannel(platform: string, channel: string): boolean {
+  const rule = RULES[platform as StreamPlatform];
+  return Boolean(rule && typeof channel === 'string' && rule.pattern.test(channel));
+}
+
+/** Address of the embedded player of the mini player: starts muted (no sound until the visitor turns it on). */
+export function mutedEmbedUrl(platform: string, channel: string, hostname: string): string {
+  const c = encodeURIComponent(channel);
+  if (platform === 'TWITCH') return `https://player.twitch.tv/?channel=${c}&parent=${encodeURIComponent(hostname)}&muted=true&autoplay=true`;
+  if (platform === 'KICK') return `https://player.kick.com/${c}?muted=true&autoplay=true`;
+  return `https://www.youtube.com/embed/live_stream?channel=${c}&autoplay=1&mute=1`;
+}
+
 /** Public page of the channel. */
 export function channelUrl(platform: string, channel: string): string {
   const c = encodeURIComponent(channel);
